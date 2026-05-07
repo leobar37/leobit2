@@ -57,6 +57,20 @@ export const BUSINESS_MODE_DEFAULTS: Record<string, BusinessModeFlags> = {
     saleCalculatorTitle: "Entrega de Agua",
     showVisitStatus: true,
   },
+  cochera: {
+    useTara: false,
+    useNetWeight: false,
+    useContainers: false,
+    useDeposits: false,
+    useSubscriptions: false,
+    useFrequency: false,
+    customCustomerFields: [],
+    defaultUnit: "unidad",
+    suggestedProducts: [],
+    closeFields: [],
+    saleCalculatorTitle: "Nueva Venta",
+    showVisitStatus: false,
+  },
 };
 
 /**

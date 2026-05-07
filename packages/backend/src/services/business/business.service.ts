@@ -39,7 +39,8 @@ export class BusinessService {
     private repository: BusinessRepository,
     private supplierRepo: SupplierRepository,
     private whatsAppTemplateRepo: WhatsAppTemplateRepository,
-    private productRepo: ProductRepository
+    private productRepo: ProductRepository,
+    private subscriptionRepo?: import("../repository/business-subscription.repository").BusinessSubscriptionRepository
   ) {}
 
   async getBusiness(ctx: RequestContext) {
@@ -113,6 +114,12 @@ export class BusinessService {
     }).returning();
 
     const workerCtx = RequestContextClass.forWorker(business.id, businessUser.id);
+
+    // Auto-create gratis subscription for cochera businesses
+    if (business.businessMode === "cochera" && this.subscriptionRepo) {
+      await this.subscriptionRepo.getOrCreate(workerCtx);
+    }
+
     await this.supplierRepo.create(workerCtx, {
       name: "Proveedor Varios",
       type: "generic",

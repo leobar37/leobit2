@@ -1,4 +1,4 @@
-# CocheraPro Feature Dependency Graph
+# Avileo Cocheras Feature Dependency Graph
 
 ## Dependency Rules
 
@@ -9,7 +9,7 @@
   - `F-003` for rates, grace minutes, accepted payment methods, and capacity settings.
   - `F-004` for active vehicle sessions.
 - `F-006` and `F-007` depend on completed checkout transactions from `F-005`.
-- `F-008` depends on `F-001` for mode selection, `F-002` for plan/access messaging, and `F-003` for first-run setup.
+- `F-008` depends on `F-001` for mode selection, `F-002` for internal plan/limit status, and `F-003` for first-run setup.
 - `F-009` validates the integrated initiative and should follow the major feature waves.
 
 ## Graph (ASCII)

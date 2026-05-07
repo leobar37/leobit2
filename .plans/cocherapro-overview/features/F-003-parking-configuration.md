@@ -2,7 +2,7 @@
 
 ## Objective
 
-Add CocheraPro settings for garage identity and billing rules: name/address, hourly rate, optional day rate, grace minutes, capacity, and accepted payment methods.
+Add Avileo Cocheras settings for garage identity and billing rules: name/address, hourly rate, optional day rate, grace minutes, capacity, and accepted payment methods.
 
 ## Status
 
@@ -38,7 +38,7 @@ unassigned
 
 ## Assumptions
 
-- Garage name/address may reuse business fields, but parking-specific rates/capacity should live in a CocheraPro settings table or equivalent tenant-scoped model.
+- Garage name/address may reuse business fields, but parking-specific rates/capacity should live in a Avileo Cocheras settings table or equivalent tenant-scoped model.
 - Day rate is optional and can be stored nullable.
 - Capacity is informational for dashboard/occupancy warnings unless `/plan` defines hard-blocking behavior.
 
@@ -53,7 +53,8 @@ unassigned
 - `packages/backend/src/api/cochera*.ts`
 - `packages/backend/src/plugins/services.ts`
 - `packages/app/app/hooks/use-cochera*.ts`
-- `packages/app/app/routes/_protected.cochera.config.tsx`
+- `packages/app/app/routes/_protected.config.cochera.tsx` (settings form under `/config/cochera`)
+- `packages/app/app/routes/_protected.config._index.tsx` (add "Configuracion de Cochera" item)
 - `packages/app/app/components/cochera/`
 
 ## Dependencies on Other Feature IDs

@@ -39,6 +39,10 @@ import {
   waterDeliveryStops,
   waterContainerLedgerEntries,
   waterDepositLedgerEntries,
+  cocheraSettings,
+  cocheraSessions,
+  businessSubscriptions,
+  subscriptionUsage,
 } from "../src/db/schema";
 import { eq, ne, and } from "drizzle-orm";
 import { auth } from "../src/lib/auth";
@@ -375,6 +379,10 @@ async function resetDatabase() {
     { name: "Water delivery stops", fn: () => db.delete(waterDeliveryStops) },
     { name: "Water customer profiles", fn: () => db.delete(waterCustomerProfiles) },
     { name: "Water routes", fn: () => db.delete(waterRoutes) },
+    { name: "Cochera sessions", fn: () => db.delete(cocheraSessions) },
+    { name: "Cochera settings", fn: () => db.delete(cocheraSettings) },
+    { name: "Subscription usage", fn: () => db.delete(subscriptionUsage) },
+    { name: "Business subscriptions", fn: () => db.delete(businessSubscriptions) },
     { name: "Sale items", fn: () => db.delete(saleItems) },
     { name: "Visitas", fn: () => db.delete(visitas) },
     { name: "Sales", fn: () => db.delete(sales) },

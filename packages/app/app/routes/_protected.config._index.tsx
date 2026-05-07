@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   ImageIcon,
   ReceiptText,
+  CarFront,
 } from "lucide-react";
 import {
   MinimalCardTitle,
@@ -177,31 +178,40 @@ const activosConfigItem: ConfigItem = {
   iconBg: "bg-pink-100",
 };
 
+const cocheraConfigItem: ConfigItem = {
+  icon: CarFront,
+  title: "Configuración de Cochera",
+  description: "Tarifas, plazas y métodos de pago",
+  href: "/config/cochera",
+  color: "text-emerald-600",
+  iconBg: "bg-emerald-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
 
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
+  const isCocheraMode = business?.businessMode === "cochera";
 
   const configItems = isAdmin
     ? [
         baseConfigItems[0],
         baseConfigItems[1],
         teamConfigItem,
-        distribucionesConfigItem,
-        comprasConfigItem,
-        gastosConfigItem,
-        stockAlertsConfigItem,
-        activosConfigItem,
-        puntosVentaConfigItem,
-        proveedoresConfigItem,
-        gruposConfigItem,
-        tagsConfigItem,
-        flagsConfigItem,
-        whatsappConfigItem,
+        ...(isCocheraMode ? [cocheraConfigItem] : [distribucionesConfigItem, comprasConfigItem]),
+        ...(isCocheraMode ? [] : [gastosConfigItem]),
+        ...(isCocheraMode ? [] : [stockAlertsConfigItem]),
+        ...(isCocheraMode ? [] : [activosConfigItem]),
+        ...(isCocheraMode ? [] : [puntosVentaConfigItem]),
+        ...(isCocheraMode ? [] : [proveedoresConfigItem]),
+        ...(isCocheraMode ? [] : [gruposConfigItem]),
+        ...(isCocheraMode ? [] : [tagsConfigItem]),
+        ...(isCocheraMode ? [] : [flagsConfigItem]),
+        ...(isCocheraMode ? [] : [whatsappConfigItem]),
         ...baseConfigItems.slice(2),
       ]
-    : [...baseConfigItems, gastosConfigItem, activosConfigItem];
+    : [...baseConfigItems, ...(isCocheraMode ? [] : [gastosConfigItem, activosConfigItem])];
 
   return (
     <div className="space-y-6">

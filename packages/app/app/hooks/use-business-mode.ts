@@ -43,6 +43,7 @@ export function useBusinessMode(): UseBusinessModeReturn {
     return {
       polleria: mode === "polleria",
       agua: mode === "agua",
+      cochera: mode === "cochera",
     };
   }, [mode]);
 

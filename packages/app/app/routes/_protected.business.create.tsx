@@ -3,7 +3,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router";
-import { CheckCircle2, ChevronDown, ChevronUp, Droplets, Loader2, Route, Scale, Truck } from "lucide-react";
+import { Car, CheckCircle2, ChevronDown, ChevronUp, Droplets, Loader2, Route, Scale, Truck } from "lucide-react";
 import { useCreateBusiness } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,7 @@ import { cn } from "~/lib/utils";
 import type { BusinessModeSlug } from "@avileo/shared";
 
 const createBusinessSchema = z.object({
-  businessMode: z.enum(["polleria", "agua"]),
+  businessMode: z.enum(["polleria", "agua", "cochera"]),
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
   ruc: z.string().max(20).optional(),
   address: z.string().optional(),
@@ -53,6 +53,14 @@ const businessModeOptions: Array<{
     icon: Droplets,
     tone: "sky",
   },
+  {
+    value: "cochera",
+    title: "Estacionamiento / Cochera",
+    description: "Control de ingreso, salida y cobro de vehículos.",
+    detail: "Nuevo",
+    icon: Car,
+    tone: "emerald",
+  },
 ];
 
 export default function CreateBusinessPage() {
@@ -84,8 +92,8 @@ export default function CreateBusinessPage() {
         businessMode: data.businessMode,
       };
 
-      await createBusiness.mutateAsync(input);
-      navigate("/onboarding/data");
+      const createdBusiness = await createBusiness.mutateAsync(input);
+      navigate(createdBusiness.businessMode === "cochera" ? "/config/cochera" : "/onboarding/data");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error al crear negocio";
 
@@ -154,6 +162,7 @@ export default function CreateBusinessPage() {
                   const Icon = option.icon;
                   const selected = selectedBusinessMode === option.value;
                   const isWater = option.tone === "sky";
+                  const isCochera = option.tone === "emerald";
 
                   return (
                     <button
@@ -183,7 +192,9 @@ export default function CreateBusinessPage() {
                           selected
                             ? isWater
                               ? "bg-sky-100 text-sky-700 dark:bg-sky-500/18 dark:text-sky-200"
-                              : "bg-orange-100 text-orange-700 dark:bg-orange-500/18 dark:text-orange-200"
+                              : isCochera
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/18 dark:text-emerald-200"
+                                : "bg-orange-100 text-orange-700 dark:bg-orange-500/18 dark:text-orange-200"
                             : "bg-gray-100 text-gray-500 dark:bg-white/8 dark:text-gray-300"
                         )}
                       >

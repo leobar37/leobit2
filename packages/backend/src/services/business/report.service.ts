@@ -3,6 +3,7 @@ import { db } from "../../lib/db";
 import { sales, customers, abonos, saleItems, type Sale } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import { NotFoundError } from "../../errors";
+import { getCalendarMonthPeriod } from "@avileo/shared";
 
 export interface SalesTodayStats {
   today: {
@@ -462,15 +463,12 @@ export class ReportService {
     }
 
     if (type === "month") {
-      const startOfMonth = new Date(today.getUTCFullYear(), today.getUTCMonth(), 1);
-      const endOfMonth = new Date(today.getUTCFullYear(), today.getUTCMonth() + 1, 1);
-
-      const prevStart = new Date(today.getUTCFullYear(), today.getUTCMonth() - 1, 1);
-      const prevEnd = startOfMonth;
+      const { periodStart, periodEnd } = getCalendarMonthPeriod(today);
+      const prevStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
 
       return {
-        currentRange: { start: startOfMonth, end: endOfMonth },
-        previousRange: { start: prevStart, end: prevEnd },
+        currentRange: { start: periodStart, end: periodEnd },
+        previousRange: { start: prevStart, end: periodStart },
       };
     }
 

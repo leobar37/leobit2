@@ -59,6 +59,14 @@ import { ExpenseRepository } from "../services/repository/expense.repository";
 import { ExpenseService } from "../services/business/expense.service";
 import { ExpenseCategoryRepository } from "../services/repository/expense-category.repository";
 import { ExpenseCategoryService } from "../services/business/expense-category.service";
+import { BusinessSubscriptionRepository } from "../services/repository/business-subscription.repository";
+import { SubscriptionService } from "../services/business/subscription.service";
+import { CocheraSettingsRepository } from "../services/repository/cochera-settings.repository";
+import { CocheraSettingsService } from "../services/business/cochera-settings.service";
+import { CocheraSessionRepository } from "../services/repository/cochera-session.repository";
+import { CocheraSessionService } from "../services/business/cochera-session.service";
+import { CocheraCheckoutService } from "../services/business/cochera-checkout.service";
+import { CocheraReportService } from "../services/business/cochera-report.service";
 import { initializeStateMachines } from "../services/transitions";
 
 export const servicesPlugin = new Elysia({ name: "services" })
@@ -94,10 +102,13 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const expenseRepo = new ExpenseRepository();
     const expenseCategoryRepo = new ExpenseCategoryRepository();
 
+    const subscriptionRepo = new BusinessSubscriptionRepository();
+    const subscriptionService = new SubscriptionService(subscriptionRepo);
+
     // Initialize state machines with their transitions
     initializeStateMachines({});
 
-    const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo);
+    const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo, subscriptionRepo);
     const customerService = new CustomerService(customerRepo, waterCustomerProfileRepo);
     const waterRouteService = new WaterRouteService(waterRouteRepo);
     const productService = new ProductService(productRepo, productVariantRepo, categoryRepo);
@@ -132,6 +143,16 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const puntoVentaRepo = new PuntoVentaRepository();
     const expenseService = new ExpenseService(expenseRepo, expenseCategoryRepo);
     const expenseCategoryService = new ExpenseCategoryService(expenseCategoryRepo, expenseRepo);
+    const cocheraSettingsRepo = new CocheraSettingsRepository();
+    const cocheraSettingsService = new CocheraSettingsService(cocheraSettingsRepo);
+    const cocheraSessionRepo = new CocheraSessionRepository();
+    const cocheraSessionService = new CocheraSessionService(cocheraSessionRepo);
+    const cocheraCheckoutService = new CocheraCheckoutService(
+      cocheraSessionRepo,
+      cocheraSettingsRepo,
+      subscriptionService
+    );
+    const cocheraReportService = new CocheraReportService(subscriptionService);
 
     return {
       businessRepo,
@@ -192,5 +213,13 @@ export const servicesPlugin = new Elysia({ name: "services" })
       expenseService,
       expenseCategoryRepo,
       expenseCategoryService,
+      subscriptionRepo,
+      subscriptionService,
+      cocheraSettingsRepo,
+      cocheraSettingsService,
+      cocheraSessionRepo,
+      cocheraSessionService,
+      cocheraCheckoutService,
+      cocheraReportService,
     };
   });

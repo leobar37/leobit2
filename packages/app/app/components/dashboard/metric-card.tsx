@@ -10,6 +10,7 @@ interface MetricCardProps {
   iconColor?: string;
   className?: string;
   featured?: boolean;
+  dataTestId?: string;
 }
 
 export function MetricCard({
@@ -21,12 +22,14 @@ export function MetricCard({
   iconColor = "text-orange-600",
   className,
   featured = false,
+  dataTestId,
 }: MetricCardProps) {
   const isPositive = change !== undefined && change >= 0;
   const showChange = change !== undefined && change !== 0;
 
   return (
     <div
+      data-testid={dataTestId}
       className={cn(
         "shell-card-flat rounded-[26px] border-0 bg-white/70 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-[#151821] dark:shadow-[0_18px_40px_rgba(0,0,0,0.22)]",
         featured && "bg-white dark:bg-[#171a22]",

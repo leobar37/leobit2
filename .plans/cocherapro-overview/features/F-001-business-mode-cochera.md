@@ -2,7 +2,7 @@
 
 ## Objective
 
-Add `cochera` as a first-class Avileo business mode so downstream CocheraPro features can be created, selected, routed, and guarded consistently.
+Add `cochera` as a first-class Avileo business mode so downstream Avileo Cocheras features can be created, selected, routed, and guarded consistently.
 
 ## Status
 
@@ -38,7 +38,7 @@ unassigned
 ## Assumptions
 
 - The slug should be exactly `cochera`.
-- CocheraPro mode defaults should disable chicken/water-specific assumptions.
+- Avileo Cocheras mode defaults should disable chicken/water-specific assumptions.
 - Mode changes do not require a database migration because `business_mode` is a varchar.
 
 ## Likely Files or Directories Involved
@@ -58,7 +58,7 @@ unassigned
 
 ## Parallelization Notes
 
-This is the foundation and should be completed before all other CocheraPro features. It touches shared contract files that downstream features also need.
+This is the foundation and should be completed before all other Avileo Cocheras features. It touches shared contract files that downstream features also need.
 
 ## Worktree Recommendation
 

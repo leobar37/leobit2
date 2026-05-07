@@ -1,9 +1,9 @@
-# CocheraPro Feature Index
+# Avileo Cocheras Feature Index
 
 ## Summary
 
 - Mode: Initiative Overview
-- Slug: `cocherapro-overview`
+- Slug: `avileo-cocheras-overview`
 - Feature Briefs Directory: `features/`
 - Dependency Graph: `dependency-graph.md`
 - Worktree Strategy: `worktrees.md`
@@ -17,10 +17,10 @@
 | F-003 | `features/F-003-parking-configuration.md` | Add parking garage settings for rates, grace time, capacity, and payment methods | `structured` | F-001 | yes | planned | unassigned |
 | F-004 | `features/F-004-vehicle-entry-session.md` | Register active vehicle entries and prevent duplicate active plates | `structured` | F-001 | yes | planned | unassigned |
 | F-005 | `features/F-005-checkout-payment-calculation.md` | Close parking sessions with automatic fee calculation and payment capture | `structured` | F-002, F-003, F-004 | no | planned | unassigned |
-| F-006 | `features/F-006-cochera-dashboard.md` | Show CocheraPro KPIs and 7-day income chart | `structured` | F-005 | yes | planned | unassigned |
+| F-006 | `features/F-006-cochera-dashboard.md` | Show Avileo Cocheras KPIs and 7-day income chart | `structured` | F-005 | yes | planned | unassigned |
 | F-007 | `features/F-007-cochera-reports-export.md` | Add filtered reports and export for parking transactions | `structured` | F-002, F-005 | yes | planned | unassigned |
-| F-008 | `features/F-008-auth-onboarding-access.md` | Wire CocheraPro into auth, business creation, routing, and access UX | `structured` | F-001, F-002, F-003 | yes | planned | unassigned |
-| F-009 | `features/F-009-qa-seeds-fixtures.md` | Add demo data and validation coverage for core CocheraPro flows | `structured` | F-005, F-006, F-007, F-008 | no | planned | unassigned |
+| F-008 | `features/F-008-auth-onboarding-access.md` | Wire Avileo Cocheras into auth, business creation, routing, and access UX | `structured` | F-001, F-002, F-003 | yes | planned | unassigned |
+| F-009 | `features/F-009-qa-seeds-fixtures.md` | Add demo data and validation coverage for core Avileo Cocheras flows | `structured` | F-005, F-006, F-007, F-008 | no | planned | unassigned |
 
 ## Suggested Execution Waves
 
@@ -39,12 +39,12 @@
 
 ## Follow-up Commands
 
-- `/plan .plans/cocherapro-overview/features/F-001-business-mode-cochera.md`
-- `/plan .plans/cocherapro-overview/features/F-002-subscription-plans-limits.md`
-- `/plan .plans/cocherapro-overview/features/F-003-parking-configuration.md`
-- `/plan .plans/cocherapro-overview/features/F-004-vehicle-entry-session.md`
-- `/plan .plans/cocherapro-overview/features/F-005-checkout-payment-calculation.md`
-- `/plan .plans/cocherapro-overview/features/F-006-cochera-dashboard.md`
-- `/plan .plans/cocherapro-overview/features/F-007-cochera-reports-export.md`
-- `/plan .plans/cocherapro-overview/features/F-008-auth-onboarding-access.md`
-- `/plan .plans/cocherapro-overview/features/F-009-qa-seeds-fixtures.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-001-business-mode-cochera.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-002-subscription-plans-limits.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-003-parking-configuration.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-004-vehicle-entry-session.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-005-checkout-payment-calculation.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-006-cochera-dashboard.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-007-cochera-reports-export.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-008-auth-onboarding-access.md`
+- `/plan .plans/avileo-cocheras-overview/features/F-009-qa-seeds-fixtures.md`

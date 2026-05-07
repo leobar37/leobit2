@@ -2,7 +2,7 @@
 
 ## Objective
 
-Wire CocheraPro into existing login/register/business creation flows so users can create/select a CocheraPro business, land in the correct routes, and see subscription-aware access messaging.
+Wire Avileo Cocheras into existing login/register/business creation flows so users can create/select a Avileo Cocheras business, land in the correct routes, and see appropriate plan/limit status without introducing self-service upgrade flows.
 
 ## Status
 
@@ -18,8 +18,8 @@ unassigned
 
 - Business creation option for `cochera`.
 - Mode-aware landing/dashboard/navigation labels.
-- First-run route to configure Cochera settings when missing.
-- Basic subscription status/upgrade prompts in relevant screens.
+- First-run route to configure Cochera settings when missing (navigate to `/config/cochera`).
+- Basic subscription status and limit notices in relevant screens.
 - Ensure existing auth/session behavior works unchanged.
 
 ### Out of Scope
@@ -27,6 +27,8 @@ unassigned
 - New auth provider.
 - Staff roles beyond existing business roles.
 - External payment checkout for subscription upgrades.
+- WhatsApp/contact-sales upgrade redirects.
+- User-facing self-service plan changes.
 - Multi-cochera ownership flows.
 
 ## Verified Context
@@ -35,7 +37,7 @@ unassigned
 - `business_users` links users to businesses and roles.
 - Business creation and dashboard currently have mode-aware behavior for existing modes.
 - Cochera settings from `F-003` are needed for first-run completeness.
-- Subscription status from `F-002` is needed for plan messaging.
+- Subscription status from `F-002` is needed for internal plan/limit notices.
 
 ## Assumptions
 
@@ -49,6 +51,7 @@ unassigned
 - `packages/app/app/routes/login.tsx`
 - `packages/app/app/routes/_protected.business.create.tsx`
 - `packages/app/app/routes/_protected.dashboard.tsx`
+- `packages/app/app/routes/_protected.config._index.tsx`
 - `packages/app/app/components/layout/`
 - `packages/app/app/hooks/use-auth.ts`
 - `packages/app/app/hooks/use-business.ts`

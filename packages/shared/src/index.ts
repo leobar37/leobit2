@@ -40,6 +40,72 @@ export const DistribucionStatus = {
   EN_RUTA: "en_ruta",
 } as const;
 
+// Subscription Plans
+export const SubscriptionPlan = {
+  GRATIS: "gratis",
+  PROFESIONAL: "profesional",
+} as const;
+
+export type SubscriptionPlanType =
+  (typeof SubscriptionPlan)[keyof typeof SubscriptionPlan];
+
+export interface SubscriptionPlanConfig {
+  plan: SubscriptionPlanType;
+  monthlyRecordLimit: number | null;
+  priceMonthly: number;
+  features: {
+    reports: boolean;
+    exportExcel: boolean;
+  };
+}
+
+export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, SubscriptionPlanConfig> = {
+  gratis: {
+    plan: "gratis",
+    monthlyRecordLimit: 50,
+    priceMonthly: 0,
+    features: { reports: false, exportExcel: false },
+  },
+  profesional: {
+    plan: "profesional",
+    monthlyRecordLimit: null,
+    priceMonthly: 49,
+    features: { reports: true, exportExcel: true },
+  },
+};
+
+export interface BusinessSubscription {
+  id: string;
+  businessId: string;
+  plan: SubscriptionPlanType;
+  monthlyRecordLimit: number | null;
+  priceMonthly: number;
+  features: SubscriptionPlanConfig["features"];
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubscriptionUsage {
+  id: string;
+  businessId: string;
+  periodStart: string;
+  periodEnd: string;
+  recordCount: number;
+  updatedAt: string;
+}
+
+export interface PlanStatus {
+  plan: SubscriptionPlanType;
+  isWithinLimit: boolean;
+  recordsUsedThisPeriod: number;
+  recordsLimit: number | null;
+  periodEnd: string;
+  canExport: boolean;
+  canAccessReports: boolean;
+}
+
 // Type helpers
 export type ApiResponse<T = unknown> = {
   success: boolean;
@@ -60,7 +126,7 @@ export interface Business {
   publicCatalogEnabled: boolean;
   publicCatalogSlug: string | null;
   usarDistribucion: boolean;
-  businessMode: "polleria" | "agua";
+  businessMode: "polleria" | "agua" | "cochera";
   modeConfigOverrides: Record<string, unknown> | null;
   role: string;
   salesPoint: string | null;
@@ -75,7 +141,7 @@ export interface CreateBusinessInput {
   address?: string;
   phone?: string;
   email?: string;
-  businessMode?: "polleria" | "agua";
+  businessMode?: "polleria" | "agua" | "cochera";
 }
 
 export interface UpdateBusinessInput {
@@ -87,7 +153,7 @@ export interface UpdateBusinessInput {
   usarDistribucion?: boolean;
   publicCatalogEnabled?: boolean;
   publicCatalogSlug?: string | null;
-  businessMode?: "polleria" | "agua";
+  businessMode?: "polleria" | "agua" | "cochera";
   modeConfigOverrides?: Record<string, unknown>;
 }
 
@@ -485,6 +551,15 @@ export {
 export { DECIMALS } from "./standards/decimals";
 export type { DecimalConfig } from "./standards/decimals";
 
+export {
+  getCalendarDayPeriod,
+  getCalendarMonthPeriod,
+  getCalendarWeekPeriod,
+  isDateInPeriod,
+  periodToISOStrings,
+} from "./standards/periods";
+export type { CalendarMonthPeriod, CalendarPeriod } from "./standards/periods";
+
 // Business Modes
 export {
   BusinessModeFlagsSchema,
@@ -499,3 +574,131 @@ export type {
   BusinessModeFlags,
   BusinessModeSlug,
 } from "./business-modes";
+
+// Cochera (Parking) Settings
+export interface CocheraSettings {
+  id: string;
+  businessId: string;
+  displayName: string | null;
+  displayAddress: string | null;
+  hourlyRate: string;
+  dailyRate: string | null;
+  graceMinutes: number;
+  totalSpaces: number;
+  acceptedPaymentMethods: ("efectivo" | "yape" | "plin")[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CocheraSettingsInput {
+  displayName?: string;
+  displayAddress?: string;
+  hourlyRate: number;
+  dailyRate?: number | null;
+  graceMinutes: number;
+  totalSpaces: number;
+  acceptedPaymentMethods: ("efectivo" | "yape" | "plin")[];
+}
+
+// Cochera Vehicle Sessions
+export const CocheraVehicleType = {
+  AUTO: "auto",
+  MOTO: "moto",
+  CAMIONETA: "camioneta",
+} as const;
+
+export type CocheraVehicleType =
+  (typeof CocheraVehicleType)[keyof typeof CocheraVehicleType];
+
+export const CocheraSessionStatus = {
+  DENTRO: "dentro",
+  FUERA: "fuera",
+} as const;
+
+export type CocheraSessionStatus =
+  (typeof CocheraSessionStatus)[keyof typeof CocheraSessionStatus];
+
+export interface CocheraSession {
+  id: string;
+  businessId: string;
+  plate: string;
+  vehicleType: CocheraVehicleType;
+  status: CocheraSessionStatus;
+  entryAt: string;
+  exitAt: string | null;
+  notes: string | null;
+  totalAmount: string | null;
+  discountAmount: string | null;
+  paymentMethod: string | null;
+  checkoutAt: string | null;
+  checkoutBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCocheraSessionInput {
+  plate: string;
+  vehicleType: CocheraVehicleType;
+  notes?: string;
+}
+
+// Cochera Checkout
+export interface CocheraCheckoutInput {
+  paymentMethod: "efectivo" | "yape" | "plin";
+  discount?: number;
+}
+
+export interface CocheraCheckoutResult {
+  id: string;
+  plate: string;
+  vehicleType: CocheraVehicleType;
+  entryAt: string;
+  exitAt: string;
+  checkoutAt: string;
+  durationMinutes: number;
+  billableHours: number;
+  hourlyRate: string;
+  discountAmount: string;
+  totalAmount: string;
+  paymentMethod: string;
+  checkoutBy: string | null;
+}
+
+// Cochera Dashboard
+export interface CocheraDashboardData {
+  todayEntries: number;
+  activeInside: number;
+  todayIncome: string;
+  monthIncome: string;
+  chartData: { date: string; income: string; count: number }[];
+  recentActivity: CocheraSession[];
+}
+
+// Cochera Reports
+export type CocheraReportPeriod = "today" | "week" | "month";
+
+export interface CocheraReportRow {
+  id: string;
+  plate: string;
+  vehicleType: CocheraVehicleType;
+  entryAt: string;
+  exitAt: string | null;
+  durationMinutes: number;
+  totalAmount: string;
+  paymentMethod: string | null;
+  discountAmount: string | null;
+}
+
+export interface CocheraReportSummary {
+  totalVehicles: number;
+  totalIncome: string;
+  averagePerVehicle: string;
+}
+
+export interface CocheraReportResult {
+  period: CocheraReportPeriod;
+  startDate: string;
+  endDate: string;
+  summary: CocheraReportSummary;
+  rows: CocheraReportRow[];
+}

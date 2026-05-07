@@ -2,7 +2,7 @@
 
 ## Objective
 
-Define and enforce CocheraPro Free/Professional subscription behavior so Free tenants are limited and Professional tenants unlock unlimited records, reports, export, and support messaging surfaces.
+Define and enforce Avileo Cocheras Free/Professional subscription behavior as an internal Avileo/Avileo Cocheras control so Free tenants are limited and Professional tenants unlock unlimited records, full reports, and export capabilities.
 
 ## Status
 
@@ -18,28 +18,29 @@ unassigned
 
 - Shared subscription constants/types for `gratis` and `profesional`.
 - Tenant-scoped subscription storage or plan source.
-- Free-plan monthly record limit for CocheraPro.
+- Free-plan monthly record limit for Avileo Cocheras.
 - Backend limit-check service/API surfaces that downstream checkout/session flows can call.
-- Frontend plan/status hooks and basic upgrade messaging.
+- Frontend plan/status hooks and limit/status notices where needed.
 
 ### Out of Scope
 
 - External payment processor integration.
 - Automatic recurring billing.
-- WhatsApp support automation.
+- User-facing upgrade buttons, WhatsApp redirects, or self-service plan changes.
 - Invoices or receipts for subscriptions.
 
 ## Verified Context
 
 - No durable subscription/billing model was found in the current source.
 - Existing business data is tenant-scoped through `businessId`.
-- CocheraPro plan decisions are product requirements: Gratis `S/ 0/mes` up to 50 records/month; Profesional `S/ 49/mes` unlimited records, full reports, Excel export, WhatsApp support.
-- Subscription enforcement should integrate with CocheraPro session/checkout flows but remain reusable.
+- Avileo Cocheras plan decisions are product requirements: Gratis `S/ 0/mes` up to 50 records/month and basic reports; Profesional `S/ 49/mes` unlimited records, full reports, and Excel/export capability.
+- Subscription enforcement should integrate with Avileo Cocheras session/checkout flows but remain reusable.
 
 ## Assumptions
 
 - “Records/month” means completed checkout transactions unless product later defines entries differently.
-- Plan can initially be manually stored per business without payment processor integration.
+- Plan can initially be manually stored or internally administered per business without payment processor integration.
+- The app should not expose an “upgrade via WhatsApp” or similar commercial self-service flow in this feature.
 - Export is gated to Professional for the MVP unless explicitly allowed by a future product decision.
 
 ## Likely Files or Directories Involved

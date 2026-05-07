@@ -2,7 +2,7 @@
 
 ## Objective
 
-Create demo data and validation coverage for CocheraPro’s critical flows: business creation, configuration, entry, duplicate prevention, checkout calculation, subscription limits, dashboard, and reports/export.
+Create demo data and validation coverage for Avileo Cocheras’s critical flows: business creation, configuration, entry, duplicate prevention, checkout calculation, subscription limits, dashboard, and reports/export.
 
 ## Status
 
@@ -16,7 +16,7 @@ unassigned
 
 ### In Scope
 
-- Demo CocheraPro business/user seed data.
+- Demo Avileo Cocheras business/user seed data.
 - Backend unit/integration coverage for calculation and tenant isolation rules.
 - Frontend or E2E coverage for primary daily workflow.
 - Test fixtures for Free vs Professional behavior.

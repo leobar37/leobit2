@@ -1,14 +1,14 @@
-# CocheraPro Initiative Context
+# Avileo Cocheras Initiative Context
 
 ## Initiative Summary
 
-CocheraPro adds a new Avileo business vertical for small Peruvian parking garages that want to replace paper registers with a responsive web workflow: register vehicle entry by plate, calculate checkout charges automatically, track daily/monthly income, configure parking rates, generate reports, and enforce Free/Professional subscription limits.
+Avileo Cocheras adds a new Avileo business vertical for small Peruvian parking garages that want to replace paper registers with a responsive web workflow: register vehicle entry by plate, calculate checkout charges automatically, track daily/monthly income, configure parking rates, generate reports, and enforce Free/Professional subscription limits.
 
 ## Product Decisions Captured
 
 - `cochera` will be a separate `businessMode`, following the existing `agua` vertical pattern.
-- CocheraPro is online-only for this initiative; it should not introduce PGlite, sync queues, or offline-first mutation paths.
-- Subscription support is included now: Free and Professional plans with tenant-scoped limits.
+- Avileo Cocheras is online-only for this initiative; it should not introduce PGlite, sync queues, or offline-first mutation paths.
+- Subscription support is included now as an internal Avileo/Avileo Cocheras control: Free and Professional plans with tenant-scoped limits. This is not a client-facing upgrade, payment, or WhatsApp self-service flow.
 - User-facing copy should be Spanish for Peru (`es-PE`); code comments remain English.
 
 ## Verified Context
@@ -47,21 +47,21 @@ CocheraPro adds a new Avileo business vertical for small Peruvian parking garage
 ### Existing Vertical Pattern
 
 - The `agua` vertical uses dedicated extension tables, shared contracts, backend services, and mode-aware frontend labels/routes.
-- CocheraPro should follow the dedicated-table approach rather than forcing parking sessions into the existing sales/product model.
+- Avileo Cocheras should follow the dedicated-table approach rather than forcing parking sessions into the existing sales/product model.
 
 ## Scope Boundaries
 
 ### In Scope
 
 - `cochera` business mode support.
-- Tenant-scoped CocheraPro schema/API/services.
+- Tenant-scoped Avileo Cocheras schema/API/services.
 - Parking garage settings: name/address, hourly/day rate, grace minutes, capacity, accepted payment methods.
 - Vehicle entry/session registration and active occupancy list.
 - Checkout/payment calculation with hourly ceiling and optional discount.
 - Dashboard KPIs and 7-day income chart.
 - Reports by today/week/month and export capability.
 - Free/Professional subscription model and limits.
-- Auth/onboarding wiring for CocheraPro businesses.
+- Auth/onboarding wiring for Avileo Cocheras businesses.
 - Seeds/fixtures/QA coverage planning.
 
 ### Out of Scope
@@ -75,7 +75,27 @@ CocheraPro adds a new Avileo business vertical for small Peruvian parking garage
 - Valet parking.
 - Per-minute billing.
 - Printed tickets.
-- Offline/PGlite sync for CocheraPro.
+- Offline/PGlite sync for Avileo Cocheras.
+
+## Core Platform Reuse Principle
+
+> **Reuse core platform surfaces first; create vertical modules only for unique operational workflows or complex domain-specific screens.**
+
+Avileo is a multi-vertical platform. The following core surfaces must be reused via mode-aware composition (`businessMode` / `useBusinessMode()`), not duplicated:
+
+| Core Surface | Route | Cochera Adaptation |
+|---|---|---|
+| Dashboard | `/dashboard` | Mode-aware rendering: show parking KPIs, hide sales/inventory metrics |
+| Configuration | `/config` | Add "Configuracion de Cochera" item gated by `businessMode === "cochera"` |
+| Reports | `/reportes` | Reuse existing report infrastructure; add dedicated Cochera report components only if table/export logic is materially different |
+| Business creation | `/business/create` | Already mode-aware with `cochera` option |
+
+Dedicated Avileo Cocheras routes are justified **only** for unique operational workflows:
+- `/cochera` — active vehicle sessions list
+- `/cochera/entrada` — register vehicle entry
+- `/cochera/cobrar/:id` — checkout and payment
+
+Do **not** create separate duplicates like `/cochera/dashboard`, a standalone Cochera settings menu disconnected from `/config`, or a separate reports module if existing reports can be adapted cleanly.
 
 ## Assumptions
 
@@ -83,6 +103,7 @@ CocheraPro adds a new Avileo business vertical for small Peruvian parking garage
 - Only one active `dentro` session per plate per business is allowed.
 - Payment methods are limited to `efectivo`, `yape`, and `plin` for MVP.
 - Free-plan monthly limits apply to completed parking transactions unless later changed.
+- Plan upgrades/status changes are internal/admin-controlled for now; the app should not add a “contact WhatsApp”, “upgrade now”, or payment processor flow unless explicitly requested later.
 - Excel export can be planned as an export feature; implementation may choose CSV or XLSX during `/plan` based on existing dependencies.
 - A single Avileo tenant represents one parking garage for this vertical.
 

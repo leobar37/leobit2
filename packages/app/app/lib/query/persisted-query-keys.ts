@@ -24,4 +24,9 @@ export const PERSISTED_REMOTE_QUERY_KEYS = {
   puntosVentaActive: withPersistedRemotePrefix(["puntos-venta", "active"] as const),
   puntoVenta: (id: string) => withPersistedRemotePrefix(["puntos-venta", id] as const),
   paymentMethodsConfig: withPersistedRemotePrefix(["payment-methods-config"] as const),
+  cocheraSettings: withPersistedRemotePrefix(["cochera", "settings"] as const),
+  cocheraSessions: withPersistedRemotePrefix(["cochera", "sessions"] as const),
+  cocheraDashboard: withPersistedRemotePrefix(["cochera", "dashboard"] as const),
+  cocheraReports: withPersistedRemotePrefix(["cochera", "reports"] as const),
+  subscriptionStatus: withPersistedRemotePrefix(["subscription", "status"] as const),
 } as const;

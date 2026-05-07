@@ -57,7 +57,7 @@ export type BusinessModeFlags = z.infer<typeof BusinessModeFlagsSchema>;
 /**
  * Business Mode identifier
  */
-export const BusinessModeSlugSchema = z.enum(["polleria", "agua"]);
+export const BusinessModeSlugSchema = z.enum(["polleria", "agua", "cochera"]);
 export type BusinessModeSlug = z.infer<typeof BusinessModeSlugSchema>;
 
 /**
