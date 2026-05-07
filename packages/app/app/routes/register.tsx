@@ -32,7 +32,7 @@ export default function RegisterPage() {
       if (!invitationToken) return null;
       const { data, error } = await api.public.invitations({ token: invitationToken }).get();
       if (error) throw new Error("Token inválido");
-      return data;
+      return data?.data ?? null;
     },
     enabled: !!invitationToken,
   });
@@ -131,7 +131,7 @@ export default function RegisterPage() {
   };
 
   const isInvitationInvalid = invitationToken && !isLoadingInvitation && !invitationData;
-  const hasValidInvitation = invitationData?.data?.name;
+  const hasValidInvitation = invitationData?.name;
 
   return (
     <MobileSlotProvider>
@@ -167,11 +167,11 @@ export default function RegisterPage() {
 
               {isInvitationInvalid && (
                 <div className="px-5 sm:px-6 pb-2">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                    <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-amber-800">
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 p-3">
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-300" />
+                    <div className="text-sm text-amber-900 dark:text-amber-100">
                       <p className="font-medium">Invitación no válida</p>
-                      <p className="text-amber-700">El enlace ha expirado o ya fue usado. Puedes crear una cuenta individual.</p>
+                      <p className="text-amber-800/80 dark:text-amber-100/80">El enlace ha expirado o ya fue usado. Puedes crear una cuenta individual.</p>
                     </div>
                   </div>
                 </div>

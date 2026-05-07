@@ -23,6 +23,7 @@ export interface CreateVisitaData {
 export interface BulkCreateVisitasData {
   distribucionId: string;
   customerIds: string[];
+  vendedorId?: string;
 }
 
 export interface UpdateVisitaStatusData {
@@ -182,7 +183,7 @@ export class VisitaRepository {
     const visits: Omit<NewVisita, "id">[] = data.customerIds.map((customerId) => ({
       distribucionId: data.distribucionId,
       customerId,
-      vendedorId: ctx.businessUserId,
+      vendedorId: data.vendedorId ?? ctx.businessUserId,
       businessId: ctx.businessId,
       status: "pendiente",
     }));

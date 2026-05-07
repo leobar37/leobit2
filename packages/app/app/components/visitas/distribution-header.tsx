@@ -11,11 +11,10 @@ interface DistributionHeaderProps {
 
 function formatFecha(fecha: string | Date): string {
   if (typeof fecha === "string") return fecha;
-  return fecha.toLocaleDateString("es-PE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const day = String(fecha.getUTCDate()).padStart(2, "0");
+  const month = String(fecha.getUTCMonth() + 1).padStart(2, "0");
+  const year = fecha.getUTCFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 export function DistributionHeader({ distribucion }: DistributionHeaderProps) {

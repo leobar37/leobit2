@@ -32,6 +32,7 @@ export default function VisitasPage() {
 
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
   const [search, setSearch] = useState("");
+  const [selectedFilterGroupId, setSelectedFilterGroupId] = useState<string | null>(null);
 
   const {
     selectionModal,
@@ -63,16 +64,33 @@ export default function VisitasPage() {
 
   const { data: visitasData, isLoading: isLoadingVisitas } = useVisitas(distribucion?.id);
 
+  const groupFilterOptions = useMemo(() => {
+    const groupMap = new Map<string, string>();
+    for (const visita of visitasData || []) {
+      for (const group of visita.groups || []) {
+        groupMap.set(group.id, group.name);
+      }
+    }
+    return Array.from(groupMap, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [visitasData]);
+
   const filteredVisitas = useMemo(() => {
     const visitasList = visitasData || [];
-    if (!search.trim()) return visitasList;
     const lowerSearch = search.toLowerCase();
-    return visitasList.filter(
-      (v) =>
+    return visitasList.filter((v) => {
+      const matchesSearch =
+        !search.trim() ||
         v.customer?.name?.toLowerCase().includes(lowerSearch) ||
-        v.customer?.dni?.includes(search)
-    );
-  }, [visitasData, search]);
+        v.customer?.dni?.includes(search);
+      const matchesGroup =
+        !selectedFilterGroupId ||
+        v.groups?.some((group) => group.id === selectedFilterGroupId);
+
+      return matchesSearch && matchesGroup;
+    });
+  }, [visitasData, search, selectedFilterGroupId]);
 
   async function handleCreateSingleVisita() {
     if (!distribucion?.id || !selectedCustomerId) return;
@@ -226,13 +244,41 @@ export default function VisitasPage() {
         />
       </div>
 
+      {groupFilterOptions.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={selectedFilterGroupId === null ? "default" : "outline"}
+            className="shrink-0 rounded-full"
+            onClick={() => setSelectedFilterGroupId(null)}
+          >
+            Todos
+          </Button>
+          {groupFilterOptions.map((group) => (
+            <Button
+              key={group.id}
+              type="button"
+              size="sm"
+              variant={selectedFilterGroupId === group.id ? "default" : "outline"}
+              className="shrink-0 rounded-full"
+              onClick={() => setSelectedFilterGroupId(group.id)}
+            >
+              {group.name}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {filteredVisitas.length === 0 && !isLoadingVisitas && (
         <div className="py-8 text-center">
           <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <p className="mb-4 text-muted-foreground">
-            {search ? "No se encontraron visitas" : "No hay visitas registradas"}
+            {search || selectedFilterGroupId
+              ? "No se encontraron visitas"
+              : "No hay visitas registradas"}
           </p>
-          {!search && distribucion && (
+          {!search && !selectedFilterGroupId && distribucion && (
             <Button
               onClick={() => selectionModal.open()}
               className="bg-orange-500 hover:bg-orange-600"

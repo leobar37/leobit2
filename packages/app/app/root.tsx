@@ -27,13 +27,13 @@ import { registerSW } from "virtual:pwa-register";
 
 export function HydrateFallback() {
   return (
-    <div className="min-h-screen bg-orange-500 flex flex-col items-center justify-center gap-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
       <img src="/logo.svg" alt="Avileo" className="w-20 h-20" />
       <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold text-white">Avileo</h1>
+        <h1 className="text-2xl font-bold">Avileo</h1>
         <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-white/80" />
-          <p className="text-sm text-white/80">Cargando...</p>
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
     </div>
@@ -98,6 +98,23 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
+      navigator.serviceWorker.getRegistrations().then(async (regs) => {
+        if (regs.length === 0) return;
+        await Promise.all(regs.map((r) => r.unregister()));
+        const cacheKeys = "caches" in window ? await window.caches.keys() : [];
+        await Promise.all(cacheKeys.map((name) => window.caches.delete(name)));
+
+        if (!sessionStorage.getItem("avileo_dev_sw_cleared")) {
+          sessionStorage.setItem("avileo_dev_sw_cleared", "true");
+          window.location.reload();
+        }
+      });
+      return;
+    }
+
     if (typeof registerSW !== "function") return;
 
     const intervals: ReturnType<typeof setInterval>[] = [];

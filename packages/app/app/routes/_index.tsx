@@ -30,13 +30,13 @@ const LOADING_TIMEOUT_MS = 3000;
 
 function SplashScreen() {
   return (
-    <div className="min-h-screen bg-orange-500 flex flex-col items-center justify-center gap-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
       <img src="/logo.svg" alt="Avileo" className="w-20 h-20" />
       <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold text-white">Avileo</h1>
+        <h1 className="text-2xl font-bold">Avileo</h1>
         <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-white/80" />
-          <p className="text-sm text-white/80">Cargando...</p>
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
     </div>

@@ -179,7 +179,8 @@ export class DistribucionService {
               }
     }
 
-    const groupIds = data.groupIds ?? (data as { groupId?: string }).groupId ? [(data as { groupId?: string }).groupId!] : [];
+    const legacyGroupId = (data as { groupId?: string }).groupId;
+    const groupIds = data.groupIds ?? (legacyGroupId ? [legacyGroupId] : []);
 
     if (groupIds.length > 0) {
       // Create junction records for each group
@@ -201,6 +202,7 @@ export class DistribucionService {
         const createdVisitas = await this.visitaRepository.bulkCreate(ctx, {
           distribucionId: distribucion.id,
           customerIds,
+          vendedorId: data.vendedorId,
         }, tx);
 
         // Register sync operations for each created visita
