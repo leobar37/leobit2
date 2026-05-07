@@ -9,6 +9,11 @@ import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
 import { toast } from "sonner";
 
+export interface VisitaGroup {
+  id: string;
+  name: string;
+}
+
 export interface Visita {
   id: string;
   businessId: string;
@@ -27,6 +32,7 @@ export interface Visita {
     address: string | null;
     phone: string | null;
   };
+  groups?: VisitaGroup[];
 }
 
 export interface CreateVisitaInput {
@@ -56,6 +62,7 @@ interface BackendVisita {
   updatedAt: string;
   customerName?: string;
   customerDni?: string | null;
+  groups?: VisitaGroup[];
 }
 
 /**
@@ -82,6 +89,7 @@ function mapVisita(v: BackendVisita): Visita {
           phone: null,
         }
       : undefined,
+    groups: v.groups,
   };
 }
 

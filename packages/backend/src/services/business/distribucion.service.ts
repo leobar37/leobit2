@@ -3,6 +3,7 @@ import type { DistribucionRepository } from "../repository/distribucion.reposito
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { CustomerGroupRepository } from "../repository/customer-group.repository";
+import type { DistribucionGroupRepository } from "../repository/distribucion-group.repository";
 import type { VisitaRepository } from "../repository/visita.repository";
 import type { RequestContext } from "../../context/request-context";
 import {
@@ -33,6 +34,7 @@ export interface CreateDistribucionItemInput {
 
 interface DistribucionWithItems extends Distribucion {
   items: (DistribucionItem & { variant?: { name: string; product?: { name: string } } })[];
+  groups?: { id: string; name: string }[];
 }
 
 export class DistribucionService {
@@ -41,6 +43,7 @@ export class DistribucionService {
     private itemRepository: DistribucionItemRepository,
     private variantRepository: ProductVariantRepository,
     private customerGroupRepository: CustomerGroupRepository,
+    private distribucionGroupRepository: DistribucionGroupRepository,
     private visitaRepository: VisitaRepository
   ) {}
 
@@ -100,7 +103,7 @@ export class DistribucionService {
       puntoVentaId?: string;
       notaCreacion?: string;
       fecha?: string;
-      groupId?: string;
+      groupIds?: string[];
       items?: CreateDistribucionItemInput[];
     },
     tx?: DbTransaction
@@ -176,10 +179,25 @@ export class DistribucionService {
               }
     }
 
-    if (data.groupId) {
-      const group = await this.customerGroupRepository.findByIdWithMembers(ctx, data.groupId, tx);
-      if (group && group.members.length > 0) {
-        const customerIds = group.members.map(m => m.customerId);
+    const groupIds = data.groupIds ?? (data as { groupId?: string }).groupId ? [(data as { groupId?: string }).groupId!] : [];
+
+    if (groupIds.length > 0) {
+      // Create junction records for each group
+      await this.distribucionGroupRepository.createMany(ctx, distribucion.id, groupIds, tx);
+
+      // Collect all unique customer IDs from all groups
+      const allCustomerIds = new Set<string>();
+      for (const groupId of groupIds) {
+        const group = await this.customerGroupRepository.findByIdWithMembers(ctx, groupId, tx);
+        if (group && group.members.length > 0) {
+          for (const member of group.members) {
+            allCustomerIds.add(member.customerId);
+          }
+        }
+      }
+
+      if (allCustomerIds.size > 0) {
+        const customerIds = Array.from(allCustomerIds);
         const createdVisitas = await this.visitaRepository.bulkCreate(ctx, {
           distribucionId: distribucion.id,
           customerIds,
@@ -187,7 +205,8 @@ export class DistribucionService {
 
         // Register sync operations for each created visita
         for (const visita of createdVisitas) {
-                  }
+          // Sync operation placeholder
+        }
       }
     }
 
@@ -196,7 +215,13 @@ export class DistribucionService {
       throw new NotFoundError("Distribución");
     }
 
-    return distribucionWithItems;
+    // Enrich with group names
+    const groups = await this.distribucionGroupRepository.findGroupsByDistribucionId(ctx, distribucion.id, tx);
+
+    return {
+      ...distribucionWithItems,
+      groups,
+    };
   }
 
   async updateDistribucion(
@@ -302,7 +327,14 @@ export class DistribucionService {
 
     const distribucionWithItems = await this.repository.findByIdWithItems(ctx, distribucion.id);
     if (!distribucionWithItems) return null;
-    return distribucionWithItems;
+
+    // Enrich with group names
+    const groups = await this.distribucionGroupRepository.findGroupsByDistribucionId(ctx, distribucion.id);
+
+    return {
+      ...distribucionWithItems,
+      groups,
+    };
   }
 
   async getDistribucionWithItems(
@@ -323,6 +355,29 @@ export class DistribucionService {
     }
 
     return distribucion;
+  }
+
+  /**
+   * Get groups linked to a distribution
+   */
+  async getDistribucionGroups(
+    ctx: RequestContext,
+    distribucionId: string
+  ): Promise<{ id: string; name: string }[]> {
+    if (!ctx.hasPermission("inventory.read")) {
+      throw new ForbiddenError("No tiene permisos para ver distribuciones");
+    }
+
+    const distribucion = await this.repository.findById(ctx, distribucionId);
+    if (!distribucion) {
+      throw new NotFoundError("Distribución");
+    }
+
+    if (!ctx.isAdmin() && distribucion.vendedorId !== ctx.businessUserId) {
+      throw new ForbiddenError("No puede ver esta distribución");
+    }
+
+    return this.distribucionGroupRepository.findGroupsByDistribucionId(ctx, distribucionId);
   }
 
   async getDistribucionItems(
@@ -421,9 +476,11 @@ export class DistribucionService {
         )
       );
 
-    await this.repository.delete(ctx, id);
+    // Delete group links
+    await this.distribucionGroupRepository.deleteByDistribucionId(ctx, id);
 
-      }
+    await this.repository.delete(ctx, id);
+  }
 
   async replaceDistribucionItems(
     ctx: RequestContext,

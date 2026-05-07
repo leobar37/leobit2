@@ -124,13 +124,14 @@ export default function NuevoCobroPage() {
   const parsedAmount = parseAmount(amount);
   const remainingDebt = calculateBalanceDue(currentDebt, parsedAmount);
 
+  // Auto-fill amount only when customer changes and amount is empty
   useEffect(() => {
-    if (customerId && currentDebt > 0) {
+    if (customerId && currentDebt > 0 && !amount) {
       setValue("amount", formatCurrency(currentDebt), {
         shouldValidate: true,
       });
     }
-  }, [customerId, currentDebt, setValue]);
+  }, [customerId]);
 
   const onSubmit = async (data: PaymentFormData) => {
     if (!customerId) return;

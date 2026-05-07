@@ -4,13 +4,14 @@
  */
 import { eq, and, inArray, desc, asc } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { visitas, customers, type Visita, type NewVisita } from "../../db/schema";
+import { visitas, customers, customerGroupMembers, customerGroups, distribucionGroups, type Visita, type NewVisita } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import type { DbTransaction } from "../../lib/txid";
 
 export interface VisitaWithCustomer extends Visita {
   customerName: string;
   customerDni?: string | null;
+  groups?: { id: string; name: string }[];
 }
 
 export interface CreateVisitaData {
@@ -32,7 +33,7 @@ export interface UpdateVisitaStatusData {
 
 export class VisitaRepository {
   /**
-   * Find all visits for a distribution
+   * Find all visits for a distribution with customer and group info
    */
   async findByDistribucionId(ctx: RequestContext, distribucionId: string): Promise<VisitaWithCustomer[]> {
     const results = await db
@@ -58,7 +59,49 @@ export class VisitaRepository {
       ))
       .orderBy(asc(visitas.status), desc(visitas.createdAt));
 
-    return results;
+    // Get groups linked to this distribution
+    const groupRows = await db
+      .select({
+        groupId: distribucionGroups.groupId,
+        groupName: customerGroups.name,
+      })
+      .from(distribucionGroups)
+      .innerJoin(customerGroups, eq(distribucionGroups.groupId, customerGroups.id))
+      .where(and(
+        eq(distribucionGroups.distribucionId, distribucionId),
+        eq(distribucionGroups.businessId, ctx.businessId)
+      ));
+
+    // Get customer-group memberships for customers in these visits
+    const customerIds = results.map(r => r.customerId);
+    let membershipRows: { customerId: string; groupId: string; groupName: string }[] = [];
+    if (customerIds.length > 0) {
+      membershipRows = await db
+        .select({
+          customerId: customerGroupMembers.customerId,
+          groupId: customerGroups.id,
+          groupName: customerGroups.name,
+        })
+        .from(customerGroupMembers)
+        .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+        .where(and(
+          inArray(customerGroupMembers.customerId, customerIds),
+          eq(customerGroupMembers.businessId, ctx.businessId)
+        ));
+    }
+
+    // Build a map of customerId -> groups
+    const customerGroupsMap = new Map<string, { id: string; name: string }[]>();
+    for (const row of membershipRows) {
+      const existing = customerGroupsMap.get(row.customerId) || [];
+      existing.push({ id: row.groupId, name: row.groupName });
+      customerGroupsMap.set(row.customerId, existing);
+    }
+
+    return results.map(r => ({
+      ...r,
+      groups: customerGroupsMap.get(r.customerId),
+    }));
   }
 
   /**
@@ -88,7 +131,25 @@ export class VisitaRepository {
       ))
       .limit(1);
 
-    return result[0] || null;
+    if (!result[0]) return null;
+
+    // Get groups for this customer
+    const membershipRows = await db
+      .select({
+        groupId: customerGroups.id,
+        groupName: customerGroups.name,
+      })
+      .from(customerGroupMembers)
+      .innerJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
+      .where(and(
+        eq(customerGroupMembers.customerId, result[0].customerId),
+        eq(customerGroupMembers.businessId, ctx.businessId)
+      ));
+
+    return {
+      ...result[0],
+      groups: membershipRows.map(r => ({ id: r.groupId, name: r.groupName })),
+    };
   }
 
   /**

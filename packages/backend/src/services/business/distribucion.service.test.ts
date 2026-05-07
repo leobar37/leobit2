@@ -32,6 +32,10 @@ describe("DistribucionService", () => {
       itemRepository as never,
       {} as never,
       {} as never,
+      {
+        createMany: vi.fn().mockResolvedValue([]),
+        findGroupsByDistribucionId: vi.fn().mockResolvedValue([]),
+      } as never,
       {} as never
     );
 
@@ -47,7 +51,7 @@ describe("DistribucionService", () => {
       {} as never
     );
 
-    expect(result).toEqual(distribucion);
+    expect(result).toEqual({ ...distribucion, groups: [] });
     expect(repository.create).toHaveBeenCalledWith(
       ctx,
       expect.objectContaining({

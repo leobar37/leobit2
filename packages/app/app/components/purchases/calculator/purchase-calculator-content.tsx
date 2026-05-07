@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
   Plus,
@@ -44,6 +44,7 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [preFilledItems, setPreFilledItems] = useState<PreFilledItem[]>([]);
+  const quantityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     data: products = [],
@@ -117,11 +118,17 @@ export function PurchaseCalculatorContent({ onAddedToCart, returnPath, preFilled
       if (variant) {
         setSelectedVariantId(variant.id);
         // Pre-fill quantity after a short delay to ensure calculator is ready
-        setTimeout(() => {
+        quantityTimeoutRef.current = setTimeout(() => {
           setFieldValue("quantity", firstItem.quantity);
         }, 150);
       }
     }
+    return () => {
+      if (quantityTimeoutRef.current) {
+        clearTimeout(quantityTimeoutRef.current);
+        quantityTimeoutRef.current = null;
+      }
+    };
   }, [preFilledItems, selectedProductId, variants, selectedVariantId, setFieldValue]);
 
   const handleSave = async () => {

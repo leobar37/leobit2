@@ -81,6 +81,18 @@ export function VisitaCard({
               DNI: {visita.customer.dni}
             </p>
           )}
+          {visita.groups && visita.groups.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {visita.groups.map((group) => (
+                <span
+                  key={group.id}
+                  className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                >
+                  {group.name}
+                </span>
+              ))}
+            </div>
+          )}
           {visita.motivoNoCompra && (
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">
               Motivo: {visita.motivoNoCompra}

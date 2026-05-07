@@ -21,8 +21,7 @@ import {
 } from "~/hooks/use-grupos";
 import { GroupCard } from "~/components/grupos/group-card";
 import { GroupFormDrawer } from "~/components/grupos/group-form-drawer";
-import { MemberDialog } from "~/components/grupos/member-dialog";
-import { useMemberManagement } from "~/hooks/use-member-management";
+import { MemberDrawer } from "~/components/grupos/member-drawer";
 
 export default function GroupsPage() {
   useSetLayout({ title: "Grupos de Clientes" });
@@ -36,11 +35,6 @@ export default function GroupsPage() {
   const dialogs = useGrupoDialogs();
 
   const [search, setSearch] = useState("");
-
-  const memberManagement = useMemberManagement({
-    onOpenMemberModal: dialogs.memberModal.open,
-    onResetMemberState: dialogs.resetMemberState,
-  });
 
   const filteredGroups = useMemo(() => {
     if (!search.trim()) return groups || [];
@@ -80,11 +74,10 @@ export default function GroupsPage() {
     }
   }, [dialogs, deleteMutation]);
 
-  const handleCloseMemberDialog = useCallback(() => {
+  const handleCloseMemberDrawer = useCallback(() => {
     dialogs.memberModal.close();
     dialogs.resetMemberState();
-    memberManagement.setSelectedGroupId(null);
-  }, [dialogs, memberManagement]);
+  }, [dialogs]);
 
   if (isLoading) {
     return (
@@ -128,7 +121,7 @@ export default function GroupsPage() {
                 dialogs.formModal.open(g);
               }}
               onDelete={(g) => dialogs.deleteModal.open(g)}
-              onManageMembers={memberManagement.handleManageMembers}
+              onManageMembers={(g) => dialogs.memberModal.open(g)}
             />
           ))}
         </div>
@@ -196,22 +189,13 @@ export default function GroupsPage() {
         </SheetContent>
       </Sheet>
 
-      <MemberDialog
+      <MemberDrawer
         isOpen={dialogs.memberModal.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseMemberDialog();
-          }
+        data={{
+          groupId: dialogs.memberModal.data?.id || "",
+          groupName: dialogs.memberModal.data?.name || "",
         }}
-        groupName={dialogs.memberModal.data?.name || ""}
-        members={memberManagement.members}
-        isLoadingMembers={memberManagement.isLoadingMembers}
-        availableCustomers={memberManagement.availableCustomers}
-        selectedCustomerIds={memberManagement.selectedCustomerIds}
-        onToggleCustomerSelection={memberManagement.toggleCustomerSelection}
-        onRemoveMember={memberManagement.handleRemoveMember}
-        onAddMembers={memberManagement.handleAddMembers}
-        isManagingMembers={memberManagement.isManagingMembers}
+        onClose={handleCloseMemberDrawer}
       />
     </div>
   );

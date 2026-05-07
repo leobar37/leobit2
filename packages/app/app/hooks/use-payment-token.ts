@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { api } from "~/lib/api-client";
 import { extractData, getErrorMessage } from "~/lib/api-utils";
 
-interface PaymentToken {
+export interface PaymentToken {
   id: string;
   paymentId: string;
   token: string;
@@ -27,20 +27,33 @@ export function usePaymentToken(paymentId: string | null) {
   });
 }
 
-export function useGeneratePaymentToken() {
+export function usePaymentTokenWithAutoGenerate(paymentId: string | null) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (paymentId: string) => {
-      const response = await api.payments({ id: paymentId }).token.post();
-      return extractData<{ token: string }>(response);
+  return useQuery({
+    queryKey: ["payment-token", paymentId],
+    queryFn: async () => {
+      if (!paymentId) return null;
+
+      const response = await api.payments({ id: paymentId }).token.get();
+      if (response.error) {
+        throw new Error(getErrorMessage(response.error.value));
+      }
+
+      const existing = (response.data?.data ?? null) as PaymentToken | null;
+      if (existing) {
+        return existing;
+      }
+
+      const createResponse = await api.payments({ id: paymentId }).token.post();
+      if (createResponse.error) {
+        throw new Error(getErrorMessage(createResponse.error.value));
+      }
+
+      const created = (createResponse.data?.data ?? null) as PaymentToken | null;
+      return created;
     },
-    onSuccess: (_, paymentId) => {
-      queryClient.invalidateQueries({ queryKey: ["payment-token", paymentId] });
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error) || "No se pudo generar el enlace");
-    },
+    enabled: !!paymentId,
   });
 }
 

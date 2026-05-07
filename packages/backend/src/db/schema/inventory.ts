@@ -25,6 +25,7 @@ import { businesses, businessUsers } from "./businesses";
 import { sales, saleItems } from "./sales";
 import { assets } from "./assets";
 import { puntosVenta } from "./puntos-venta";
+import { distribucionGroups } from "./distribucion-groups";
 
 export const productCategories = pgTable(
   "product_categories",
@@ -288,6 +289,7 @@ export const distribucionesRelations = relations(distribuciones, ({ one, many })
   items: many(distribucionItems),
   cierreItems: many(distribucionCierreItems),
   sales: many(sales),
+  groups: many(distribucionGroups),
 }));
 
 export const distribucionItemsRelations = relations(distribucionItems, ({ one }) => ({

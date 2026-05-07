@@ -44,7 +44,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         });
       }
     }, [team, user?.id]);
-    const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
+    const [selectedGroups, setSelectedGroups] = useState<CustomerGroup[]>([]);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState<PuntoVenta | null>(null);
     const [notaCreacion, setNotaCreacion] = useState("");
     const [assignItems, setAssignItems] = useState(false);
@@ -72,7 +72,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         puntoVenta: selectedPuntoVenta.name,
         puntoVentaId: selectedPuntoVenta.id,
         notaCreacion: notaCreacion.trim() || undefined,
-        groupId: selectedGroup?.id,
+        groupIds: selectedGroups.map((g) => g.id),
         items: assignItems ? items : [],
       });
     };
@@ -115,17 +115,20 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Grupo de Clientes
+            Grupos de Clientes
           </Label>
           <GroupSelect
-            value={selectedGroup?.id || null}
-            selectedGroup={selectedGroup}
-            onChange={setSelectedGroup}
-            helperText="Se crearán visitas para todos los clientes del grupo"
+            value={null}
+            values={selectedGroups.map((g) => g.id)}
+            selectedGroups={selectedGroups}
+            onChange={() => {}}
+            onMultiChange={setSelectedGroups}
+            helperText="Se crearán visitas para todos los clientes de los grupos seleccionados"
+            multi
           />
-          {selectedGroup && (
+          {selectedGroups.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              Se crearán {selectedGroup.memberCount ?? 0} visitas automáticamente
+              Se crearán {selectedGroups.reduce((sum, g) => sum + (g.memberCount ?? 0), 0)} visitas automáticamente
             </p>
           )}
         </div>

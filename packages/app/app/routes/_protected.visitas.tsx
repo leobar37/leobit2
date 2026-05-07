@@ -99,7 +99,7 @@ export default function VisitasPage() {
 
     const groupList = groups || [];
     const group = groupList.find((g) => g.id === selectedGroupId);
-    if (!group?.members?.length) {
+    if (!group?.memberCount || group.memberCount === 0) {
       toast.error("El grupo no tiene miembros");
       return;
     }

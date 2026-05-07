@@ -42,7 +42,15 @@ export interface DistribucionItemEnriched extends DistribucionItem {
   variantName?: string;
 }
 
-export type DistribucionWithItems = Distribucion & { items: DistribucionItemEnriched[] };
+export interface DistribucionGroup {
+  id: string;
+  name: string;
+}
+
+export type DistribucionWithItems = Distribucion & {
+  items: DistribucionItemEnriched[];
+  groups?: DistribucionGroup[];
+};
 
 export interface CreateDistribucionItemInput {
   variantId: string;
@@ -56,7 +64,7 @@ export interface CreateDistribucionInput {
   puntoVentaId?: string;
   notaCreacion?: string;
   fecha?: string;
-  groupId?: string;
+  groupIds?: string[];
   items?: CreateDistribucionItemInput[];
 }
 
@@ -66,7 +74,7 @@ export interface CreateDistribucionApiInput {
   puntoVentaId?: string;
   notaCreacion?: string;
   fecha?: string;
-  groupId?: string;
+  groupIds?: string[];
   items?: Array<{
     variantId: string;
     cantidadAsignada: number;
@@ -95,7 +103,7 @@ interface BackendDistribucionItem {
 }
 
 function mapDistribucionWithItems(
-  d: Distribucion & { items?: BackendDistribucionItem[] }
+  d: Distribucion & { items?: BackendDistribucionItem[]; groups?: DistribucionGroup[] }
 ): DistribucionWithItems {
   return {
     ...d,
@@ -112,6 +120,7 @@ function mapDistribucionWithItems(
         variantName: item.variant?.name,
         productName: item.variant?.product?.name,
       })) ?? [],
+    groups: d.groups,
   };
 }
 
@@ -128,7 +137,7 @@ export function useDistribuciones(params?: {
   const businessId = business?.id || storedBusinessId;
 
   return useQuery({
-    queryKey: [queryKeys.distribuciones.all, businessId, params],
+    queryKey: [...queryKeys.distribuciones.all, businessId, params],
     queryFn: async () => {
       if (!businessId) return [];
       const response = await api.distribuciones.get({
@@ -201,6 +210,7 @@ export function useMiDistribucion(fecha?: string) {
       });
       const data = extractData<Distribucion & {
         items?: BackendDistribucionItem[];
+        groups?: DistribucionGroup[];
       }>(response);
       return data ? mapDistribucionWithItems(data) : null;
     },
@@ -219,6 +229,7 @@ export function useDistribucion(id: string | null) {
       const response = await api.distribuciones({ id }).get();
       const data = extractData<Distribucion & {
         items?: BackendDistribucionItem[];
+        groups?: DistribucionGroup[];
       }>(response);
       return mapDistribucionWithItems(data);
     },

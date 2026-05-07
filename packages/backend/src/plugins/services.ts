@@ -50,6 +50,7 @@ import { CustomerTagService } from "../services/business/customer-tag.service";
 import { PuntoVentaRepository } from "../services/repository/punto-venta.repository";
 import { CustomerGroupRepository } from "../services/repository/customer-group.repository";
 import { CustomerGroupService } from "../services/business/customer-group.service";
+import { DistribucionGroupRepository } from "../services/repository/distribucion-group.repository";
 import { VisitaRepository } from "../services/repository/visita.repository";
 import { VisitaService } from "../services/business/visita.service";
 import { ExpenseRepository } from "../services/repository/expense.repository";
@@ -85,6 +86,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const categoryRepo = new CategoryRepository();
     const customerTagRepo = new CustomerTagRepository();
     const customerGroupRepo = new CustomerGroupRepository();
+    const distribucionGroupRepo = new DistribucionGroupRepository();
     const visitaRepo = new VisitaRepository();
     const expenseRepo = new ExpenseRepository();
     const expenseCategoryRepo = new ExpenseCategoryRepository();
@@ -96,7 +98,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const customerService = new CustomerService(customerRepo);
     const productService = new ProductService(productRepo, productVariantRepo, categoryRepo);
     const paymentService = new PaymentService(paymentRepo, customerRepo, saleRepo);
-    const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, visitaRepo);
+    const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, distribucionGroupRepo, visitaRepo);
     const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);
