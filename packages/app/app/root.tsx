@@ -98,59 +98,64 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof registerSW === "function") {
-      const updateSW = registerSW({
-        immediate: true,
-        onRegistered(r: ServiceWorkerRegistration | undefined) {
-          console.log("[PWA] Service Worker registered:", r);
-          // Check for updates immediately and periodically
-          if (r) {
-            // Check for updates every 5 minutes
-            setInterval(() => {
-              console.log("[PWA] Checking for updates...");
-              r.update();
-            }, 5 * 60 * 1000);
+    if (typeof registerSW !== "function") return;
 
-            // Also check immediately if there's a waiting worker
-            if (r.waiting) {
-              console.log("[PWA] Update already waiting, reloading...");
-              r.waiting.postMessage({ type: "SKIP_WAITING" });
-              window.location.reload();
-            }
-          }
-        },
-        onRegisterError(error: Error | undefined) {
-          console.error("[PWA] Service Worker registration failed:", error);
-        },
-        onOfflineReady() {
-          console.log("[PWA] App ready");
-        },
-        onNeedRefresh() {
-          // Force reload when new version is available to avoid stale chunks
-          console.log("[PWA] New version available, reloading...");
-          window.location.reload();
-        },
-      });
+    const intervals: ReturnType<typeof setInterval>[] = [];
 
-      // Listen for messages from SW about updates
-      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-        navigator.serviceWorker.addEventListener("message", (event) => {
-          if (event.data && event.data.type === "SW_UPDATED") {
-            console.log("[PWA] SW reports new version, reloading...");
+    const updateSW = registerSW({
+      immediate: true,
+      onRegistered(r: ServiceWorkerRegistration | undefined) {
+        console.log("[PWA] Service Worker registered:", r);
+        if (r) {
+          const interval = setInterval(() => {
+            console.log("[PWA] Checking for updates...");
+            r.update();
+          }, 5 * 60 * 1000);
+          intervals.push(interval);
+
+          if (r.waiting) {
+            console.log("[PWA] Update already waiting, reloading...");
+            r.waiting.postMessage({ type: "SKIP_WAITING" });
             window.location.reload();
           }
-        });
+        }
+      },
+      onRegisterError(error: Error | undefined) {
+        console.error("[PWA] Service Worker registration failed:", error);
+      },
+      onOfflineReady() {
+        console.log("[PWA] App ready");
+      },
+      onNeedRefresh() {
+        console.log("[PWA] New version available, reloading...");
+        window.location.reload();
+      },
+    });
 
-        // Listen for controllerchange (new SW activated)
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          console.log("[PWA] New Service Worker activated");
-        });
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === "SW_UPDATED") {
+        console.log("[PWA] SW reports new version, reloading...");
+        window.location.reload();
       }
+    };
 
-      return () => {
-        updateSW && updateSW();
-      };
+    const handleControllerChange = () => {
+      console.log("[PWA] New Service Worker activated");
+    };
+
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", handleSWMessage);
+      navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
     }
+
+    return () => {
+      intervals.forEach(clearInterval);
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("message", handleSWMessage);
+        navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+      }
+      if (updateSW) updateSW();
+    };
   }, []);
 
   useEffect(() => {

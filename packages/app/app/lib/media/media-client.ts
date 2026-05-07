@@ -1,4 +1,5 @@
 import { getStoredAuthToken, getStoredBusinessId } from "~/lib/session-storage";
+import { getApiErrorMessage } from "~/lib/api-client";
 import type { UploadResponse, MediaResolveRequest, MediaResolveResponse } from "./media-types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5201";
@@ -33,7 +34,7 @@ export async function uploadMediaFile(endpoint: "/files/upload" | "/assets/uploa
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: "Upload failed" }));
-    throw new Error(errorData.error || "Upload failed");
+    throw new Error(getApiErrorMessage(errorData, "No se pudo subir el archivo"));
   }
 
   return response.json() as Promise<UploadResponse>;
@@ -54,7 +55,7 @@ export async function resolveMediaBatch(request: MediaResolveRequest): Promise<M
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: "Resolve failed" }));
-    throw new Error(errorData.error || "Resolve failed");
+    throw new Error(getApiErrorMessage(errorData, "No se pudo resolver el archivo"));
   }
 
   return response.json() as Promise<MediaResolveResponse>;

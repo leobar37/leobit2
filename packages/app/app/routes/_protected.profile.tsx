@@ -1,8 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Camera, Loader2, User, Moon, Sun, Monitor } from "lucide-react";
+import { Camera, Loader2, User, Moon, Sun, Monitor, Download, Check, Smartphone, Share2, X } from "lucide-react";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
+import { usePWAInstall } from "~/hooks/use-pwa-install";
 import { useFile } from "~/hooks/use-files";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
@@ -47,6 +48,7 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const isLoading = profileLoading;
   const { mode, setMode } = useTheme();
+  const { canInstall, isInstalled, isIOS, install } = usePWAInstall();
 
   const wrapperForm = useWrapperForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -82,7 +84,7 @@ export default function ProfilePage() {
     return () => URL.revokeObjectURL(previewUrl);
   }, [avatarValue]);
 
-  const onSubmit = async (data: ProfileFormData) => {
+  const saveProfile = async (data: ProfileFormData) => {
     setIsUploading(true);
     try {
       const payload: Record<string, string> = {};
@@ -121,6 +123,20 @@ export default function ProfilePage() {
       shouldValidate: true,
     });
   };
+
+  const handleSubmit = wrapperForm.handleSubmit(async (rawData) => {
+    setIsUploading(true);
+    try {
+      const data = await wrapperForm.resolvePayload(rawData);
+      await saveProfile(data);
+    } catch (error) {
+      toast.error("Error al actualizar el perfil", {
+        description: getErrorMessage(error),
+      });
+      console.error("Error updating profile:", error);
+      setIsUploading(false);
+    }
+  });
 
   if (isLoading) {
     return (
@@ -172,7 +188,7 @@ export default function ProfilePage() {
 
           <div>
             <WrapperFormProvider form={wrapperForm}>
-              <form onSubmit={wrapperForm.handleResolvedSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <FormMediaField
                   name="avatarId"
                   label="Avatar"
@@ -248,6 +264,60 @@ export default function ProfilePage() {
               );
             })}
           </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Aplicación</h3>
+            <p className="text-sm text-muted-foreground">
+              Instala Avileo en tu dispositivo para acceso rápido
+            </p>
+          </div>
+          {isInstalled ? (
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-green-200 bg-green-50">
+              <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                <Check className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-800">Avileo instalado</p>
+                <p className="text-xs text-green-600">La app está en tu pantalla de inicio</p>
+              </div>
+            </div>
+          ) : canInstall ? (
+            <button
+              type="button"
+              onClick={install}
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                {isIOS ? (
+                  <Share2 className="h-5 w-5 text-orange-600" />
+                ) : (
+                  <Download className="h-5 w-5 text-orange-600" />
+                )}
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-medium text-orange-800">
+                  {isIOS ? "Agregar a pantalla de inicio" : "Instalar Avileo"}
+                </p>
+                <p className="text-xs text-orange-600">
+                  {isIOS
+                    ? "Toca el botón compartir y selecciona 'Agregar a pantalla de inicio'"
+                    : "Agrega la app para acceso sin conexión"}
+                </p>
+              </div>
+            </button>
+          ) : (
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-gray-50">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                <Smartphone className="h-5 w-5 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Avileo Web</p>
+                <p className="text-xs text-gray-500">Usa tu navegador para acceder a Avileo</p>
+              </div>
+            </div>
+          )}
         </div>
       </MobilePage.Root>
 

@@ -118,7 +118,7 @@ export default defineConfig({
               cacheableResponse: {
                 statuses: [0, 200],
               },
-              networkTimeoutSeconds: 3, // If network takes >3s, use cache
+              networkTimeoutSeconds: 10, // If network takes >10s, use cache
             },
           },
         ],
