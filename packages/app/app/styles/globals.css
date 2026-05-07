@@ -250,4 +250,14 @@
   .shell-nav-item:hover {
     background: var(--nav-hover-bg);
   }
+
+  @keyframes avileo-route-progress {
+    0% {
+      transform: translateX(-110%);
+    }
+
+    100% {
+      transform: translateX(220%);
+    }
+  }
 }

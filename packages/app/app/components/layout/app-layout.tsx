@@ -1,9 +1,9 @@
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigation } from "react-router";
 import {
   createContext,
   useContext,
   useState,
-  useEffect,
+  useLayoutEffect,
   useCallback,
   useMemo,
   useRef,
@@ -12,7 +12,6 @@ import {
 import {
   Home,
   ShoppingCart,
-  ClipboardList,
   Users,
   Menu,
   LogOut,
@@ -20,7 +19,6 @@ import {
   ArrowLeft,
   Wallet,
   Calendar,
-  ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme";
@@ -43,15 +41,6 @@ const menuItems = [
   { icon: Menu, label: "Más", href: "/config" },
 ];
 
-const moreMenuItems = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
-  { icon: Wallet, label: "Cobros", href: "/cobros" },
-  { icon: Users, label: "Clientes", href: "/clientes" },
-  { icon: Calendar, label: "Visitas", href: "/visitas" },
-  { icon: ImageIcon, label: "Activos", href: "/activos" },
-];
-
 interface LayoutConfig {
   title?: string;
   actions?: ReactNode;
@@ -66,6 +55,76 @@ interface LayoutContextValue {
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null);
+
+type RouteLayoutConfig = Required<
+  Pick<LayoutConfig, "title" | "showBottomNav" | "showBackButton" | "backHref">
+>;
+
+const DEFAULT_ROUTE_LAYOUT: RouteLayoutConfig = {
+  title: "Avileo",
+  showBottomNav: true,
+  showBackButton: false,
+  backHref: "/dashboard",
+};
+
+const ROUTE_LAYOUTS: Array<[pattern: RegExp, config: Partial<RouteLayoutConfig>]> = [
+  [/^\/dashboard\/?$/, { title: "Avileo" }],
+  [/^\/ventas\/?$/, { title: "Ventas" }],
+  [/^\/ventas\/[^/]+\/editar\/calculadora\/?$/, { title: "Calculadora", showBottomNav: false, showBackButton: true, backHref: "/ventas" }],
+  [/^\/ventas\/[^/]+\/editar\/?$/, { title: "Editar venta", showBackButton: true, backHref: "/ventas" }],
+  [/^\/ventas\/[^/]+\/?$/, { title: "Detalle de venta", showBackButton: true, backHref: "/ventas" }],
+  [/^\/clientes\/nuevo\/?$/, { title: "Nuevo cliente", showBackButton: true, backHref: "/clientes" }],
+  [/^\/clientes\/[^/]+\/edit\/?$/, { title: "Editar cliente", showBackButton: true, backHref: "/clientes" }],
+  [/^\/clientes\/[^/]+\/?$/, { title: "Cliente", showBackButton: true, backHref: "/clientes" }],
+  [/^\/clientes\/?$/, { title: "Clientes" }],
+  [/^\/cobros\/nuevo\/?$/, { title: "Nuevo cobro", showBackButton: true, backHref: "/cobros" }],
+  [/^\/cobros\/?$/, { title: "Cobros" }],
+  [/^\/visitas\/?$/, { title: "Visitas" }],
+  [/^\/mi-distribucion\/?$/, { title: "Mi Distribución", showBackButton: true, backHref: "/dashboard" }],
+  [/^\/distribuciones\/nueva\/?$/, { title: "Nueva distribución", showBackButton: true, backHref: "/distribuciones" }],
+  [/^\/distribuciones\/[^/]+\/editar\/?$/, { title: "Editar distribución", showBackButton: true, backHref: "/distribuciones" }],
+  [/^\/distribuciones\/?$/, { title: "Distribuciones del día", showBackButton: true, backHref: "/config" }],
+  [/^\/productos\/nuevo\/?$/, { title: "Nuevo Producto", showBackButton: true, backHref: "/productos" }],
+  [/^\/productos\/[^/]+\/?$/, { title: "Producto", showBackButton: true, backHref: "/productos" }],
+  [/^\/productos\/?$/, { title: "Catálogo" }],
+  [/^\/gastos\/nuevo\/?$/, { title: "Nuevo Gasto", showBackButton: true, backHref: "/gastos" }],
+  [/^\/gastos\/[^/]+\/?$/, { title: "Detalle del Gasto", showBackButton: true, backHref: "/gastos" }],
+  [/^\/gastos\/?$/, { title: "Gastos" }],
+  [/^\/compras\/nueva\/[^/]+\/calculadora\/?$/, { title: "Calculadora", showBottomNav: false, showBackButton: true, backHref: "/compras/nueva" }],
+  [/^\/compras\/nueva\/calculadora\/?$/, { title: "Calculadora", showBottomNav: false, showBackButton: true, backHref: "/compras/nueva" }],
+  [/^\/compras\/nueva\/?$/, { title: "Nueva compra", showBackButton: true, backHref: "/compras" }],
+  [/^\/compras\/[^/]+\/editar\/calculadora\/?$/, { title: "Calculadora", showBottomNav: false, showBackButton: true, backHref: "/compras" }],
+  [/^\/compras\/[^/]+\/editar\/?$/, { title: "Editar compra", showBackButton: true, backHref: "/compras" }],
+  [/^\/compras\/[^/]+\/?$/, { title: "Compra", showBackButton: true, backHref: "/compras" }],
+  [/^\/compras\/?$/, { title: "Compras" }],
+  [/^\/proveedores\/nuevo\/?$/, { title: "Nuevo proveedor", showBackButton: true, backHref: "/proveedores" }],
+  [/^\/proveedores\/[^/]+\/edit\/?$/, { title: "Editar proveedor", showBackButton: true, backHref: "/proveedores" }],
+  [/^\/proveedores\/[^/]+\/?$/, { title: "Proveedor", showBackButton: true, backHref: "/proveedores" }],
+  [/^\/proveedores\/?$/, { title: "Proveedores" }],
+  [/^\/business\/edit\/?$/, { title: "Mi Negocio", showBackButton: true, backHref: "/config" }],
+  [/^\/business\/create\/?$/, { title: "Crear negocio", showBottomNav: false }],
+  [/^\/profile\/?$/, { title: "Mi Perfil", showBackButton: true, backHref: "/config" }],
+  [/^\/team\/?$/, { title: "Equipo", showBackButton: true, backHref: "/config" }],
+  [/^\/invitations\/?$/, { title: "Invitaciones", showBackButton: true, backHref: "/team" }],
+  [/^\/config\/payment-methods\/?$/, { title: "Métodos de Pago", showBackButton: true, backHref: "/config" }],
+  [/^\/config\/security\/?$/, { title: "Seguridad", showBackButton: true, backHref: "/config" }],
+  [/^\/config\/whatsapp\/templates\/?$/, { title: "Plantillas", showBackButton: true, backHref: "/config/whatsapp" }],
+  [/^\/config\/whatsapp\/?$/, { title: "WhatsApp", showBackButton: true, backHref: "/config" }],
+  [/^\/config\/tags\/?$/, { title: "Etiquetas", showBackButton: true, backHref: "/config" }],
+  [/^\/config\/puntos-venta\/?$/, { title: "Puntos de venta", showBackButton: true, backHref: "/config" }],
+  [/^\/config\/flags\/?$/, { title: "Funciones", showBackButton: true, backHref: "/config" }],
+  [/^\/config\/?$/, { title: "Avileo" }],
+  [/^\/activos\/?$/, { title: "Activos", showBackButton: true, backHref: "/config" }],
+  [/^\/reportes\//, { title: "Reportes", showBackButton: true, backHref: "/config" }],
+];
+
+function getRouteLayout(pathname: string): RouteLayoutConfig {
+  const match = ROUTE_LAYOUTS.find(([pattern]) => pattern.test(pathname));
+  return {
+    ...DEFAULT_ROUTE_LAYOUT,
+    ...(match?.[1] ?? {}),
+  };
+}
 
 export function useLayout() {
   const context = useContext(LayoutContext);
@@ -104,7 +163,7 @@ export function useSetLayout(config: LayoutConfig) {
   const actionsRef = useRef(config.actions);
   actionsRef.current = config.actions;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setConfig({
       ...stableConfig,
       actions: actionsRef.current,
@@ -128,19 +187,32 @@ function AppLayoutHeaderControl({ children }: { children: ReactNode }) {
 export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
   const { user, logout, isLoggingOut } = useAuth();
   const location = useLocation();
-  const [config, setConfig] = useState<LayoutConfig>({
-    title: "Avileo",
-    showBottomNav: true,
-    showBackButton: false,
-  });
+  const navigation = useNavigation();
+  const routeLayout = useMemo(
+    () => getRouteLayout(location.pathname),
+    [location.pathname],
+  );
+  const [routeConfig, setRouteConfig] = useState<
+    LayoutConfig & { pathname: string }
+  >({ ...routeLayout, pathname: location.pathname });
 
-  useEffect(() => {
-    setConfig({
-      title: "Avileo",
-      showBottomNav: true,
-      showBackButton: false,
-    });
-  }, [location.pathname]);
+  const setConfig = useCallback(
+    (nextConfig: LayoutConfig) => {
+      setRouteConfig({
+        ...nextConfig,
+        pathname: location.pathname,
+      });
+    },
+    [location.pathname],
+  );
+
+  const config: LayoutConfig =
+    routeConfig.pathname === location.pathname
+      ? { ...routeLayout, ...routeConfig }
+      : routeLayout;
+
+  const pendingPathname = navigation.location?.pathname;
+  const isNavigating = navigation.state !== "idle" && Boolean(pendingPathname);
 
   const {
     title = "Avileo",
@@ -245,6 +317,15 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
   return (
     <LayoutContext.Provider value={{ config, setConfig }}>
       <MobileShell.Root variant="protected">
+        {isNavigating ? (
+          <div
+            aria-hidden="true"
+            className="fixed left-0 right-0 top-0 z-[60] h-0.5 overflow-hidden bg-orange-500/15"
+          >
+            <div className="h-full w-1/2 animate-[avileo-route-progress_0.9s_ease-in-out_infinite] bg-orange-500" />
+          </div>
+        ) : null}
+
         {showBackButton ? (
           <MobileSlot name="header:left" priority={-10}>
             <Link
@@ -273,21 +354,25 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
             <div className="flex items-center justify-around max-w-md mx-auto">
               {menuItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.href);
+                const isPending = pendingPathname?.startsWith(item.href) ?? false;
+                const isHighlighted = isActive || isPending;
                 return (
                   <Link
                     key={item.href}
                     to={item.href}
+                    aria-current={isActive ? "page" : undefined}
+                    aria-busy={isPending || undefined}
                     className={`shell-nav-item flex flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-colors ${
-                      isActive
+                      isHighlighted
                         ? "shell-nav-active text-orange-700"
                         : "text-muted-foreground"
-                    }`}
+                    } ${isPending ? "scale-[0.98] opacity-90" : ""}`}
                   >
                     <item.icon
-                      className={`h-5 w-5 ${isActive ? "text-orange-600" : "text-muted-foreground"}`}
+                      className={`h-5 w-5 ${isHighlighted ? "text-orange-600" : "text-muted-foreground"}`}
                     />
                     <span
-                      className={`text-xs ${isActive ? "font-semibold text-orange-700" : "text-muted-foreground"}`}
+                      className={`text-xs ${isHighlighted ? "font-semibold text-orange-700" : "text-muted-foreground"}`}
                     >
                       {item.label}
                     </span>
