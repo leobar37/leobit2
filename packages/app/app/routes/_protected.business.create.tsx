@@ -3,15 +3,26 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router";
-import { Route, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  CarFront,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Droplets,
+  Drumstick,
+  Loader2,
+  Route,
+} from "lucide-react";
 import { useCreateBusiness } from "@/hooks/use-business";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormPage } from "~/components/layout/form-page";
 import { hydrateCurrentBusinessContext } from "~/lib/business-context";
+import { cn } from "~/lib/utils";
 
 const createBusinessSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
+  businessMode: z.enum(["polleria", "agua", "cochera"]),
   ruc: z.string().max(20).optional(),
   address: z.string().optional(),
   phone: z.string().max(20).optional(),
@@ -19,6 +30,33 @@ const createBusinessSchema = z.object({
 });
 
 type CreateBusinessFormData = z.infer<typeof createBusinessSchema>;
+type BusinessModeOption = CreateBusinessFormData["businessMode"];
+
+const businessModeOptions: Array<{
+  value: BusinessModeOption;
+  title: string;
+  description: string;
+  icon: typeof Drumstick;
+}> = [
+  {
+    value: "polleria",
+    title: "Pollería / distribuidora de pollo",
+    description: "Ventas por kilos, reparto diario, clientes y cobros.",
+    icon: Drumstick,
+  },
+  {
+    value: "agua",
+    title: "Reparto de agua",
+    description: "Rutas, bidones, recargas y clientes recurrentes.",
+    icon: Droplets,
+  },
+  {
+    value: "cochera",
+    title: "Cochera / playa de estacionamiento",
+    description: "Entradas, salidas, tarifas y cobro por permanencia.",
+    icon: CarFront,
+  },
+];
 
 export default function CreateBusinessPage() {
   const navigate = useNavigate();
@@ -30,6 +68,7 @@ export default function CreateBusinessPage() {
     mode: "onChange",
     defaultValues: {
       name: "",
+      businessMode: "polleria",
       ruc: "",
       address: "",
       phone: "",
@@ -45,6 +84,7 @@ export default function CreateBusinessPage() {
         address: data.address || undefined,
         phone: data.phone || undefined,
         email: data.email || undefined,
+        businessMode: data.businessMode,
       };
 
       await createBusiness.mutateAsync(input);
@@ -99,77 +139,140 @@ export default function CreateBusinessPage() {
             <h1 className="text-2xl font-bold text-foreground">
               ¿Cómo se llama tu negocio?
             </h1>
+            <p className="mx-auto mt-2 max-w-[19rem] text-sm leading-5 text-muted-foreground">
+              Elige el rubro para preparar la app con las pantallas correctas.
+            </p>
           </div>
         </div>
 
         <FormProvider {...form}>
           <form id="business-create-form" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-4">
-            <FormInput
-              label="Nombre del negocio *"
-              placeholder="Ej: Pollería El Sabor"
-              error={form.formState.errors.name?.message}
-              className="text-lg"
-              name="name"
-            />
+              <FormInput
+                label="Nombre del negocio *"
+                placeholder="Ej: Pollería El Sabor"
+                error={form.formState.errors.name?.message}
+                className="text-lg"
+                name="name"
+              />
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setShowOptional(!showOptional)}
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                {showOptional ? (
-                  <>
-                    <ChevronUp className="w-4 h-4" />
-                    Ocultar opcionales
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4" />
-                    Agregar RUC, teléfono (opcional)
-                  </>
-                )}
-              </button>
+              <div className="space-y-3" role="radiogroup" aria-label="Tipo de negocio">
+                <p className="text-sm font-medium text-foreground">Tipo de negocio *</p>
+                {businessModeOptions.map((option) => {
+                  const Icon = option.icon;
+                  const selected = form.watch("businessMode") === option.value;
 
-              {showOptional && (
-                <div className="mt-4 space-y-4 pt-4 border-t border-gray-100">
-                  <div className="grid grid-cols-2 gap-3">
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      data-testid={`business-mode-${option.value}`}
+                      onClick={() =>
+                        form.setValue("businessMode", option.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                      disabled={createBusiness.isPending}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2",
+                        selected
+                          ? "border-orange-400 bg-card shadow-sm ring-1 ring-orange-400/35"
+                          : "border-border bg-card hover:border-orange-300/60 hover:bg-muted/40",
+                        createBusiness.isPending && "cursor-not-allowed opacity-60"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                          selected
+                            ? "bg-orange-500 text-white"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1 space-y-1">
+                        <span className="block text-base font-semibold text-foreground">
+                          {option.title}
+                        </span>
+                        <span className="block text-sm leading-5 text-muted-foreground">
+                          {option.description}
+                        </span>
+                      </span>
+                      <CheckCircle2
+                        className={cn(
+                          "mt-0.5 h-5 w-5 shrink-0",
+                          selected
+                            ? "text-orange-500"
+                            : "text-muted-foreground/60"
+                        )}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOptional(!showOptional)}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showOptional ? (
+                    <>
+                      <ChevronUp className="w-4 h-4" />
+                      Ocultar opcionales
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-4 h-4" />
+                      Agregar RUC, teléfono (opcional)
+                    </>
+                  )}
+                </button>
+
+                {showOptional && (
+                  <div className="mt-4 space-y-4 pt-4 border-t border-gray-100">
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormInput
+                        label="RUC"
+                        placeholder="20123456789"
+                        error={form.formState.errors.ruc?.message}
+                        name="ruc"
+                      />
+                      <FormInput
+                        label="Teléfono"
+                        placeholder="987654321"
+                        error={form.formState.errors.phone?.message}
+                        name="phone"
+                      />
+                    </div>
                     <FormInput
-                      label="RUC"
-                      placeholder="20123456789"
-                      error={form.formState.errors.ruc?.message}
-                      name="ruc"
+                      label="Dirección"
+                      placeholder="Av. Principal 123"
+                      error={form.formState.errors.address?.message}
+                      name="address"
                     />
                     <FormInput
-                      label="Teléfono"
-                      placeholder="987654321"
-                      error={form.formState.errors.phone?.message}
-                      name="phone"
+                      label="Email del negocio"
+                      type="email"
+                      placeholder="contacto@tunegocio.com"
+                      error={form.formState.errors.email?.message}
+                      name="email"
                     />
                   </div>
-                  <FormInput
-                    label="Dirección"
-                    placeholder="Av. Principal 123"
-                    error={form.formState.errors.address?.message}
-                    name="address"
-                  />
-                  <FormInput
-                    label="Email del negocio"
-                    type="email"
-                    placeholder="contacto@tunegocio.com"
-                    error={form.formState.errors.email?.message}
-                    name="email"
-                  />
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {form.formState.errors.root && (
-              <p className="text-sm text-destructive text-center">
-                {form.formState.errors.root.message}
-              </p>
-            )}
+              {form.formState.errors.root && (
+                <p className="text-sm text-destructive text-center">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
             </div>
           </form>
         </FormProvider>

@@ -38,8 +38,17 @@ export default function OnboardingDataPage() {
   const { mode } = useBusinessMode();
   const [selectedOption, setSelectedOption] = useState<OnboardingOption>("demo");
   const isWaterMode = mode === "agua";
+  const isCocheraMode = mode === "cochera";
   const options = onboardingOptions.map((option) => {
-    if (!isWaterMode || option.value !== "demo") return option;
+    if (option.value !== "demo") return option;
+    if (isCocheraMode) {
+      return {
+        ...option,
+        description: "Tarifas, espacios y datos iniciales para operar entradas y salidas.",
+        detail: "Recomendado para probar cochera",
+      };
+    }
+    if (!isWaterMode) return option;
     return {
       ...option,
       description: "Bidón 20L, Bidón 10L y configuración inicial para vender por unidad.",
@@ -102,7 +111,8 @@ export default function OnboardingDataPage() {
             Completa tu registro
           </h1>
           <p className="mx-auto max-w-[18rem] text-sm leading-5 text-muted-foreground">
-            Puedes entrar con datos listos para probar {isWaterMode ? "repartos" : "ventas"} o empezar sin información inicial.
+            Puedes entrar con datos listos para probar{" "}
+            {isCocheraMode ? "tu cochera" : isWaterMode ? "repartos" : "ventas"} o empezar sin información inicial.
           </p>
         </div>
 
@@ -124,8 +134,8 @@ export default function OnboardingDataPage() {
                   "flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2",
                   selected
-                    ? "border-orange-400 bg-orange-50 shadow-sm dark:border-orange-500/70 dark:bg-orange-500/12"
-                    : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-[#151821] dark:hover:border-white/20 dark:hover:bg-white/[0.08]",
+                    ? "border-orange-400 bg-card shadow-sm ring-1 ring-orange-400/35"
+                    : "border-border bg-card hover:border-orange-300/60 hover:bg-muted/40",
                   isLoading && "cursor-not-allowed opacity-60"
                 )}
               >
@@ -133,8 +143,8 @@ export default function OnboardingDataPage() {
                   className={cn(
                     "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
                     selected
-                      ? "bg-orange-100 text-orange-700 dark:bg-orange-500/18 dark:text-orange-200"
-                      : "bg-gray-100 text-gray-500 dark:bg-white/8 dark:text-gray-300"
+                      ? "bg-orange-500 text-white"
+                      : "bg-muted text-muted-foreground"
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -160,19 +170,19 @@ export default function OnboardingDataPage() {
                   </span>
                   <span
                     className={cn(
-                      "block text-xs font-medium leading-4",
-                      selected
-                        ? "text-orange-700"
-                        : "text-gray-600 dark:text-gray-300"
-                    )}
-                  >
+                    "block text-xs font-medium leading-4",
+                    selected
+                      ? "text-orange-500"
+                      : "text-muted-foreground"
+                  )}
+                >
                     {option.detail}
                   </span>
                 </span>
                 <CheckCircle2
                   className={cn(
                     "mt-0.5 h-5 w-5 shrink-0",
-                    selected ? "text-orange-500 dark:text-orange-300" : "text-gray-300 dark:text-gray-500"
+                    selected ? "text-orange-500" : "text-muted-foreground/60"
                   )}
                 />
               </button>
