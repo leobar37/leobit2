@@ -41,16 +41,16 @@ export function SaleDetailInfoCard({ hideTara, sale }: SaleDetailInfoCardProps) 
       value: sale.customer?.name || "Cliente general",
       accent: "text-foreground",
     },
-    ...(!sale.tara || hideTara
-      ? []
-      : [
+    ...(sale.tara && !hideTara
+      ? [
           {
             icon: Scale,
             label: "Tara",
             value: `${formatCurrency(sale.tara)} kg`,
             accent: "text-muted-foreground",
           },
-        ]),
+        ]
+      : []),
     ...(sale.netWeight
       ? [
           {

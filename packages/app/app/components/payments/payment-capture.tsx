@@ -25,6 +25,7 @@ interface PaymentCaptureProps {
   // Payment method
   paymentMethod: string | null;
   onPaymentMethodChange: (method: PaymentMethod) => void;
+  methods?: PaymentMethod[];
 
   // Reference number
   referenceNumber?: string;
@@ -42,6 +43,7 @@ export function PaymentCapture({
   disabled = false,
   paymentMethod,
   onPaymentMethodChange,
+  methods,
   referenceNumber = "",
   onReferenceNumberChange,
   proofImageId,
@@ -62,10 +64,11 @@ export function PaymentCapture({
       "transferencia",
       "tarjeta",
     ];
+    const availableMethods = methods ?? allMethods;
     const config = paymentConfig?.methods;
-    if (!config) return allMethods;
-    return allMethods.filter((m) => config[m]?.enabled !== false);
-  }, [paymentConfig]);
+    if (!config) return availableMethods;
+    return availableMethods.filter((m) => config[m]?.enabled !== false);
+  }, [methods, paymentConfig]);
 
   const currentMethod = (paymentMethod as PaymentMethod) || null;
   const showMethodInfo =

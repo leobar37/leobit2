@@ -8,7 +8,7 @@ import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale, SaleItem } from "../../db/schema";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { toISODateString, now, parseDateString } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
 import { decimalToNumber } from "@avileo/shared";
@@ -73,7 +73,7 @@ export class SaleService {
         subtotal: number;
       }>;
     }
-  ): Promise<MutationResult<Sale>> {
+  ): Promise<Sale> {
     const items = data.items || [];
     const isEmptyDraft =
       items.length === 0 &&
@@ -196,7 +196,7 @@ export class SaleService {
 
       return {
         data: sale,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -216,7 +216,7 @@ export class SaleService {
       advanceReferenceNumber?: string | null;
       advanceProofImageId?: string | null;
     }
-  ): Promise<MutationResult<Sale>> {
+  ): Promise<Sale> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
       throw new NotFoundError("Sale");
@@ -317,7 +317,7 @@ export class SaleService {
 
       return {
         data: updatedSale,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -414,7 +414,7 @@ export class SaleService {
       referenceNumber?: string;
       proofImageId?: string;
     }
-  ): Promise<MutationResult<Sale>> {
+  ): Promise<Sale> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
       throw new NotFoundError("Sale");
@@ -449,7 +449,7 @@ export class SaleService {
         );
         return {
           data: confirmedSale,
-          txid: await getTxid(tx),
+          txid: await getCurrentTransactionId(tx),
         };
       });
     }
@@ -526,7 +526,7 @@ export class SaleService {
 
       return {
         data: confirmedSale,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -535,7 +535,7 @@ export class SaleService {
     ctx: RequestContext,
     id: string,
     baseVersion: number
-  ): Promise<MutationResult<Sale>> {
+  ): Promise<Sale> {
     const sale = await this.repository.findById(ctx, id);
     if (!sale) {
       throw new NotFoundError("Sale");
@@ -562,7 +562,7 @@ export class SaleService {
       );
       return {
         data: deliveredSale,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -733,7 +733,7 @@ export class SaleService {
       unitPriceQuoted?: number;
       subtotal: number;
     }
-  ): Promise<MutationResult<SaleItem>> {
+  ): Promise<SaleItem> {
     const sale = await this.repository.findById(ctx, saleId);
     if (!sale) {
       throw new NotFoundError("Sale");
@@ -813,7 +813,7 @@ export class SaleService {
 
       return {
         data: item,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -832,7 +832,7 @@ export class SaleService {
       deliveredQuantity?: number;
       isModified?: boolean;
     }
-  ): Promise<MutationResult<SaleItem>> {
+  ): Promise<SaleItem> {
     const sale = await this.repository.findById(ctx, saleId);
     if (!sale) {
       throw new NotFoundError("Sale");
@@ -916,7 +916,7 @@ export class SaleService {
 
       return {
         data: updatedItem,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -925,7 +925,7 @@ export class SaleService {
     ctx: RequestContext,
     saleId: string,
     itemId: string
-  ): Promise<MutationResult<void>> {
+  ): Promise<void> {
     const sale = await this.repository.findById(ctx, saleId);
     if (!sale) {
       throw new NotFoundError("Sale");
@@ -955,7 +955,7 @@ export class SaleService {
 
       return {
         data: undefined,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

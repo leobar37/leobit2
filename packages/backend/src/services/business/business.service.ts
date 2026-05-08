@@ -16,6 +16,7 @@ import { db, businessUsers } from "../../lib/db";
 import { businesses, defaultCalculatorSettings } from "../../db/schema/businesses";
 import type { BusinessCalculatorSettings } from "../../db/schema/businesses";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./default-templates";
+import { BusinessModeSlugSchema } from "@avileo/shared";
 
 function normalizePublicCatalogSlug(value: string): string {
   return value
@@ -38,11 +39,14 @@ export class BusinessService {
     private repository: BusinessRepository,
     private supplierRepo: SupplierRepository,
     private whatsAppTemplateRepo: WhatsAppTemplateRepository,
-    private productRepo: ProductRepository
+    private productRepo: ProductRepository,
+    private subscriptionRepo?: import("../repository/business-subscription.repository").BusinessSubscriptionRepository
   ) {}
 
   async getBusiness(ctx: RequestContext) {
-    const membership = await this.repository.findByUserId(ctx);
+    const membership = ctx.businessId
+      ? await this.repository.findByUserIdAndBusinessId(ctx.userId, ctx.businessId)
+      : await this.repository.findByUserId(ctx);
 
     if (!membership) {
       throw new NotFoundError("Negocio");
@@ -60,6 +64,8 @@ export class BusinessService {
       publicCatalogEnabled: membership.business.publicCatalogEnabled,
       publicCatalogSlug: membership.business.publicCatalogSlug,
       usarDistribucion: membership.business.usarDistribucion,
+      businessMode: membership.business.businessMode,
+      modeConfigOverrides: membership.business.modeConfigOverrides,
       role: membership.role,
       salesPoint: membership.salesPoint,
       isActive: membership.business.isActive,
@@ -76,6 +82,7 @@ export class BusinessService {
       address?: string;
       phone?: string;
       email?: string;
+      businessMode?: string;
     }
   ) {
     const existingMembership = await this.repository.findByUserId(ctx);
@@ -88,21 +95,33 @@ export class BusinessService {
       throw new ValidationError("El nombre debe tener al menos 2 caracteres");
     }
 
+    const parsedBusinessMode = BusinessModeSlugSchema.safeParse(data.businessMode ?? "polleria");
+    if (!parsedBusinessMode.success) {
+      throw new ValidationError("Tipo de negocio no válido");
+    }
+
     const business = await this.repository.create(ctx, {
       name: data.name,
       ruc: data.ruc,
       address: data.address,
       phone: data.phone,
       email: data.email,
+      businessMode: parsedBusinessMode.data,
     });
 
-    await db.insert(businessUsers).values({
+    const [businessUser] = await db.insert(businessUsers).values({
       businessId: business.id,
       userId: ctx.userId,
       role: "ADMIN_NEGOCIO",
-    });
+    }).returning();
 
-    const workerCtx = RequestContextClass.forWorker(business.id);
+    const workerCtx = RequestContextClass.forWorker(business.id, businessUser.id);
+
+    // Auto-create gratis subscription for cochera businesses
+    if (business.businessMode === "cochera" && this.subscriptionRepo) {
+      await this.subscriptionRepo.getOrCreate(workerCtx);
+    }
+
     await this.supplierRepo.create(workerCtx, {
       name: "Proveedor Varios",
       type: "generic",
@@ -135,6 +154,8 @@ export class BusinessService {
       usarDistribucion?: boolean;
       publicCatalogEnabled?: boolean;
       publicCatalogSlug?: string | null;
+      businessMode?: string;
+      modeConfigOverrides?: Record<string, unknown> | null;
     }
   ) {
     if (!ctx.isAdmin()) {
@@ -174,6 +195,15 @@ export class BusinessService {
       }
     }
 
+    let businessMode: string | undefined;
+    if (data.businessMode !== undefined) {
+      const parsedBusinessMode = BusinessModeSlugSchema.safeParse(data.businessMode);
+      if (!parsedBusinessMode.success) {
+        throw new ValidationError("Tipo de negocio no válido");
+      }
+      businessMode = parsedBusinessMode.data;
+    }
+
     const business = await this.repository.update(ctx, id, {
       name: data.name,
       ruc: data.ruc,
@@ -183,6 +213,8 @@ export class BusinessService {
       usarDistribucion: data.usarDistribucion,
       publicCatalogEnabled: data.publicCatalogEnabled,
       publicCatalogSlug,
+      businessMode,
+      modeConfigOverrides: data.modeConfigOverrides,
     });
 
     return business;
@@ -263,13 +295,20 @@ export class BusinessService {
   }
 
   async seedDemoData(ctx: RequestContext) {
-    const demoProducts = [
-      { name: "Pollo Entero", type: "pollo" as const, unit: "kg" as const, basePrice: "12.50" },
-      { name: "1/2 Pollo", type: "pollo" as const, unit: "kg" as const, basePrice: "6.50" },
-      { name: "1/4 Pollo", type: "pollo" as const, unit: "kg" as const, basePrice: "3.50" },
-      { name: "Pierna", type: "pollo" as const, unit: "unidad" as const, basePrice: "8.00" },
-      { name: "Pecho", type: "pollo" as const, unit: "unidad" as const, basePrice: "7.50" },
-    ];
+    const demoProducts = ctx.businessMode === "agua"
+      ? [
+          { name: "Bidón 20L", type: "otro" as const, unit: "unidad" as const, basePrice: "8.00" },
+          { name: "Bidón 10L", type: "otro" as const, unit: "unidad" as const, basePrice: "5.00" },
+          { name: "Recarga 20L", type: "otro" as const, unit: "unidad" as const, basePrice: "4.00" },
+          { name: "Recarga 10L", type: "otro" as const, unit: "unidad" as const, basePrice: "2.50" },
+        ]
+      : [
+          { name: "Pollo Entero", type: "pollo" as const, unit: "kg" as const, basePrice: "12.50" },
+          { name: "1/2 Pollo", type: "pollo" as const, unit: "kg" as const, basePrice: "6.50" },
+          { name: "1/4 Pollo", type: "pollo" as const, unit: "kg" as const, basePrice: "3.50" },
+          { name: "Pierna", type: "pollo" as const, unit: "unidad" as const, basePrice: "8.00" },
+          { name: "Pecho", type: "pollo" as const, unit: "unidad" as const, basePrice: "7.50" },
+        ];
 
     const createdProducts = [];
 

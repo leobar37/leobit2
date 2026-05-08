@@ -78,6 +78,7 @@ export {
   type NewBusiness,
   type BusinessUser,
   type NewBusinessUser,
+  type BusinessModeFlags,
 } from "./businesses";
 
 // Customers
@@ -87,6 +88,29 @@ export {
   type Customer,
   type NewCustomer,
 } from "./customers";
+
+export {
+  waterCustomerProfiles,
+  waterRoutes,
+  waterDeliveryStops,
+  waterContainerLedgerEntries,
+  waterDepositLedgerEntries,
+  waterCustomerProfilesRelations,
+  waterRoutesRelations,
+  waterDeliveryStopsRelations,
+  waterContainerLedgerEntriesRelations,
+  waterDepositLedgerEntriesRelations,
+  type WaterRoute,
+  type NewWaterRoute,
+  type WaterCustomerProfile,
+  type NewWaterCustomerProfile,
+  type WaterDeliveryStop,
+  type NewWaterDeliveryStop,
+  type WaterContainerLedgerEntry,
+  type NewWaterContainerLedgerEntry,
+  type WaterDepositLedgerEntry,
+  type NewWaterDepositLedgerEntry,
+} from "./water";
 
 // Tags
 export {
@@ -162,8 +186,6 @@ export {
   type Abono,
   type NewAbono,
 } from "./payments";
-
-
 
 // Inventory (Products, Inventory, Distribuciones, Variants)
 export {
@@ -297,3 +319,42 @@ export {
   type ExpenseCategory,
   type NewExpenseCategory,
 } from "./expense-categories";
+
+// Business Subscriptions
+export {
+  businessSubscriptions,
+  businessSubscriptionsRelations,
+  type BusinessSubscription,
+  type NewBusinessSubscription,
+} from "./business-subscriptions";
+
+// Subscription Usage
+export {
+  subscriptionUsage,
+  subscriptionUsageRelations,
+  type SubscriptionUsage,
+  type NewSubscriptionUsage,
+} from "./subscription-usage";
+
+// Cochera (Parking)
+export {
+  cocheraSettings,
+  cocheraSettingsRelations,
+  type CocheraSettings,
+  type NewCocheraSettings,
+} from "./cochera";
+
+export {
+  cocheraSessions,
+  cocheraSessionsRelations,
+  cocheraSessionPayments,
+  cocheraSessionPaymentsRelations,
+  type CocheraSession,
+  type NewCocheraSession,
+  type CocheraSessionPayment,
+  type NewCocheraSessionPayment,
+  cocheraSessionStatusEnum,
+  cocheraVehicleTypeEnum,
+  type CocheraSessionStatus,
+  type CocheraVehicleType,
+} from "./cochera";

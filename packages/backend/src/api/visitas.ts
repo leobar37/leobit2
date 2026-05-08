@@ -91,6 +91,30 @@ export const visitaRoutes = new Elysia({ prefix: "/visitas" })
       }),
     }
   )
+  .post(
+    "/:id/water/complete",
+    async ({ visitaService, ctx, params, body }) => {
+      const result = await visitaService.completeWaterDelivery(ctx as RequestContext, params.id, body);
+      return { success: true, data: result };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        status: t.Union([
+          t.Literal("entregado"),
+          t.Literal("no_atendido"),
+          t.Literal("reprogramado"),
+        ]),
+        delivered: t.Optional(t.Number({ minimum: 0 })),
+        collected: t.Optional(t.Number({ minimum: 0 })),
+        damaged: t.Optional(t.Number({ minimum: 0 })),
+        lost: t.Optional(t.Number({ minimum: 0 })),
+        notes: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    }
+  )
   // Delete a visit
   .delete(
     "/:id",

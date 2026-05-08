@@ -1,7 +1,7 @@
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -61,7 +61,7 @@ export class SupplierService {
       email?: string;
       notes?: string;
     }
-  ): Promise<MutationResult<Supplier>> {
+  ): Promise<Supplier> {
     if (!ctx.hasPermission("suppliers.write")) {
       throw new ForbiddenError("No tiene permisos para crear proveedores");
     }
@@ -91,7 +91,7 @@ export class SupplierService {
 
       return {
         data: supplier,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -126,7 +126,7 @@ export class SupplierService {
       notes?: string;
       isActive?: boolean;
     }
-  ): Promise<MutationResult<Supplier>> {
+  ): Promise<Supplier> {
     if (!ctx.hasPermission("suppliers.write")) {
       throw new ForbiddenError("No tiene permisos para editar proveedores");
     }
@@ -152,7 +152,7 @@ export class SupplierService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

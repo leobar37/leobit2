@@ -13,6 +13,7 @@ import { useBusiness } from "~/hooks/use-business";
 import { useSales } from "~/hooks/use-sales";
 import { useExpenses } from "~/hooks/use-expenses";
 import { useCreateSale } from "~/hooks/use-sales";
+import { useCompleteWaterDelivery, useVisitas } from "~/hooks/use-visitas";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatKilos, formatCurrency } from "~/lib/utils";
 import { BusinessUserRole, decimalToNumber } from "@avileo/shared";
@@ -117,7 +118,17 @@ export default function MiDistribucionPage() {
   const { data: business } = useBusiness();
   const isOnline = true;
   const createSale = useCreateSale();
+  const completeWaterDelivery = useCompleteWaterDelivery();
   const cierreConfirm = useCierreConfirmDialog();
+  const isWaterMode = business?.businessMode === "agua";
+  const { data: waterVisits = [] } = useVisitas(isWaterMode ? distribucion?.id : undefined);
+  const [waterCompletionDrafts, setWaterCompletionDrafts] = useState<Record<string, {
+    delivered: number;
+    collected: number;
+    damaged: number;
+    lost: number;
+    notes: string;
+  }>>({});
 
   // Fetch sales for this distribution
   const { data: distribucionSales } = useSales(
@@ -225,6 +236,40 @@ export default function MiDistribucionPage() {
     }
   };
 
+  const handleWaterDraftChange = (
+    visitId: string,
+    patch: Partial<{ delivered: number; collected: number; damaged: number; lost: number; notes: string }>
+  ) => {
+    setWaterCompletionDrafts((drafts) => ({
+      ...drafts,
+      [visitId]: {
+        delivered: drafts[visitId]?.delivered ?? 0,
+        collected: drafts[visitId]?.collected ?? 0,
+        damaged: drafts[visitId]?.damaged ?? 0,
+        lost: drafts[visitId]?.lost ?? 0,
+        notes: drafts[visitId]?.notes ?? "",
+        ...patch,
+      },
+    }));
+  };
+
+  const handleCompleteWaterStop = async (
+    visitId: string,
+    status: "entregado" | "no_atendido" | "reprogramado",
+    expected: number
+  ) => {
+    const draft = waterCompletionDrafts[visitId];
+    await completeWaterDelivery.mutateAsync({
+      id: visitId,
+      status,
+      delivered: status === "entregado" ? (draft?.delivered ?? expected) : 0,
+      collected: 0,
+      damaged: 0,
+      lost: 0,
+      notes: draft?.notes?.trim() || null,
+    });
+  };
+
   if (!usarDistribucion) {
     return (
       <Card className="border rounded-xl">
@@ -283,7 +328,117 @@ export default function MiDistribucionPage() {
           cantidadItems={distribucionWithItems.items?.length || 0}
         />
 
-        {(!distribucionWithItems.items || distribucionWithItems.items.length === 0) && (
+        {isWaterMode && (
+          <Card className="border rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Entregas de agua
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {waterVisits.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aún no hay paradas en esta ruta.
+                </p>
+              ) : (
+                waterVisits.map((visit) => {
+                  const stop = visit.waterStop;
+                  const expected = stop?.expectedContainerQuantity ?? 0;
+                  const draft = waterCompletionDrafts[visit.id] ?? {
+                    delivered: expected,
+                    collected: 0,
+                    damaged: 0,
+                    lost: 0,
+                    notes: "",
+                  };
+                  const completed = stop?.status && stop.status !== "pendiente";
+                  return (
+                    <div key={visit.id} className="rounded-2xl border bg-card p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold">{visit.customer?.name ?? "Cliente"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {visit.customer?.address || "Sin dirección registrada"}
+                          </p>
+                        </div>
+                        <Badge variant={completed ? "default" : "secondary"}>
+                          {completed ? stop?.status : "pendiente"}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <div className="rounded-xl bg-sky-50 p-3 text-sky-900 dark:bg-sky-500/10 dark:text-sky-100">
+                          <p className="text-xs opacity-75">Bidones esperados</p>
+                          <p className="text-lg font-bold">{expected}</p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-3 text-slate-900 dark:bg-white/5 dark:text-slate-100">
+                          <p className="text-xs opacity-75">Venta</p>
+                          <p className="text-lg font-bold">Unidad</p>
+                        </div>
+                      </div>
+
+                      {!completed && (
+                        <div className="mt-3 space-y-3">
+                          <label className="space-y-1 text-xs text-muted-foreground">
+                            Bidones entregados
+                            <input
+                              type="number"
+                              min={0}
+                              value={draft.delivered}
+                              onChange={(event) =>
+                                handleWaterDraftChange(visit.id, {
+                                  delivered: Math.max(0, Number(event.target.value) || 0),
+                                })
+                              }
+                              className="shell-field h-11 w-full rounded-xl px-3 text-sm"
+                            />
+                          </label>
+                          <Textarea
+                            value={draft.notes}
+                            onChange={(event) => handleWaterDraftChange(visit.id, { notes: event.target.value })}
+                            placeholder="Nota de entrega..."
+                            className="min-h-[76px] rounded-xl"
+                          />
+                          <div className="grid grid-cols-3 gap-2">
+                            <Button
+                              type="button"
+                              onClick={() => handleCompleteWaterStop(visit.id, "entregado", expected)}
+                              disabled={completeWaterDelivery.isPending}
+                              className="rounded-xl bg-sky-600 hover:bg-sky-700"
+                            >
+                              Entregado
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleCompleteWaterStop(visit.id, "no_atendido", expected)}
+                              disabled={completeWaterDelivery.isPending}
+                              className="rounded-xl"
+                            >
+                              No atendió
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleCompleteWaterStop(visit.id, "reprogramado", expected)}
+                              disabled={completeWaterDelivery.isPending}
+                              className="rounded-xl"
+                            >
+                              Reprogramar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {!isWaterMode && (!distribucionWithItems.items || distribucionWithItems.items.length === 0) && (
           <Card className="border rounded-xl">
             <CardContent className="p-6 text-center">
               <Package className="h-10 w-10 text-orange-500 mx-auto mb-3" />
@@ -295,7 +450,7 @@ export default function MiDistribucionPage() {
           </Card>
         )}
 
-        {distribucionWithItems.items && distribucionWithItems.items.length > 0 && (
+        {!isWaterMode && distribucionWithItems.items && distribucionWithItems.items.length > 0 && (
           <Card className="border rounded-xl">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -409,6 +564,7 @@ export default function MiDistribucionPage() {
       {!isCerrado && (
         <ToolbarActions>
           <div className="space-y-2">
+            {!isWaterMode && (
             <Button
               onClick={handleNewSale}
               disabled={createSale.isPending}
@@ -417,6 +573,7 @@ export default function MiDistribucionPage() {
               <Package className="mr-2 h-5 w-5" />
               Nueva Venta
             </Button>
+            )}
 
             <Button
               onClick={() => navigate(`/gastos/nuevo?distribucion=${distribucion?.id}`)}

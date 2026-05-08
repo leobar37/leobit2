@@ -3,6 +3,9 @@ import { BusinessRepository } from "../services/repository/business.repository";
 import { BusinessService } from "../services/business/business.service";
 import { CustomerRepository } from "../services/repository/customer.repository";
 import { CustomerService } from "../services/business/customer.service";
+import { WaterCustomerProfileRepository } from "../services/repository/water-customer-profile.repository";
+import { WaterRouteRepository } from "../services/repository/water-route.repository";
+import { WaterRouteService } from "../services/business/water-route.service";
 import { ProductRepository } from "../services/repository/product.repository";
 import { ProductService } from "../services/business/product.service";
 import { PaymentRepository } from "../services/repository/payment.repository";
@@ -57,6 +60,15 @@ import { ExpenseRepository } from "../services/repository/expense.repository";
 import { ExpenseService } from "../services/business/expense.service";
 import { ExpenseCategoryRepository } from "../services/repository/expense-category.repository";
 import { ExpenseCategoryService } from "../services/business/expense-category.service";
+import { BusinessSubscriptionRepository } from "../services/repository/business-subscription.repository";
+import { SubscriptionService } from "../services/business/subscription.service";
+import { CocheraSettingsRepository } from "../services/repository/cochera-settings.repository";
+import { CocheraSettingsService } from "../services/business/cochera-settings.service";
+import { CocheraSessionRepository } from "../services/repository/cochera-session.repository";
+import { CocheraSessionService } from "../services/business/cochera-session.service";
+import { CocheraCheckoutService } from "../services/business/cochera-checkout.service";
+import { CocheraReportService } from "../services/business/cochera-report.service";
+import { CocheraDebtService } from "../services/business/cochera-debt.service";
 import { initializeStateMachines } from "../services/transitions";
 
 export const servicesPlugin = new Elysia({ name: "services" })
@@ -64,6 +76,8 @@ export const servicesPlugin = new Elysia({ name: "services" })
   .decorate(() => {
     const businessRepo = new BusinessRepository();
     const customerRepo = new CustomerRepository();
+    const waterCustomerProfileRepo = new WaterCustomerProfileRepository();
+    const waterRouteRepo = new WaterRouteRepository();
     const productRepo = new ProductRepository();
     const paymentRepo = new PaymentRepository();
     const distribucionRepo = new DistribucionRepository();
@@ -91,14 +105,27 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const expenseRepo = new ExpenseRepository();
     const expenseCategoryRepo = new ExpenseCategoryRepository();
 
+    const subscriptionRepo = new BusinessSubscriptionRepository();
+    const subscriptionService = new SubscriptionService(subscriptionRepo);
+
     // Initialize state machines with their transitions
     initializeStateMachines({});
 
-    const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo);
-    const customerService = new CustomerService(customerRepo);
+    const businessService = new BusinessService(businessRepo, supplierRepo, whatsAppTemplateRepo, productRepo, subscriptionRepo);
+    const customerService = new CustomerService(customerRepo, waterCustomerProfileRepo);
+    const waterRouteService = new WaterRouteService(waterRouteRepo);
     const productService = new ProductService(productRepo, productVariantRepo, categoryRepo);
     const paymentService = new PaymentService(paymentRepo, customerRepo, saleRepo);
-    const distribucionService = new DistribucionService(distribucionRepo, distribucionItemRepo, productVariantRepo, customerGroupRepo, distribucionGroupRepo, visitaRepo);
+    const distribucionService = new DistribucionService(
+      distribucionRepo,
+      distribucionItemRepo,
+      productVariantRepo,
+      customerGroupRepo,
+      distribucionGroupRepo,
+      visitaRepo,
+      waterCustomerProfileRepo,
+      waterRouteRepo
+    );
     const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);
@@ -124,16 +151,29 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const categoryService = new CategoryService(categoryRepo);
     const customerTagService = new CustomerTagService(customerTagRepo, tagRepo, customerRepo);
     const customerGroupService = new CustomerGroupService(customerGroupRepo, customerRepo);
-    const visitaService = new VisitaService(visitaRepo, customerRepo, distribucionRepo);
+    const visitaService = new VisitaService(visitaRepo, customerRepo, distribucionRepo, waterCustomerProfileRepo);
     const puntoVentaRepo = new PuntoVentaRepository();
     const expenseService = new ExpenseService(expenseRepo, expenseCategoryRepo);
     const expenseCategoryService = new ExpenseCategoryService(expenseCategoryRepo, expenseRepo);
+    const cocheraSettingsRepo = new CocheraSettingsRepository();
+    const cocheraSettingsService = new CocheraSettingsService(cocheraSettingsRepo);
+    const cocheraSessionRepo = new CocheraSessionRepository();
+    const cocheraSessionService = new CocheraSessionService(cocheraSessionRepo);
+    const cocheraCheckoutService = new CocheraCheckoutService(
+      cocheraSessionRepo,
+      cocheraSettingsRepo,
+      subscriptionService
+    );
+    const cocheraReportService = new CocheraReportService(subscriptionService);
+    const cocheraDebtService = new CocheraDebtService(cocheraSessionRepo, cocheraSettingsRepo);
 
     return {
       businessRepo,
       businessService,
       customerRepo,
       customerService,
+      waterRouteRepo,
+      waterRouteService,
       productRepo,
       productService,
       paymentRepo,
@@ -186,5 +226,14 @@ export const servicesPlugin = new Elysia({ name: "services" })
       expenseService,
       expenseCategoryRepo,
       expenseCategoryService,
+      subscriptionRepo,
+      subscriptionService,
+      cocheraSettingsRepo,
+      cocheraSettingsService,
+      cocheraSessionRepo,
+      cocheraSessionService,
+      cocheraCheckoutService,
+      cocheraReportService,
+      cocheraDebtService,
     };
   });

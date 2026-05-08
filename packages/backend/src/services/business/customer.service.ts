@@ -1,7 +1,8 @@
 import type { CustomerRepository, AccountsReceivableItem } from "../repository/customer.repository";
+import type { WaterCustomerProfileRepository, WaterCustomerProfileInput } from "../repository/water-customer-profile.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -9,8 +10,17 @@ import {
 } from "../../errors";
 import type { Customer, NewCustomer } from "../../db/schema";
 
+export type CustomerWithWaterProfile = Customer & {
+  totalDebt?: number;
+  lastSaleDate?: Date | null;
+  waterProfile?: (import("../../db/schema").WaterCustomerProfile & { waterRouteName?: string | null }) | null;
+};
+
 export class CustomerService {
-  constructor(private repository: CustomerRepository) {}
+  constructor(
+    private repository: CustomerRepository,
+    private waterProfileRepository?: WaterCustomerProfileRepository
+  ) {}
 
   async getCustomers(
     ctx: RequestContext,
@@ -28,10 +38,11 @@ export class CustomerService {
       throw new ForbiddenError("No tiene permisos para ver clientes");
     }
 
-    return this.repository.findMany(ctx, filters);
+    const customers = await this.repository.findMany(ctx, filters);
+    return this.attachWaterProfiles(ctx, customers);
   }
 
-  async getCustomer(ctx: RequestContext, id: string): Promise<Customer> {
+  async getCustomer(ctx: RequestContext, id: string): Promise<CustomerWithWaterProfile> {
     if (!ctx.hasPermission("customers.read")) {
       throw new ForbiddenError("No tiene permisos para ver clientes");
     }
@@ -41,7 +52,7 @@ export class CustomerService {
       throw new NotFoundError("Cliente");
     }
 
-    return customer;
+    return this.attachWaterProfile(ctx, customer);
   }
 
   async createCustomer(
@@ -52,8 +63,9 @@ export class CustomerService {
       phone?: string | null;
       address?: string | null;
       notes?: string | null;
+      waterProfile?: WaterCustomerProfileInput | null;
     }
-  ): Promise<MutationResult<Customer>> {
+  ): Promise<CustomerWithWaterProfile> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para crear clientes");
     }
@@ -82,9 +94,20 @@ export class CustomerService {
         tx
       );
 
+      let waterProfile = null;
+      if (data.waterProfile) {
+        this.assertWaterMode(ctx);
+        waterProfile = await this.getWaterProfileRepository().create(
+          ctx,
+          customer.id,
+          this.normalizeWaterProfileInput(data.waterProfile),
+          tx
+        );
+      }
+
       return {
-        data: customer,
-        txid: await getTxid(tx),
+        data: { ...customer, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -98,8 +121,9 @@ export class CustomerService {
       phone?: string | null;
       address?: string | null;
       notes?: string | null;
+      waterProfile?: WaterCustomerProfileInput | null;
     }
-  ): Promise<MutationResult<Customer>> {
+  ): Promise<CustomerWithWaterProfile> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para editar clientes");
     }
@@ -126,9 +150,22 @@ export class CustomerService {
         throw new NotFoundError("Cliente");
       }
 
+      let waterProfile = null;
+      if (data.waterProfile) {
+        this.assertWaterMode(ctx);
+        waterProfile = await this.getWaterProfileRepository().upsert(
+          ctx,
+          id,
+          this.normalizeWaterProfileInput(data.waterProfile),
+          tx
+        );
+      } else if (ctx.businessMode === "agua") {
+        waterProfile = await this.getWaterProfileRepository().findByCustomerId(ctx, id, tx) ?? null;
+      }
+
       return {
-        data: updated,
-        txid: await getTxid(tx),
+        data: { ...updated, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -189,5 +226,73 @@ export class CustomerService {
     }
 
     return this.repository.getBalance(ctx, customerId);
+  }
+
+  private async attachWaterProfiles<T extends Customer>(
+    ctx: RequestContext,
+    customers: T[]
+  ): Promise<Array<T & { waterProfile?: import("../../db/schema").WaterCustomerProfile | null }>> {
+    if (ctx.businessMode !== "agua" || customers.length === 0) {
+      return customers;
+    }
+
+    const profiles = await this.getWaterProfileRepository().findByCustomerIds(
+      ctx,
+      customers.map((customer) => customer.id)
+    );
+    const profilesByCustomerId = new Map(
+      profiles.map((profile) => [profile.customerId, profile])
+    );
+
+    return customers.map((customer) => ({
+      ...customer,
+      waterProfile: profilesByCustomerId.get(customer.id) ?? null,
+    }));
+  }
+
+  private async attachWaterProfile<T extends Customer>(
+    ctx: RequestContext,
+    customer: T
+  ): Promise<T & { waterProfile?: import("../../db/schema").WaterCustomerProfile | null }> {
+    if (ctx.businessMode !== "agua") {
+      return customer;
+    }
+    const waterProfile = await this.getWaterProfileRepository().findByCustomerId(ctx, customer.id);
+    return { ...customer, waterProfile: waterProfile ?? null };
+  }
+
+  private assertWaterMode(ctx: RequestContext) {
+    if (ctx.businessMode !== "agua") {
+      throw new ValidationError("Los campos de reparto de agua solo aplican a negocios de agua");
+    }
+  }
+
+  private getWaterProfileRepository(): WaterCustomerProfileRepository {
+    if (!this.waterProfileRepository) {
+      throw new Error("Water customer profile repository is not configured");
+    }
+    return this.waterProfileRepository;
+  }
+
+  private normalizeWaterProfileInput(input: WaterCustomerProfileInput): WaterCustomerProfileInput {
+    const defaultContainerQuantity = Math.max(0, Number(input.defaultContainerQuantity ?? 1));
+    const containersAtCustomer = Math.max(0, Number(input.containersAtCustomer ?? 0));
+    const depositAmount = String(input.depositAmount ?? "0");
+    const depositStatus = input.depositStatus || "none";
+    const depositExceptionReason = input.depositExceptionReason?.trim() || null;
+
+    return {
+      deliveryFrequency: input.deliveryFrequency || "weekly",
+      deliveryDays: Array.isArray(input.deliveryDays) ? input.deliveryDays : [],
+      defaultContainerQuantity,
+      containersAtCustomer,
+      depositAmount,
+      depositStatus,
+      depositExceptionReason,
+      waterRouteId: input.waterRouteId || null,
+      preferredRoute: input.preferredRoute?.trim() || null,
+      deliveryInstructions: input.deliveryInstructions?.trim() || null,
+      scheduleAnchorDate: input.scheduleAnchorDate ?? null,
+    };
   }
 }

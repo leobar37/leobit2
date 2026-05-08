@@ -43,6 +43,7 @@ Before adding a new entity/field that is used in both app and backend:
 - `ApiResponse<T>` and API DTO helpers
 - Finance helpers such as `calculateBalanceDue()`
 - Domain constraints such as `VARIANTS_CONSTRAINTS`
+- Period utilities: `getCalendarMonthPeriod()`, `isDateInPeriod()`, `periodToISOStrings()`
 
 ## Anti-patterns
 
@@ -50,6 +51,7 @@ Before adding a new entity/field that is used in both app and backend:
 - ❌ Reintroducing TS `enum` in new code.
 - ❌ Exporting backend-only internals directly to frontend contract.
 - ❌ Modifying `schema.ts` without updating corresponding contract fields in `index.ts`.
+- ❌ Hand-rolling `Date.UTC` / `startOfMonth` / `endOfMonth` calculations. Use the shared period utilities (`getCalendarMonthPeriod`, `isDateInPeriod`, `periodToISOStrings`) instead.
 
 ## Testing
 

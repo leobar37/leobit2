@@ -348,8 +348,43 @@
     {
       "idx": 49,
       "version": "7",
+      "when": 1778025600000,
+      "tag": "0067_add_business_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
       "when": 1746624000000,
       "tag": "0068_add_distribucion_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1778112000000,
+      "tag": "0069_add_water_vertical_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1778198400000,
+      "tag": "0070_add_cochera_vertical_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1778284800000,
+      "tag": "0071_add_cochera_settlement_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1778371200000,
+      "tag": "0072_add_cochera_session_payments",
       "breakpoints": true
     }
   ]

@@ -2,7 +2,6 @@ import { eq, and, desc, asc, like, sql, inArray, ne, count } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customers, sales, abonos, type Customer, type NewCustomer } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 import {
   buildSearchCondition,
   resolveTagCustomerIds,

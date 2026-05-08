@@ -2,7 +2,6 @@ import { eq, and, desc, like, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { suppliers, type Supplier, type NewSupplier } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export class SupplierRepository {
   async findMany(

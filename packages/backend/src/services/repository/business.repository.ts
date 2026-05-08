@@ -26,14 +26,15 @@ export class BusinessRepository {
   async findByUserIdAndBusinessId(
     userId: string,
     businessId: string
-  ): Promise<BusinessUser | undefined> {
+  ): Promise<(BusinessUser & { business: Business }) | undefined> {
     const membership = await db.query.businessUsers.findFirst({
       where: and(
         eq(businessUsers.userId, userId),
         eq(businessUsers.businessId, businessId)
       ),
+      with: { business: true },
     });
-    return membership;
+    return membership as (BusinessUser & { business: Business }) | undefined;
   }
 
   async create(
@@ -44,6 +45,7 @@ export class BusinessRepository {
       address?: string | null;
       phone?: string | null;
       email?: string | null;
+      businessMode?: string;
     }
   ): Promise<Business> {
     const [business] = await db
@@ -54,6 +56,7 @@ export class BusinessRepository {
         address: data.address || null,
         phone: data.phone || null,
         email: data.email || null,
+        businessMode: data.businessMode || "polleria",
       })
       .returning();
 
@@ -72,6 +75,8 @@ export class BusinessRepository {
       usarDistribucion?: boolean;
       publicCatalogEnabled?: boolean;
       publicCatalogSlug?: string | null;
+      businessMode?: string;
+      modeConfigOverrides?: Record<string, unknown> | null;
     }
   ): Promise<Business | undefined> {
     const [business] = await db
@@ -85,6 +90,8 @@ export class BusinessRepository {
         ...(data.usarDistribucion !== undefined && { usarDistribucion: data.usarDistribucion }),
         ...(data.publicCatalogEnabled !== undefined && { publicCatalogEnabled: data.publicCatalogEnabled }),
         ...(data.publicCatalogSlug !== undefined && { publicCatalogSlug: data.publicCatalogSlug }),
+        ...(data.businessMode !== undefined && { businessMode: data.businessMode }),
+        ...(data.modeConfigOverrides !== undefined && { modeConfigOverrides: data.modeConfigOverrides }),
         updatedAt: new Date(),
       })
       .where(eq(businesses.id, id))

@@ -19,8 +19,13 @@ import {
   ArrowLeft,
   Wallet,
   Calendar,
+  CarFront,
+  FileText,
+  Plus,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useBusiness } from "@/hooks/use-business";
 import { ThemeToggle } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,13 +37,35 @@ import {
 } from "@/components/ui/sheet";
 import { MobileShell, MobileSlot } from "~/components/mobile";
 
-const menuItems = [
-  { icon: Home, label: "Inicio", href: "/dashboard" },
+type MenuItem = {
+  icon: typeof Home;
+  label: string;
+  href: string;
+  active?: (pathname: string) => boolean;
+};
+
+const defaultMenuItems: MenuItem[] = [
+  { icon: Home, label: "Inicio", href: "/dashboard", active: (pathname) => pathname === "/dashboard" },
   { icon: ShoppingCart, label: "Ventas", href: "/ventas" },
   { icon: Wallet, label: "Cobros", href: "/cobros" },
   { icon: Users, label: "Clientes", href: "/clientes" },
   { icon: Calendar, label: "Visitas", href: "/visitas" },
   { icon: Menu, label: "Más", href: "/config" },
+];
+
+const cocheraMenuItems: MenuItem[] = [
+  { icon: Home, label: "Inicio", href: "/dashboard", active: (pathname) => pathname === "/dashboard" },
+  { icon: Plus, label: "Entrada", href: "/cochera/entrada", active: (pathname) => pathname.startsWith("/cochera/entrada") },
+  {
+    icon: CarFront,
+    label: "Vehículos",
+    href: "/cochera",
+    active: (pathname) =>
+      pathname === "/cochera" ||
+      pathname.startsWith("/cochera/cobrar"),
+  },
+  { icon: FileText, label: "Reportes", href: "/reportes", active: (pathname) => pathname.startsWith("/reportes") },
+  { icon: Settings, label: "Más", href: "/config", active: (pathname) => pathname.startsWith("/config") },
 ];
 
 interface LayoutConfig {
@@ -116,6 +143,11 @@ const ROUTE_LAYOUTS: Array<[pattern: RegExp, config: Partial<RouteLayoutConfig>]
   [/^\/config\/?$/, { title: "Avileo" }],
   [/^\/activos\/?$/, { title: "Activos", showBackButton: true, backHref: "/config" }],
   [/^\/reportes\//, { title: "Reportes", showBackButton: true, backHref: "/config" }],
+  [/^\/reportes\/?$/, { title: "Reportes" }],
+  [/^\/cochera\/entrada\/?$/, { title: "Entrada", showBackButton: true, backHref: "/cochera" }],
+  [/^\/cochera\/cobrar\/[^/]+\/?$/, { title: "Cobrar salida", showBackButton: true, backHref: "/cochera" }],
+  [/^\/cochera\/?$/, { title: "Vehículos" }],
+  [/^\/config\/cochera\/?$/, { title: "Config. cochera", showBackButton: true, backHref: "/config" }],
 ];
 
 function getRouteLayout(pathname: string): RouteLayoutConfig {
@@ -186,6 +218,7 @@ function AppLayoutHeaderControl({ children }: { children: ReactNode }) {
 
 export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
   const { user, logout, isLoggingOut } = useAuth();
+  const { data: business } = useBusiness();
   const location = useLocation();
   const navigation = useNavigation();
   const routeLayout = useMemo(
@@ -213,6 +246,8 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
 
   const pendingPathname = navigation.location?.pathname;
   const isNavigating = navigation.state !== "idle" && Boolean(pendingPathname);
+  const menuItems =
+    business?.businessMode === "cochera" ? cocheraMenuItems : defaultMenuItems;
 
   const {
     title = "Avileo",
@@ -250,7 +285,11 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
       </AppLayoutHeaderControl>
       <AppLayoutHeaderControl>
         <Sheet>
-          <SheetTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent">
+          <SheetTrigger
+            type="button"
+            aria-label="Abrir perfil"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent"
+          >
             <User className="h-5 w-5" />
           </SheetTrigger>
           <SheetContent side="right" className="w-80">
@@ -353,8 +392,14 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
           <nav data-testid="mobile-bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 border-t shell-surface px-3 sm:px-4 py-2.5">
             <div className="flex items-center justify-around max-w-md mx-auto">
               {menuItems.map((item) => {
-                const isActive = location.pathname.startsWith(item.href);
-                const isPending = pendingPathname?.startsWith(item.href) ?? false;
+                const isActive = item.active
+                  ? item.active(location.pathname)
+                  : location.pathname.startsWith(item.href);
+                const isPending = pendingPathname
+                  ? item.active
+                    ? item.active(pendingPathname)
+                    : pendingPathname.startsWith(item.href)
+                  : false;
                 const isHighlighted = isActive || isPending;
                 return (
                   <Link

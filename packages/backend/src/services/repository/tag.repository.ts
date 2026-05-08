@@ -6,7 +6,6 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { tags, customerTags, type Tag, type NewTag } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export class TagRepository {
   async findAll(ctx: RequestContext): Promise<Tag[]> {

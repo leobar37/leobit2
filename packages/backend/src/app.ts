@@ -35,6 +35,13 @@ import { puntoVentaRoutes } from "./api/puntos-venta";
 import { mediaRoutes } from "./api/media";
 import { expenseRoutes } from "./api/expenses";
 import { expenseCategoryRoutes } from "./api/expense-categories";
+import { waterRouteRoutes } from "./api/water-routes";
+import { subscriptionRoutes } from "./api/subscriptions";
+import { cocheraSettingsRoutes } from "./api/cochera-settings";
+import { cocheraSessionRoutes } from "./api/cochera-sessions";
+import { cocheraDashboardRoutes } from "./api/cochera-dashboard";
+import { cocheraReportRoutes } from "./api/cochera-reports";
+import { cocheraDebtRoutes } from "./api/cochera-debts";
 import { getCorsConfig, getCorsOrigin, mergeExposeHeaders } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
@@ -103,6 +110,13 @@ export const app = new Elysia()
   .use(mediaRoutes)
   .use(expenseRoutes)
   .use(expenseCategoryRoutes)
+  .use(waterRouteRoutes)
+  .use(subscriptionRoutes)
+  .use(cocheraSettingsRoutes)
+  .use(cocheraSessionRoutes)
+  .use(cocheraDashboardRoutes)
+  .use(cocheraReportRoutes)
+  .use(cocheraDebtRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",

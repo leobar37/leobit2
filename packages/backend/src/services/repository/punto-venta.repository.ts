@@ -6,7 +6,6 @@ import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { puntosVenta, type PuntoVenta, type NewPuntoVenta } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export class PuntoVentaRepository {
   async findAll(ctx: RequestContext): Promise<PuntoVenta[]> {

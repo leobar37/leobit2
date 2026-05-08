@@ -1,4 +1,4 @@
-import { User, Phone, MapPin, CreditCard, Check, Users, CalendarDays, Banknote } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, Check, Users, CalendarDays, Banknote, Droplets } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
 import { formatCurrency } from "~/lib/utils";
@@ -7,6 +7,7 @@ import { formatRecentDateTime } from "~/lib/date-utils";
 import { useCustomerGroupsWithDetails, type CustomerGroupBadgeItem } from "~/hooks/use-customer-groups-with-details";
 import { useCustomerTagsWithDetails, type CustomerTagWithDetails } from "~/hooks/use-customer-tags-with-details";
 import { TagBadge } from "~/components/tags";
+import { useBusinessMode } from "~/hooks/use-business-mode";
 
 interface CustomerCardProps {
   customer: {
@@ -22,6 +23,12 @@ interface CustomerCardProps {
     updatedAt?: string;
     totalDebt?: number;
     lastSaleDate?: string | null;
+    waterProfile?: {
+      deliveryDays: string[];
+      defaultContainerQuantity: number;
+      waterRouteName?: string | null;
+      preferredRoute: string | null;
+    } | null;
   };
   showDebt?: boolean;
   showTags?: boolean;
@@ -54,6 +61,8 @@ export function CustomerCard({
   );
   const customerTags = preloadedTags ?? customerTagsQuery;
   const customerGroups = preloadedGroups ?? customerGroupsQuery;
+  const { mode } = useBusinessMode();
+  const waterProfile = mode === "agua" ? customer.waterProfile : null;
 
   const handleSelectClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -174,6 +183,26 @@ export function CustomerCard({
               )}>
                 <CalendarDays className="h-3 w-3" />
                 <span>Última compra: {formatRecentDateTime(new Date(customer.lastSaleDate))}</span>
+              </div>
+            )}
+
+            {waterProfile && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Badge
+                  variant="outline"
+                  className="h-6 rounded-full border-sky-200 bg-sky-50 px-2 text-[11px] font-medium text-sky-700 shadow-none dark:border-sky-400/30 dark:bg-sky-500/20 dark:text-sky-200"
+                >
+                  <Droplets className="mr-1 h-3 w-3" />
+                  {waterProfile.defaultContainerQuantity} bidones
+                </Badge>
+                {(waterProfile.waterRouteName || waterProfile.preferredRoute) && (
+                  <Badge
+                    variant="outline"
+                    className="h-6 rounded-full border-slate-200 bg-slate-50 px-2 text-[11px] font-medium text-slate-700 shadow-none dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+                  >
+                    {waterProfile.waterRouteName || waterProfile.preferredRoute}
+                  </Badge>
+                )}
               </div>
             )}
 

@@ -59,6 +59,62 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       },
     }
   )
+  .post(
+    "/water/preview",
+    async ({ ctx, body, distribucionService }) => {
+      const customers = await distribucionService.previewWaterRoute(ctx, {
+        fecha: body.fecha,
+        waterRouteId: body.waterRouteId,
+      });
+      return {
+        success: true,
+        data: {
+          distribucionId: null,
+          customers,
+          createdVisits: 0,
+        },
+      };
+    },
+    {
+      body: t.Object({
+        fecha: t.String(),
+        waterRouteId: t.String(),
+      }),
+      detail: {
+        summary: "Previsualizar ruta de agua",
+        description: "Lista clientes programados para una fecha y ruta de reparto de agua.",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
+  .post(
+    "/water/generate",
+    async ({ ctx, body, distribucionService }) => {
+      const result = await distribucionService.generateWaterRoute(ctx, {
+        vendedorId: body.vendedorId,
+        fecha: body.fecha,
+        waterRouteId: body.waterRouteId,
+        notaCreacion: body.notaCreacion,
+      });
+      return {
+        success: true,
+        data: result,
+      };
+    },
+    {
+      body: t.Object({
+        vendedorId: t.String(),
+        fecha: t.String(),
+        waterRouteId: t.String(),
+        notaCreacion: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "Generar ruta de agua",
+        description: "Crea una distribución y visitas desde clientes programados de agua.",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
   .get(
     "/:id",
     async ({ ctx, params, distribucionService }) => {

@@ -11,6 +11,14 @@ import {
   TrendingUp,
   Package,
   Receipt,
+  Droplets,
+  Route,
+  CarFront,
+  Banknote,
+  Plus,
+  Clock,
+  CalendarDays,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
@@ -34,10 +42,11 @@ import { OnboardingChecklist } from "~/components/dashboard/onboarding-checklist
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
+import { useCocheraDashboard } from "~/hooks/use-cochera-dashboard";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data: business } = useBusiness();
+  const { data: business, isLoading: isLoadingBusiness } = useBusiness();
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
 
   const [period, setPeriod] = useState<PeriodValue>({
@@ -67,6 +76,12 @@ export default function DashboardPage() {
   const usarDistribucion = business?.usarDistribucion ?? true;
   const tieneDistribucion = !!distribucion && distribucion.estado === "activo";
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
+  const isWaterMode = business?.businessMode === "agua";
+  const isCocheraMode = business?.businessMode === "cochera";
+
+  const { data: cocheraDashboard, isLoading: isLoadingCocheraDashboard } = useCocheraDashboard({
+    enabled: isCocheraMode,
+  });
 
   const debtorsCount = debtorsSummary?.debtorsCount ?? 0;
   const currentPeriodLabel =
@@ -77,6 +92,179 @@ export default function DashboardPage() {
         : period.type === "month"
           ? "Este mes"
           : "Rango personalizado";
+
+  if (isLoadingBusiness || !business) {
+    return (
+      <div className="flex min-h-[55vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-7 w-7 animate-spin text-orange-500" />
+          <p className="text-sm font-medium">Cargando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Cochera mode: simplified dashboard with parking-focused quick actions
+  if (isCocheraMode) {
+    const formatChartDate = (value: string) => {
+      const [year, month, day] = value.split("-").map(Number);
+      const date =
+        year && month && day
+          ? new Date(year, month - 1, day)
+          : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+
+      return date
+        .toLocaleDateString("es-PE", { weekday: "short" })
+        .replace(".", "");
+    };
+
+    const chartLabels = cocheraDashboard?.chartData.map((d) => {
+      return formatChartDate(String(d.date));
+    }) ?? [];
+    const chartValues = cocheraDashboard?.chartData.map((d) => Number(d.income)) ?? [];
+
+    const quickActions = [
+      {
+        to: "/cochera/entrada",
+        label: "Nueva entrada",
+        testId: "cochera-dashboard-action-entry",
+        icon: Plus,
+      },
+      {
+        to: "/cochera",
+        label: "Vehículos dentro",
+        testId: "cochera-dashboard-action-active",
+        icon: CarFront,
+      },
+      {
+        to: "/reportes",
+        label: "Reportes",
+        testId: "cochera-dashboard-action-reports",
+        icon: FileText,
+      },
+      ...(isAdmin
+        ? [
+            {
+              to: "/config/cochera",
+              label: "Configuración",
+              testId: "cochera-dashboard-action-config",
+              icon: Settings,
+            },
+          ]
+        : []),
+    ];
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[28px] bg-white/80 p-5 shadow-[0_14px_34px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:bg-[#151821] dark:shadow-[0_22px_52px_rgba(0,0,0,0.22)]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-[2rem] font-bold leading-none tracking-tight text-foreground">
+                Hola, {user?.name?.split(" ")[0]}!
+              </h1>
+              <p className="mt-2 max-w-[24rem] text-sm leading-6 text-muted-foreground">
+                Control de vehículos y cobros del día.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link key={action.to} to={action.to} data-testid={action.testId} className="block">
+                <div className="flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 text-center shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
+                    <Icon className="h-4.5 w-4.5 text-foreground/75" />
+                  </div>
+                  <span className="text-xs font-medium leading-4 text-foreground/85">{action.label}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Métricas Cochera */}
+        <div className="grid grid-cols-2 gap-3">
+          <MetricCard
+            title="Entradas Hoy"
+            dataTestId="cochera-dashboard-entries-today"
+            value={isLoadingCocheraDashboard ? "-" : String(cocheraDashboard?.todayEntries ?? 0)}
+            icon={CarFront}
+            iconColor="text-blue-600"
+          />
+          <MetricCard
+            title="Dentro Ahora"
+            value={isLoadingCocheraDashboard ? "-" : String(cocheraDashboard?.activeInside ?? 0)}
+            icon={Clock}
+            iconColor="text-orange-600"
+          />
+          <MetricCard
+            title="Ingresos Hoy"
+            value={isLoadingCocheraDashboard ? "S/ -" : `S/ ${formatCurrency(Number(cocheraDashboard?.todayIncome ?? 0))}`}
+            icon={Banknote}
+            iconColor="text-green-600"
+          />
+          <MetricCard
+            title="Ingresos Mes"
+            value={isLoadingCocheraDashboard ? "S/ -" : `S/ ${formatCurrency(Number(cocheraDashboard?.monthIncome ?? 0))}`}
+            icon={CalendarDays}
+            iconColor="text-emerald-600"
+          />
+        </div>
+
+        {/* Gráfico 7 días */}
+        {!isLoadingCocheraDashboard && chartLabels.length > 0 && (
+          <WeeklySalesChart
+            labels={chartLabels}
+            data={chartValues}
+            periodType="week"
+          />
+        )}
+
+        {/* Actividad Reciente */}
+        {cocheraDashboard && cocheraDashboard.recentActivity.length > 0 && (
+          <div className="shell-card-flat rounded-[24px] bg-white/70 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-[#151821] dark:shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
+            <h3 className="text-sm font-semibold text-foreground mb-3">
+              Cobros Recientes
+            </h3>
+            <div className="space-y-2">
+              {cocheraDashboard.recentActivity.map((session) => (
+                <div
+                  key={session.id}
+                  className="flex items-center justify-between rounded-[14px] bg-black/[0.02] px-3 py-2.5 dark:bg-white/[0.03]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100/80 dark:bg-orange-500/12">
+                      <CarFront className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{session.plate}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{session.vehicleType}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-foreground">
+                      S/ {formatCurrency(Number(session.totalAmount ?? 0))}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {session.checkoutAt
+                        ? new Date(session.checkoutAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -104,6 +292,7 @@ export default function DashboardPage() {
         hasProducts={hasProducts}
         hasSales={hasSales}
         userName={user?.name?.split(" ")[0]}
+        businessMode={business?.businessMode}
         onCreateSale={() => setCreateSheetOpen(true)}
       />
 
@@ -112,12 +301,12 @@ export default function DashboardPage() {
 
       {/* Accesos Rápidos - Siempre visibles */}
       <div className="grid grid-cols-3 gap-3">
-        <Link to="/ventas" className="block">
+        <Link to={isWaterMode ? "/distribuciones/nueva" : "/ventas"} className="block">
           <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
               <ShoppingCart className="h-4.5 w-4.5 text-foreground/75" />
             </div>
-            <span className="text-xs font-medium text-foreground/85">Venta</span>
+            <span className="text-xs font-medium text-foreground/85">{isWaterMode ? "Ruta" : "Venta"}</span>
           </div>
         </Link>
 
@@ -180,14 +369,18 @@ export default function DashboardPage() {
               iconColor="text-orange-600"
             />
             <MetricCard
-              title="Kilos"
-              value={isLoadingSales ? "-" : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
+              title={isWaterMode ? "Bidones" : "Kilos"}
+              value={isLoadingSales
+                ? "-"
+                : isWaterMode
+                  ? String(Math.round(salesStats?.current.kilos ?? 0))
+                  : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
               change={salesStats?.change.kilos}
-              icon={Weight}
+              icon={isWaterMode ? Droplets : Weight}
               iconColor="text-blue-600"
             />
             <MetricCard
-              title="Deudores"
+              title={isWaterMode ? "Cobranza pendiente" : "Deudores"}
               value={isLoadingDebtors ? "-" : String(debtorsCount)}
               subtitle="clientes con deuda"
               icon={Users}
@@ -216,7 +409,7 @@ export default function DashboardPage() {
           {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
             <Link to="/mi-distribucion" className="block">
               <InventoryCard
-                puntoVenta={distribucion.puntoVenta}
+                puntoVenta={isWaterMode ? `Ruta ${distribucion.puntoVenta}` : distribucion.puntoVenta}
                 modo={"libre" as const}
                 estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
                 cantidadItems={0}
@@ -234,11 +427,16 @@ export default function DashboardPage() {
                     <p className="font-medium text-foreground">Sin distribución asignada</p>
                     <p className="text-sm text-muted-foreground">
                       {isAdmin
-                        ? "Asigna tu distribución para hoy"
+                        ? isWaterMode
+                          ? "Crea una ruta para hoy"
+                          : "Asigna tu distribución para hoy"
                         : "Contacta a tu administrador"}
                     </p>
                   </div>
-                  {isAdmin && <Settings className="h-4 w-4 text-amber-500 ml-auto" />}
+                  {isAdmin && (isWaterMode
+                    ? <Route className="h-4 w-4 text-amber-500 ml-auto" />
+                    : <Settings className="h-4 w-4 text-amber-500 ml-auto" />
+                  )}
                 </div>
               </div>
             </Link>

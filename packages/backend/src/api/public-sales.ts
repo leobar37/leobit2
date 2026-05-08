@@ -13,7 +13,6 @@ import { productVariants, products, variantInventory } from "../db/schema/invent
 import { abonos } from "../db/schema/payments";
 import { NotFoundError, ValidationError, ForbiddenError } from "../errors";
 import { normalizeAmount, normalizeQuantity } from "../lib/number-utils";
-import type { DbTransaction } from "../lib/txid";
 import { servicesPlugin } from "../plugins/services";
 import { isValidTokenFormat } from "../services/business/sale-token.service";
 

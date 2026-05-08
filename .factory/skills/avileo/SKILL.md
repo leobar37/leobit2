@@ -1,183 +1,110 @@
 ---
 name: avileo
-description: Avileo - Offline-first chicken sales management system.
-  Use when working on the Avileo project, implementing sales features, offline
-  sync, database schema, or any code related to this chicken business management
-  app. Covers monorepo structure, Bun/ElysiaJS backend, React Router v7
-  frontend, Drizzle ORM, TanStack DB, and offline-first architecture.
+description: Avileo - Online-first chicken sales management system. Use when working on the Avileo project, implementing sales features, database schema, multi-business support, or code related to this sales management app. Covers monorepo structure, Bun/ElysiaJS backend, React Router v7 frontend, Drizzle ORM, PostgreSQL, TanStack Query, and online-first architecture.
 user-invocable: true
 disable-model-invocation: false
 ---
 
 # Avileo Project Reference
 
-> **Avileo** - Offline-first chicken sales management system for businesses selling chicken (live, dressed, cuts) and related products.
+Avileo is an online-first, mobile-first sales management system for chicken businesses and related verticals. Keep this file as the lightweight entry point; load linked references only when needed.
 
-## Project Overview
+## When To Use
 
-Avileo is a comprehensive sales management system designed for chicken businesses that operates **offline-first**. It enables vendors to work in areas without internet coverage while keeping data synchronized when connectivity is available.
+- Working in `packages/app`, `packages/backend`, or `packages/shared`.
+- Implementing sales, customers, purchases, distribution, closing, public catalog, payments, WhatsApp, reports, or staff workflows.
+- Changing database schema, shared contracts, sync-sensitive entities, or business mode behavior.
+- Reviewing Avileo-specific architecture, commands, conventions, or product terminology.
 
-### Key Characteristics
+## Project Shape
 
-- **Offline-First Architecture**: Works without internet, syncs when available
-- **Multi-Tenancy**: Single user can belong to multiple businesses
-- **Flexible Operation Modes**: Supports various business models
-- **Mobile-First**: Designed for vendors using mobile devices
-- **Real-time Dashboard**: Admin panel with sync status indicators
+| Package | Purpose |
+|---------|---------|
+| `packages/app` | React Router v7 frontend, mobile shell, TanStack Query, Eden Treaty |
+| `packages/backend` | Bun + ElysiaJS API, Drizzle ORM, services, repositories |
+| `packages/shared` | Shared schemas, types, standards, transformers |
 
-### Business Problem Solved
+Core architecture: online-first PWA, PostgreSQL, Better Auth, multi-tenancy, mobile vendor flows, unified `sales` table for instant sales and pre-orders.
 
-Traditional chicken businesses operate manually:
-- Price calculations by hand or calculator
-- Accounts receivable in paper notebooks
-- No tracking of who sells what
-- Difficult to know daily sales totals
-- **Vendors work in areas without internet coverage**
+## Critical Rules
 
-### Solution
+- Read the relevant package `AGENTS.md` before changing code in that package.
+- Backend repository/service methods take `ctx` first.
+- Every tenant-scoped query must filter by `businessId`.
+- Domain services throw errors; route layers convert them to HTTP responses.
+- Frontend writes belong in TanStack Query mutation hooks and existing app mutation wrappers.
+- Protected frontend routes must follow `flatRoutes()` and `_protected.*` conventions.
+- User-facing text is Spanish (`es-PE`); code comments are English.
+- Preserve mobile-first layouts at 320px-428px.
+- For business vertical behavior, prefer `businessMode` flags over hardcoded vertical-specific branches.
 
-- Sell without internet - data stored locally (IndexedDB)
-- Automatic sync when connection returns
-- Automatic price calculations (with tare subtraction)
-- Digital accounts receivable management
-- Inventory assignment to vendors (optional)
-- Real-time collection tracking
+## Quick Commands
 
-## Project Structure
-
-```
-avileo/
-├── packages/
-│   ├── app/              # React Router v7 frontend (@avileo/app)
-│   ├── backend/          # ElysiaJS + Drizzle backend (@avileo/backend)
-│   └── shared/           # Shared types & utilities (@avileo/shared)
-├── docs/
-│   ├── technical/        # Architecture & database docs
-│   └── development/      # Development phases (01-10)
-├── .claude/
-│   └── skills/avileo/    # This skill
-└── package.json          # Turborepo root
-```
-
-## Technology Stack
-
-| Layer | Technology | Version |
-|-------|------------|---------|
-| **Runtime** | Bun | 1.1.38+ |
-| **Frontend** | React Router v7 | latest |
-| **Backend** | ElysiaJS | latest |
-| **Database** | PostgreSQL (Neon) | 16.x |
-| **ORM** | Drizzle ORM | latest |
-| **Auth** | Better Auth | latest |
-| **State** | TanStack DB | latest |
-| **Cache** | TanStack Query | 5.x |
-| **Persistence** | IndexedDB | - |
-
-## Quick Reference
-
-### Build Commands
 ```bash
-# Root level (runs via turbo)
-bun run dev          # Start all dev servers
-bun run build        # Build all packages
-bun run db:migrate   # Run database migrations
-bun run db:generate  # Generate Drizzle migrations
+bun run dev
+bun run build
 
-# Individual packages
-cd packages/app && bun run dev       # Frontend only (port 5173)
-cd packages/backend && bun run dev   # Backend only (port 3000)
-cd packages/shared && bun run build  # Build shared package
+cd packages/app && bun test
+cd packages/app && bun run test:e2e
+
+cd packages/backend && bun test
+cd packages/backend && bun run test:e2e
+cd packages/backend && bun run db:generate
+cd packages/backend && bun run db:migrate
+cd packages/backend && bun run db:seed:demo
 ```
 
-### Database Commands
-```bash
-cd packages/backend
-bun run db:generate  # Generate migration files
-drizzle-kit generate # Alternative
-bun run db:migrate   # Run pending migrations
-bun run db:push      # Push schema changes (dev only)
-```
+## Business Modes
 
-## Operation Modes
+Avileo supports multiple business verticals through a config-driven framework. Current core modes:
 
-The system supports 4 modes configurable per business:
+| Vertical | Slug | Status | Notes |
+|----------|------|--------|-------|
+| Polleria | `polleria` | Active | Tara, net weight, kg sales, daily distribution |
+| Distribucion de Agua | `agua` | Planned | Containers, deposits, subscriptions, unit sales |
 
-1. **Inventario Propio** (Traditional): Buy chicken, process, distribute to vendors
-2. **Sin Inventario** (Commission): Vendors sell third-party chicken, no stock control
-3. **Pedidos Primero** (Pre-sale): Orders first, then buy chicken to fulfill
-4. **Mixto** (Hybrid): Combination based on day/season
+Use `RequestContext.businessMode` and `RequestContext.modeFlags` in backend services. Use `useBusinessMode()`, `BusinessMode`, and `BusinessModeField` in frontend code.
 
-### Mode Configuration
-```typescript
-interface ConfiguracionSistema {
-  usar_distribucion: boolean;    // Use daily distribution
-}
-```
+For APIs, examples, feature flags, and key files, see [referencias/business-modes.md](referencias/business-modes.md).
 
-## Core Modules
+## Reference Map
 
-| Module | Description | Offline Support |
-|--------|-------------|-----------------|
-| **Authentication** | Login/logout with JWT | ⚠️ First login needs internet |
-| **Users & Roles** | Admin and vendor management | ❌ Admin only |
-| **Calculator** | Price calculations with tare | ✅ 100% offline |
-| **Sales** | Cash and credit sales | ✅ 100% offline |
-| **Customers** | Accounts receivable | ✅ 100% offline |
-| **Abonos** | Debt payments | ✅ 100% offline |
-| **Distribution** | Daily inventory assignment | ✅ 100% offline |
-| **Sync Engine** | Offline/online sync | ✅ Background sync |
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and patterns.
+- [DATABASE.md](DATABASE.md) - Database schema, relations, and enums.
+- [MODULES.md](MODULES.md) - Business modules, workflows, and use cases.
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Development phases, commands, and guidelines.
+- [referencias/business-modes.md](referencias/business-modes.md) - Multi-vertical business modes framework.
+- [referencias/toolbar-actions.md](referencias/toolbar-actions.md) - ToolbarActions component pattern.
+- `AGENTS.md` - Root conventions and command map.
+- `packages/app/AGENTS.md` - Frontend conventions.
+- `packages/backend/AGENTS.md` - Backend conventions.
+- `packages/shared/src/AGENTS.md` - Shared package conventions.
 
-## Documentation Structure
+## Key Code Paths
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical architecture, patterns, and offline-first design
-- **[DATABASE.md](DATABASE.md)** - Database schema, relations, and sync patterns
-- **[MODULES.md](MODULES.md)** - Business modules, workflows, and use cases
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development phases, commands, and guidelines
-- **[referencias/toolbar-actions.md](referencias/toolbar-actions.md)** - ToolbarActions component pattern
-
-## Important Constraints
-
-### Limitations (Documented)
-1. Login requires internet (first time) - JWT cached 24-48h
-2. Admin data not instant - sees synced data only
-3. Simultaneous edit conflicts - "last wins" strategy
-4. IndexedDB capacity ~50-100 MB per origin
-5. No real-time sync - 30s interval when online
-6. Lost device = lost unsynced data
-
-### Business Contradictions Resolved
-| Contradiction | Resolution |
-|---------------|------------|
-| "Real-time dashboard" vs "No internet" | Dashboard shows last synced state + pending count |
-| "Instant cash closing" vs "Sync delay" | Closing calculated from local vendor data |
-| "Never lose sales" vs "Device failure" | Auto-sync every 30s + manual backup button |
-
-## Key Files to Reference
-
-### Documentation
-- `docs/technical/readme.md` - Main technical plan
-- `docs/technical/database.md` - Complete ER diagram
-- `docs/development/readme.md` - Development roadmap
-- `AGENTS.md` - Project conventions and commands
-
-### Code
-- `packages/backend/src/db/schema/` - Drizzle schema files
-- `packages/app/app/routes/` - Frontend routes
-- `packages/shared/src/index.ts` - Shared types
+- `packages/backend/src/db/schema/` - Drizzle schema files.
+- `packages/backend/src/services/` - Backend domain services and repositories.
+- `packages/app/app/routes/` - Frontend routes.
+- `packages/app/app/lib/api-client.ts` - Eden Treaty API client.
+- `packages/shared/src/index.ts` - Shared public exports.
+- `packages/shared/src/transformers/` - Decimal and entity transformers.
 
 ## Glossary
 
 | Term | Definition |
 |------|------------|
-| **Offline-first** | App works without internet, syncs when possible |
-| **Sync** | Synchronize local data with server |
-| **IndexedDB** | Browser's local database |
-| **Tara** | Container weight subtracted from gross weight |
-| **Distribución del Día** | Daily inventory assignment to vendors (optional) |
-| **Abono** | Debt payment independent of sales |
-| **Modo Libre** | Sales recording without stock control |
+| Tara | Container weight subtracted from gross weight |
+| Distribucion del Dia | Daily inventory assignment to vendors |
+| Abono | Debt payment independent of sales |
+| Modo Libre | Sales recording without stock control |
+| Punto de Venta | Sales location or branch |
+| Venta al Credito | Credit sale / accounts receivable |
+| Venta al Contado | Cash sale |
+| Pre-orden / Pedido | Pre-order for future delivery |
+| Cierre | Daily closing report by vendor |
+| Visita | Customer visit tracking during distribution |
+| Variante | Product variant |
 
 ---
 
-*Last updated: February 2026*
-*For detailed information, see linked documentation files.*
+Last updated: May 2026

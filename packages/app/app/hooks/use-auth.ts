@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { authClient, useAuthSession, changePassword, refreshSession, clearAuthSessionCache } from "../lib/auth-client";
 import {
   clearStoredAuthState,
@@ -34,11 +35,13 @@ export type RegisterResult = { needsRedirect: false } | { needsRedirect: true; r
 
 export function useAuth() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: session, isPending } = useAuthSession();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const login = async (email: string, password: string): Promise<LoginResult> => {
     clearStoredAuthState();
+    queryClient.clear();
 
     const result = await authClient.signIn.email({
       email,
@@ -74,6 +77,7 @@ export function useAuth() {
     name: string;
   }): Promise<RegisterResult> => {
     clearStoredAuthState();
+    queryClient.clear();
 
     const result = await authClient.signUp.email({
       email: data.email,
@@ -106,6 +110,7 @@ export function useAuth() {
     setIsLoggingOut(true);
 
     clearStoredAuthState();
+    queryClient.clear();
     clearAuthSessionCache();
     clearStoredBusinessId();
 

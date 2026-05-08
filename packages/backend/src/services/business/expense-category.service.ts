@@ -4,7 +4,7 @@ import type { RequestContext } from "../../context/request-context";
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from "../../errors";
 import type { ExpenseCategory } from "../../db/schema";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 
 export class ExpenseCategoryService {
   constructor(
@@ -49,7 +49,7 @@ export class ExpenseCategoryService {
       icon?: string;
       color?: string;
     }
-  ): Promise<MutationResult<ExpenseCategory>> {
+  ): Promise<ExpenseCategory> {
     if (!ctx.isAdmin()) {
       throw new ForbiddenError("Solo los administradores pueden crear categorias");
     }
@@ -68,7 +68,7 @@ export class ExpenseCategoryService {
 
       return {
         data: category,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -83,7 +83,7 @@ export class ExpenseCategoryService {
       color?: string;
       isActive?: boolean;
     }
-  ): Promise<MutationResult<ExpenseCategory>> {
+  ): Promise<ExpenseCategory> {
     if (!ctx.isAdmin()) {
       throw new ForbiddenError("Solo los administradores pueden actualizar categorias");
     }
@@ -109,7 +109,7 @@ export class ExpenseCategoryService {
       const category = await this.repository.update(ctx, id, updateData, tx);
       return {
         data: category,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

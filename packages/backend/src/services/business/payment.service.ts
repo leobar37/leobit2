@@ -9,7 +9,7 @@ import {
 } from "../../errors";
 import type { Abono } from "../../db/schema";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { decimalToNumber } from "@avileo/shared";
 
 export class PaymentService {
@@ -58,7 +58,7 @@ export class PaymentService {
       referenceNumber?: string;
       relatedSaleId?: string;
     }
-  ): Promise<MutationResult<Abono>> {
+  ): Promise<Abono> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para registrar abonos");
     }
@@ -124,7 +124,7 @@ export class PaymentService {
 
       return {
         data: abono,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -166,7 +166,7 @@ export class PaymentService {
       proofImageId?: string;
       referenceNumber?: string;
     }
-  ): Promise<MutationResult<Abono>> {
+  ): Promise<Abono> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar abonos");
     }
@@ -180,7 +180,7 @@ export class PaymentService {
       const abono = await this.repository.update(ctx, id, data, tx);
       return {
         data: abono,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -194,7 +194,7 @@ export class PaymentService {
       proofImageId?: string;
       notes?: string;
     }
-  ): Promise<MutationResult<Abono>> {
+  ): Promise<Abono> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar abonos");
     }
@@ -208,7 +208,7 @@ export class PaymentService {
       const abono = await this.repository.update(ctx, id, data, tx);
       return {
         data: abono,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

@@ -9,7 +9,6 @@ import {
   type Product,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export interface ProductCategorySummary {
   id: string;

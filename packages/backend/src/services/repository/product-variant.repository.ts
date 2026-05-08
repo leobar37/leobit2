@@ -3,7 +3,6 @@ import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { productVariants, variantInventory, sales, saleItems, products, type ProductVariant, type NewProductVariant, type VariantInventory, type NewVariantInventory } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export interface CreateVariantInput {
   id?: string;

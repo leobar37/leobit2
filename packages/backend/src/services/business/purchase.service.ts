@@ -6,7 +6,7 @@ import type { ProductUnitRepository } from "../repository/product-unit.repositor
 import type { FileRepository } from "../repository/file.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -76,7 +76,7 @@ export class PurchaseService {
   async createPurchase(
     ctx: RequestContext,
     data: CreatePurchaseInput
-  ): Promise<MutationResult<PurchaseWithItems>> {
+  ): Promise<PurchaseWithItems> {
     if (!ctx.hasPermission("purchases.write")) {
       throw new ForbiddenError("No tiene permisos para crear compras");
     }
@@ -161,7 +161,7 @@ export class PurchaseService {
 
     return {
       data: purchase,
-      txid: Date.now(),
+      txid: await getCurrentTransactionId(tx),
     };
   }
 
@@ -169,7 +169,7 @@ export class PurchaseService {
     ctx: RequestContext,
     id: string,
     data: CreatePurchaseInput
-  ): Promise<MutationResult<PurchaseWithItems>> {
+  ): Promise<PurchaseWithItems> {
     if (!ctx.hasPermission("purchases.write")) {
       throw new ForbiddenError("No tiene permisos para modificar compras");
     }
@@ -268,7 +268,7 @@ export class PurchaseService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -276,7 +276,7 @@ export class PurchaseService {
   async confirmPurchase(
     ctx: RequestContext,
     id: string
-  ): Promise<MutationResult<PurchaseWithItems>> {
+  ): Promise<PurchaseWithItems> {
     if (!ctx.hasPermission("purchases.write")) {
       throw new ForbiddenError("No tiene permisos para modificar compras");
     }
@@ -305,7 +305,7 @@ export class PurchaseService {
 
     return {
       data: { ...existing, status: "pending" },
-      txid: Date.now(),
+      txid: await getCurrentTransactionId(tx),
     };
   }
 
@@ -313,7 +313,7 @@ export class PurchaseService {
     ctx: RequestContext,
     id: string,
     status: "pending" | "received" | "cancelled"
-  ): Promise<MutationResult<Purchase>> {
+  ): Promise<Purchase> {
     if (!ctx.hasPermission("purchases.write")) {
       throw new ForbiddenError("No tiene permisos para modificar compras");
     }
@@ -341,7 +341,7 @@ export class PurchaseService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

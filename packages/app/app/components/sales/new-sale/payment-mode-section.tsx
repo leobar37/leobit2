@@ -9,6 +9,7 @@ import { useNewSaleContext } from "../new-sale-context";
 import { PaymentCapture } from "~/components/payments/payment-capture";
 import type { PaymentMethod } from "~/components/payments/payment-capture";
 import { useUploadFile } from "~/hooks/use-files";
+import { useBusinessMode } from "~/hooks/use-business-mode";
 import { useToast } from "~/hooks/use-toast";
 
 const paymentModes: {
@@ -60,9 +61,14 @@ function getPaymentModeRequiresCustomerMessage(mode: PaymentMode) {
 export function PaymentModeSection() {
   const { saleId, sale, items, paymentForm, updatePaymentForm } = useNewSaleContext();
   const uploadFile = useUploadFile();
+  const { mode: businessMode } = useBusinessMode();
   const { toast } = useToast();
 
   const calculations = useSaleCalculations(sale, items);
+
+  const availablePaymentModes = businessMode === "agua"
+    ? paymentModes.filter((mode) => mode.value === "pago_total")
+    : paymentModes;
 
   const handleSetPaymentMode = useCallback(
     (mode: PaymentMode) => {
@@ -111,7 +117,7 @@ export function PaymentModeSection() {
     <Card className="rounded-[26px] border-0 bg-transparent shadow-none">
       <CardContent className="space-y-3 px-0 py-1">
         <div className="space-y-2">
-          {paymentModes.map((mode) => (
+          {availablePaymentModes.map((mode) => (
             <button
               key={mode.value}
               onClick={() => handleSetPaymentMode(mode.value)}
@@ -153,6 +159,12 @@ export function PaymentModeSection() {
             </button>
           ))}
         </div>
+
+        {businessMode === "agua" && (
+          <p className="rounded-2xl bg-sky-500/10 px-3 py-2 text-sm text-sky-800 dark:text-sky-100">
+            En reparto de agua, el flujo principal es pago contra entrega.
+          </p>
+        )}
 
         {visiblePaymentMode === "a_cuenta" && (
           <div className="space-y-4">

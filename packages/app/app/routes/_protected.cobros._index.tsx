@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useAccountsReceivable, useTotalAccountsReceivable } from "~/hooks/use-accounts-receivable";
 import { useSetLayout } from "~/components/layout/app-layout";
+import { useBusinessMode } from "~/hooks/use-business-mode";
+import { useCocheraDebts } from "~/hooks/use-cochera-debts";
 import { cn, formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
 import { getDebtLevel } from "~/lib/debt";
@@ -99,7 +101,125 @@ function DebtorCard({ account }: { account: AccountsReceivableItem }) {
   );
 }
 
-export default function CobrosPage() {
+function CocheraDebtCard({
+  debt,
+}: {
+  debt: NonNullable<ReturnType<typeof useCocheraDebts>["data"]>["items"][number];
+}) {
+  return (
+    <Link to={`/cobros/nuevo?cocheraSessionId=${debt.id}`} className="block">
+      <Card className="shell-card-flat w-full rounded-2xl border-0 transition-colors">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-lg font-bold tracking-wide">{debt.plate}</p>
+                <Badge variant="outline" className="capitalize">{debt.vehicleType}</Badge>
+                <Badge className="rounded-full border border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+                  Pendiente
+                </Badge>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {debt.responsibleName || "Sin responsable"}
+                {debt.responsiblePhone ? ` · ${debt.responsiblePhone}` : ""}
+              </p>
+              {debt.checkoutAt ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Salida: {formatDate(new Date(debt.checkoutAt))}
+                </p>
+              ) : null}
+            </div>
+            <ChevronRight className="mt-1 h-4 w-4 text-muted-foreground" />
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+            <div className="rounded-xl bg-muted/60 px-3 py-2">
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="font-semibold">S/ {formatCurrency(debt.totalAmount)}</p>
+            </div>
+            <div className="rounded-xl bg-emerald-500/10 px-3 py-2 text-emerald-700 dark:text-emerald-300">
+              <p className="text-xs opacity-80">Cobrado</p>
+              <p className="font-semibold">S/ {formatCurrency(debt.amountPaid)}</p>
+            </div>
+            <div className="rounded-xl bg-red-500/10 px-3 py-2 text-red-700 dark:text-red-300">
+              <p className="text-xs opacity-80">Pendiente</p>
+              <p className="font-semibold">S/ {formatCurrency(debt.balanceDue)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function CocheraCobrosPage() {
+  useSetLayout({ title: "Cobros", showBackButton: true, backHref: "/dashboard" });
+
+  const [search, setSearch] = useState("");
+  const { data, isLoading } = useCocheraDebts({ search });
+  const debts = data?.items ?? [];
+  const totalDebt = data?.summary.totalDebt ?? "0";
+
+  return (
+    <div className="space-y-4">
+      <div className="shell-card-soft border-l-4 border-red-500 py-3 pl-4 pr-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">Total por cobrar</p>
+            <p className="text-3xl font-bold text-foreground">S/ {formatCurrency(totalDebt)}</p>
+          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100/90 text-red-600 dark:bg-destructive/15 dark:text-destructive-foreground">
+            <Wallet className="h-5 w-5" />
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground mt-2">
+          {debts.length} {debts.length === 1 ? "vehículo" : "vehículos"} con deuda
+        </p>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar placa, responsable o teléfono..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="shell-search-field pl-10 pr-4"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">
+          Cargando deudas...
+        </div>
+      ) : debts.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100/90 dark:bg-emerald-500/14">
+            <AlertCircle className="h-10 w-10 text-emerald-600 dark:text-emerald-300" />
+          </div>
+          <h3 className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">
+            ¡Todas las cocheras al día!
+          </h3>
+          <p className="mt-1 text-muted-foreground">
+            No hay saldos pendientes de vehículos.
+          </p>
+          <Button variant="outline" className="mt-4 rounded-xl dark:border-white/10 dark:bg-white/6 dark:hover:bg-white/10" asChild>
+            <Link to="/cochera">
+              Ver vehículos
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {debts.map((debt) => (
+            <CocheraDebtCard key={debt.id} debt={debt} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PolleriaCobrosPage() {
   useSetLayout({ title: "Cobros", showBackButton: true, backHref: "/dashboard" });
 
   const [search, setSearch] = useState("");
@@ -311,4 +431,14 @@ export default function CobrosPage() {
       )}
     </div>
   );
+}
+
+export default function CobrosPage() {
+  const { is } = useBusinessMode();
+
+  if (is.cochera) {
+    return <CocheraCobrosPage />;
+  }
+
+  return <PolleriaCobrosPage />;
 }

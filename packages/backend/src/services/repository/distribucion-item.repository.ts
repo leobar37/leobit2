@@ -6,7 +6,6 @@ import {
   type NewDistribucionItem,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export class DistribucionItemRepository {
   async findByDistribucionId(

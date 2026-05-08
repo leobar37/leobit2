@@ -9,3 +9,11 @@ class LocalStorageMock {
 }
 
 global.localStorage = new LocalStorageMock() as any;
+
+if (!URL.createObjectURL) {
+  URL.createObjectURL = () => "blob:mock-url";
+}
+
+if (!URL.revokeObjectURL) {
+  URL.revokeObjectURL = () => {};
+}

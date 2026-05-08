@@ -30,8 +30,6 @@ const SINGLE_WRITER_SLOT_NAMES = new Set<MobileSlotName>([
   "bottom-nav",
 ]);
 
-const IS_DEV = import.meta.env.DEV;
-
 export type MobileSlotName = (typeof MOBILE_SLOT_NAMES)[number];
 
 export interface MobileSlotEntry {
@@ -150,12 +148,6 @@ export function MobileSlotProvider({ children }: MobileSlotProviderProps) {
               currentEntry.id === entry.id ? nextEntry : currentEntry,
             )
           : [...currentEntries, nextEntry];
-
-        if (IS_DEV && entry.isSingleWriter && nextEntries.length > 1) {
-          console.warn(
-            `[MobileSlot] Multiple writers registered for single-writer slot "${entry.name}". Last writer wins.`,
-          );
-        }
 
         return {
           ...currentRegistry,

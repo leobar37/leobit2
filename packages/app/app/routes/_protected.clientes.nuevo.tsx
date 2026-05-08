@@ -10,10 +10,12 @@ import {
   customerSchema,
   type CustomerFormData,
 } from "~/components/customers/customer-form-content";
+import { useBusinessMode } from "~/hooks/use-business-mode";
 
 export default function NewCustomerPage() {
   const navigate = useNavigate();
   const createCustomer = useCreateCustomer();
+  const { mode } = useBusinessMode();
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -24,6 +26,18 @@ export default function NewCustomerPage() {
       phone: null,
       address: null,
       notes: null,
+      waterProfile: {
+        deliveryFrequency: "weekly",
+        deliveryDays: [],
+        defaultContainerQuantity: 1,
+        containersAtCustomer: 0,
+        depositAmount: 0,
+        depositStatus: "none",
+        depositExceptionReason: null,
+        waterRouteId: null,
+        preferredRoute: null,
+        deliveryInstructions: null,
+      },
     },
   });
 
@@ -36,6 +50,21 @@ export default function NewCustomerPage() {
         phone: data.phone ?? undefined,
         address: data.address ?? undefined,
         notes: data.notes ?? undefined,
+        ...(mode === "agua" && data.waterProfile
+          ? {
+                waterProfile: {
+                  ...data.waterProfile,
+                defaultContainerQuantity: Number(data.waterProfile.defaultContainerQuantity ?? 1),
+                containersAtCustomer: 0,
+                depositAmount: "0",
+                depositStatus: "none",
+                depositExceptionReason: null,
+                waterRouteId: data.waterProfile.waterRouteId || null,
+                preferredRoute: data.waterProfile.preferredRoute || null,
+                deliveryInstructions: data.waterProfile.deliveryInstructions || null,
+              },
+            }
+          : {}),
       };
       await createCustomer.mutateAsync(input);
       navigate("/clientes");

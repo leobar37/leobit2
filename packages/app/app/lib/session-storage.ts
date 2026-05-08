@@ -48,6 +48,7 @@ export function clearStoredAuthState() {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(CURRENT_BUSINESS_ID_KEY);
   localStorage.removeItem(CURRENT_BUSINESS_USER_ID_KEY);
+  clearPersistedQueryCache();
 }
 
 export async function clearSyncStorage(

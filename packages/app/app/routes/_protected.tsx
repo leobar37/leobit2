@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { AppLayout } from "~/components/layout/app-layout";
-import { MobileSlotProvider } from "~/components/mobile";
+import { MobileShell, MobileSlotProvider } from "~/components/mobile";
 import {
   getStoredBusinessId,
   getStoredAuthToken,
@@ -82,6 +82,18 @@ export default function ProtectedLayout() {
 
   if (!businessId && location.pathname !== "/business/create") {
     return <Navigate to="/business/create" replace />;
+  }
+
+  if (location.pathname === "/business/create" || location.pathname === "/onboarding/data") {
+    return (
+      <MobileSlotProvider>
+        <MobileShell.Root variant="public">
+          <MobileShell.Content className="flex items-start justify-center sm:items-center">
+            <Outlet />
+          </MobileShell.Content>
+        </MobileShell.Root>
+      </MobileSlotProvider>
+    );
   }
 
   return (

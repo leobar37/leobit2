@@ -16,7 +16,9 @@ function makeCtx(businessId: string): RequestContext {
   } as RequestContext;
 }
 
-describe("FileRepository tenant boundaries", () => {
+const describeWithDatabase = process.env.DATABASE_URL ? describe : describe.skip;
+
+describeWithDatabase("FileRepository tenant boundaries", () => {
   const repo = new FileRepository();
   const ctxA = makeCtx("biz-a");
   const ctxB = makeCtx("biz-b");

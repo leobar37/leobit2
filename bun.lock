@@ -128,6 +128,7 @@
       "dependencies": {
         "@paralleldrive/cuid2": "^2.2.2",
         "drizzle-orm": "^0.45.1",
+        "zod": "^4.3.6",
       },
       "devDependencies": {
         "tsup": "^8.0.2",

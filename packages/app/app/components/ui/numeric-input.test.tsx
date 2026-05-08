@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { FormProvider, useForm } from "react-hook-form";
 import { FormInput } from "../forms/form-input";
 import {
   NumericInput,
@@ -51,7 +52,16 @@ describe("NumericInput", () => {
 
 describe("FormInput", () => {
   it("keeps a reserved message row even without helper text", () => {
-    const { container } = render(<FormInput label="Monto" name="amount" />);
+    function TestForm() {
+      const form = useForm({ defaultValues: { amount: "" } });
+      return (
+        <FormProvider {...form}>
+          <FormInput label="Monto" name="amount" />
+        </FormProvider>
+      );
+    }
+
+    const { container } = render(<TestForm />);
     const message = container.querySelector("p.min-h-5");
 
     expect(message).toBeTruthy();
