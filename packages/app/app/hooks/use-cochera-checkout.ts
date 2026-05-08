@@ -4,6 +4,8 @@ import type { CocheraCheckoutInput, CocheraCheckoutResult } from "@avileo/shared
 import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 
 const COCHERA_SESSIONS_KEY = PERSISTED_REMOTE_QUERY_KEYS.cocheraSessions;
+const COCHERA_DASHBOARD_KEY = PERSISTED_REMOTE_QUERY_KEYS.cocheraDashboard;
+const COCHERA_REPORTS_KEY = PERSISTED_REMOTE_QUERY_KEYS.cocheraReports;
 
 async function checkoutCocheraSession(
   id: string,
@@ -21,6 +23,8 @@ export function useCocheraCheckout() {
       checkoutCocheraSession(id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: COCHERA_SESSIONS_KEY });
+      queryClient.invalidateQueries({ queryKey: COCHERA_DASHBOARD_KEY });
+      queryClient.invalidateQueries({ queryKey: COCHERA_REPORTS_KEY });
     },
   });
 }

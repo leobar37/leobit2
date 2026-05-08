@@ -10,6 +10,9 @@ import {
   Clock,
   Tag,
   AlertCircle,
+  CreditCard,
+  User,
+  MessageSquare,
 } from "lucide-react";
 import { MobileShell } from "~/components/mobile/mobile-shell";
 import { MobileSlot } from "~/components/mobile/mobile-slots";
@@ -28,6 +31,14 @@ const PAYMENT_OPTIONS = [
   { id: "plin" as const, label: "Plin", icon: QrCode },
 ];
 
+const PAYMENT_MODE_OPTIONS = [
+  { id: "pago_total" as const, label: "Pago total", description: "Cobra el total ahora" },
+  { id: "a_cuenta" as const, label: "A cuenta", description: "Cobra una parte y deja saldo" },
+  { id: "debe_todo" as const, label: "Debe todo", description: "Sale sin pago recibido" },
+];
+
+type PaymentMode = (typeof PAYMENT_MODE_OPTIONS)[number]["id"];
+
 function formatElapsedTime(minutes: number): string {
   if (minutes < 1) return "Menos de 1 min";
   const hrs = Math.floor(minutes / 60);
@@ -45,8 +56,13 @@ export default function CocheraCobrarPage() {
   const { data: settings } = useCocheraSettings({ enabled: is.cochera });
   const checkoutMutation = useCocheraCheckout();
 
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("pago_total");
   const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "yape" | "plin">("efectivo");
   const [discountInput, setDiscountInput] = useState("");
+  const [amountPaidInput, setAmountPaidInput] = useState("");
+  const [responsibleName, setResponsibleName] = useState("");
+  const [responsiblePhone, setResponsiblePhone] = useState("");
+  const [settlementNotes, setSettlementNotes] = useState("");
 
   const session = useMemo(() => {
     return sessions?.find((s) => s.id === id);
@@ -84,15 +100,84 @@ export default function CocheraCobrarPage() {
     return new Set(settings?.acceptedPaymentMethods ?? ["efectivo"]);
   }, [settings]);
 
+  const settlementPreview = useMemo(() => {
+    if (!preview) return null;
+
+    const totalAmount = preview.totalAmount;
+    const amountPaid =
+      paymentMode === "pago_total"
+        ? totalAmount
+        : paymentMode === "debe_todo"
+          ? 0
+          : Number(amountPaidInput) || 0;
+
+    return {
+      amountPaid: Math.max(0, amountPaid),
+      balanceDue: Math.max(0, totalAmount - Math.max(0, amountPaid)),
+    };
+  }, [preview, paymentMode, amountPaidInput]);
+
+  const validationMessage = useMemo(() => {
+    if (!preview) return null;
+
+    if (paymentMode !== "debe_todo" && !acceptedMethods.has(paymentMethod)) {
+      return "El método de pago no está habilitado en configuración.";
+    }
+
+    if (paymentMode === "a_cuenta") {
+      const amountPaid = Number(amountPaidInput) || 0;
+      if (amountPaid <= 0) return "Ingresa un monto a cuenta mayor a cero.";
+      if (amountPaid >= preview.totalAmount) return "El monto a cuenta debe ser menor al total.";
+      if (!responsibleName.trim()) return "Ingresa el responsable del saldo pendiente.";
+    }
+
+    if (paymentMode === "debe_todo" && !responsibleName.trim()) {
+      return "Ingresa el responsable de la deuda.";
+    }
+
+    return null;
+  }, [acceptedMethods, amountPaidInput, paymentMethod, paymentMode, preview, responsibleName]);
+
+  const submitLabel =
+    paymentMode === "pago_total"
+      ? "Confirmar cobro"
+      : paymentMode === "a_cuenta"
+        ? "Registrar salida a cuenta"
+        : "Registrar salida con deuda";
+
   const handleSubmit = useCallback(async () => {
     if (!id) return;
     const discount = Number(discountInput) || 0;
+    const amountPaid = Number(amountPaidInput) || 0;
     await checkoutMutation.mutateAsync({
       id,
-      input: { paymentMethod, discount },
+      input: {
+        paymentMode,
+        amountPaid: paymentMode === "a_cuenta" ? amountPaid : undefined,
+        paymentMethod: paymentMode === "debe_todo" ? undefined : paymentMethod,
+        responsibleName:
+          paymentMode === "pago_total" ? undefined : responsibleName.trim(),
+        responsiblePhone:
+          paymentMode === "pago_total" || !responsiblePhone.trim()
+            ? undefined
+            : responsiblePhone.trim(),
+        notes: settlementNotes.trim() || undefined,
+        discount,
+      },
     });
     navigate("/cochera");
-  }, [id, paymentMethod, discountInput, checkoutMutation, navigate]);
+  }, [
+    id,
+    discountInput,
+    amountPaidInput,
+    paymentMode,
+    paymentMethod,
+    responsibleName,
+    responsiblePhone,
+    settlementNotes,
+    checkoutMutation,
+    navigate,
+  ]);
 
   if (!is.cochera) {
     return (
@@ -233,7 +318,43 @@ export default function CocheraCobrarPage() {
               </div>
             )}
 
+            {/* Settlement mode */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Forma de salida</p>
+              <div className="grid gap-2">
+                {PAYMENT_MODE_OPTIONS.map((option) => {
+                  const isSelected = paymentMode === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      data-testid={`cochera-payment-mode-${option.id}`}
+                      onClick={() => setPaymentMode(option.id)}
+                      className={cn(
+                        "flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all",
+                        isSelected
+                          ? "border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-500/60 dark:bg-orange-500/15 dark:text-orange-100"
+                          : "border-border bg-card text-foreground hover:border-orange-200 dark:hover:border-orange-500/40"
+                      )}
+                    >
+                      <div>
+                        <p className="font-semibold">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">{option.description}</p>
+                      </div>
+                      <CreditCard
+                        className={cn(
+                          "h-5 w-5",
+                          isSelected ? "text-orange-600 dark:text-orange-300" : "text-muted-foreground"
+                        )}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Payment method */}
+            {paymentMode !== "debe_todo" && (
             <div className="space-y-3">
               <p className="text-sm font-medium">Método de pago</p>
               <div className="grid grid-cols-3 gap-3">
@@ -251,10 +372,10 @@ export default function CocheraCobrarPage() {
                         "flex flex-col items-center justify-center gap-2 rounded-2xl border-2 px-3 py-4 text-sm font-medium transition-all",
                         !isAccepted && "opacity-40 cursor-not-allowed",
                         isSelected
-                          ? "border-orange-200 bg-orange-50 text-orange-700"
+                          ? "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/60 dark:bg-orange-500/15 dark:text-orange-200"
                           : isAccepted
-                            ? "border-gray-100 bg-gray-50/50 text-muted-foreground hover:border-gray-200"
-                            : "border-gray-100 bg-gray-50/50 text-muted-foreground"
+                            ? "border-border bg-card text-muted-foreground hover:border-orange-200 dark:hover:border-orange-500/40"
+                            : "border-border bg-muted text-muted-foreground"
                       )}
                     >
                       <option.icon className="h-6 w-6" />
@@ -264,6 +385,59 @@ export default function CocheraCobrarPage() {
                 })}
               </div>
             </div>
+            )}
+
+            {paymentMode === "a_cuenta" && (
+              <div className="space-y-2">
+                <label htmlFor="amountPaid" className="text-sm font-medium flex items-center gap-2">
+                  <Banknote className="h-4 w-4" />
+                  Monto pagado a cuenta (S/)
+                </label>
+                <Input
+                  id="amountPaid"
+                  data-testid="cochera-amount-paid-input"
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  placeholder="0.00"
+                  value={amountPaidInput}
+                  onChange={(e) => setAmountPaidInput(e.target.value)}
+                  className="h-12 rounded-xl text-base"
+                />
+              </div>
+            )}
+
+            {paymentMode !== "pago_total" && (
+              <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+                <p className="text-sm font-medium">Responsable del saldo</p>
+                <div className="space-y-2">
+                  <label htmlFor="responsibleName" className="text-sm font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Nombre *
+                  </label>
+                  <Input
+                    id="responsibleName"
+                    data-testid="cochera-responsible-name-input"
+                    placeholder="Ej: Juan Pérez"
+                    value={responsibleName}
+                    onChange={(e) => setResponsibleName(e.target.value)}
+                    className="h-12 rounded-xl text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="responsiblePhone" className="text-sm font-medium">Teléfono opcional</label>
+                  <Input
+                    id="responsiblePhone"
+                    data-testid="cochera-responsible-phone-input"
+                    inputMode="tel"
+                    placeholder="Ej: 999 999 999"
+                    value={responsiblePhone}
+                    onChange={(e) => setResponsiblePhone(e.target.value)}
+                    className="h-12 rounded-xl text-base"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Discount */}
             <div className="space-y-2">
@@ -283,6 +457,46 @@ export default function CocheraCobrarPage() {
                 className="h-12 rounded-xl text-base"
               />
             </div>
+
+            <div className="space-y-2">
+              <label htmlFor="settlementNotes" className="text-sm font-medium flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Nota de salida opcional
+              </label>
+              <Input
+                id="settlementNotes"
+                data-testid="cochera-settlement-notes-input"
+                placeholder="Ej: pagará mañana"
+                value={settlementNotes}
+                onChange={(e) => setSettlementNotes(e.target.value)}
+                className="h-12 rounded-xl text-base"
+              />
+            </div>
+
+            {settlementPreview && (
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Cobrado ahora</span>
+                  <span className="font-semibold">S/ {settlementPreview.amountPaid.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Saldo pendiente</span>
+                  <span className={cn(
+                    "font-semibold",
+                    settlementPreview.balanceDue > 0 ? "text-amber-600 dark:text-amber-300" : "text-emerald-600 dark:text-emerald-300"
+                  )}>
+                    S/ {settlementPreview.balanceDue.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {validationMessage && (
+              <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-100 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5 dark:text-amber-300" />
+                <p className="text-sm text-amber-800 dark:text-amber-100">{validationMessage}</p>
+              </div>
+            )}
 
             {/* Error */}
             {checkoutMutation.isError && (
@@ -304,7 +518,7 @@ export default function CocheraCobrarPage() {
               <Button
                 onClick={handleSubmit}
                 data-testid="cochera-checkout-submit"
-                disabled={checkoutMutation.isPending || !acceptedMethods.has(paymentMethod)}
+                disabled={checkoutMutation.isPending || Boolean(validationMessage)}
                 className="h-14 w-full rounded-xl bg-orange-500 text-lg font-semibold hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
               >
                 {checkoutMutation.isPending ? (
@@ -315,7 +529,7 @@ export default function CocheraCobrarPage() {
                 ) : (
                   <>
                     <Banknote className="mr-2 h-5 w-5" />
-                    Confirmar cobro
+                    {submitLabel}
                   </>
                 )}
               </Button>

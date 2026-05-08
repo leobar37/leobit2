@@ -187,8 +187,6 @@ export {
   type NewAbono,
 } from "./payments";
 
-
-
 // Inventory (Products, Inventory, Distribuciones, Variants)
 export {
   productCategories,
@@ -349,8 +347,12 @@ export {
 export {
   cocheraSessions,
   cocheraSessionsRelations,
+  cocheraSessionPayments,
+  cocheraSessionPaymentsRelations,
   type CocheraSession,
   type NewCocheraSession,
+  type CocheraSessionPayment,
+  type NewCocheraSessionPayment,
   cocheraSessionStatusEnum,
   cocheraVehicleTypeEnum,
   type CocheraSessionStatus,

@@ -30,7 +30,8 @@ export const cocheraSettingsSchema = z.object({
   acceptedPaymentMethods: z.array(z.enum(["efectivo", "yape", "plin"])).min(1, "Selecciona al menos un método de pago"),
 });
 
-export type CocheraSettingsFormData = z.infer<typeof cocheraSettingsSchema>;
+export type CocheraSettingsFormData = z.output<typeof cocheraSettingsSchema>;
+type CocheraSettingsFormInput = z.input<typeof cocheraSettingsSchema>;
 
 interface CocheraSettingsFormProps {
   defaultValues?: CocheraSettingsFormData;
@@ -44,24 +45,30 @@ const PAYMENT_METHOD_OPTIONS = [
   { id: "plin" as const, label: "Plin" },
 ];
 
+function getInitialValues(
+  values?: Partial<CocheraSettingsFormInput>
+): CocheraSettingsFormInput {
+  return {
+    displayName: "",
+    displayAddress: "",
+    hourlyRate: 0,
+    dailyRate: null,
+    graceMinutes: 10,
+    totalSpaces: 20,
+    acceptedPaymentMethods: ["efectivo"],
+    ...values,
+  };
+}
+
 export function CocheraSettingsForm({
   defaultValues,
   onSubmit,
   isSubmitting = false,
 }: CocheraSettingsFormProps) {
-  const form = useForm<CocheraSettingsFormData>({
+  const form = useForm<CocheraSettingsFormInput, unknown, CocheraSettingsFormData>({
     resolver: zodResolver(cocheraSettingsSchema),
     mode: "onChange",
-    defaultValues: {
-      displayName: "",
-      displayAddress: "",
-      hourlyRate: 0,
-      dailyRate: null,
-      graceMinutes: 10,
-      totalSpaces: 20,
-      acceptedPaymentMethods: ["efectivo"],
-      ...defaultValues,
-    },
+    defaultValues: getInitialValues(defaultValues),
   });
 
   useEffect(() => {
@@ -69,16 +76,7 @@ export function CocheraSettingsForm({
       return;
     }
 
-    form.reset({
-      displayName: "",
-      displayAddress: "",
-      hourlyRate: 0,
-      dailyRate: null,
-      graceMinutes: 10,
-      totalSpaces: 20,
-      acceptedPaymentMethods: ["efectivo"],
-      ...defaultValues,
-    });
+    form.reset(getInitialValues(defaultValues));
   }, [defaultValues, form]);
 
   const {

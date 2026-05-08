@@ -129,9 +129,8 @@ describe("CocheraCheckoutService", () => {
   });
 
   it("records subscription usage and closes the session atomically", async () => {
-    const fixedDate = new Date("2026-05-07T12:30:00.000Z");
-    vi.useFakeTimers();
-    vi.setSystemTime(fixedDate);
+    const fixedDate = new Date();
+    const entryAt = new Date(Date.now() - 150 * 60 * 1000);
 
     const deps = createDeps();
     deps.settingsRepo.findByBusinessId.mockResolvedValue({
@@ -144,19 +143,24 @@ describe("CocheraCheckoutService", () => {
       plate: "ABC-123",
       vehicleType: "auto",
       status: "dentro",
-      entryAt: new Date("2026-05-07T10:00:00.000Z"),
+      entryAt,
     });
     deps.sessionRepo.update.mockImplementation(async (_ctx, _id, data) => ({
       id: "session-1",
       plate: "ABC-123",
       vehicleType: "auto",
-      entryAt: new Date("2026-05-07T10:00:00.000Z"),
+      entryAt,
       exitAt: data.exitAt ?? fixedDate,
       checkoutAt: data.checkoutAt ?? fixedDate,
       checkoutBy: "operator-1",
       totalAmount: data.totalAmount ?? "15.00",
       discountAmount: data.discountAmount ?? "0.00",
+      amountPaid: data.amountPaid ?? "15.00",
+      balanceDue: data.balanceDue ?? "0.00",
+      paymentMode: data.paymentMode ?? "pago_total",
       paymentMethod: data.paymentMethod ?? "plin",
+      responsibleName: data.responsibleName ?? null,
+      responsiblePhone: data.responsiblePhone ?? null,
       businessId: "biz-1",
       notes: null,
       status: data.status ?? "fuera",
@@ -181,9 +185,148 @@ describe("CocheraCheckoutService", () => {
       expect.objectContaining({
         status: "fuera",
         paymentMethod: "plin",
+        amountPaid: "15.00",
+        balanceDue: "0.00",
+        paymentMode: "pago_total",
       }),
       { tx: true }
     );
     expect(result.totalAmount).toBe("15.00");
+    expect(result.amountPaid).toBe("15.00");
+    expect(result.balanceDue).toBe("0.00");
+  });
+
+  it("closes a session with partial payment and pending balance", async () => {
+    const fixedDate = new Date();
+    const entryAt = new Date(Date.now() - 150 * 60 * 1000);
+
+    const deps = createDeps();
+    deps.settingsRepo.findByBusinessId.mockResolvedValue({
+      hourlyRate: "5.00",
+      graceMinutes: 10,
+      acceptedPaymentMethods: ["efectivo"],
+    });
+    deps.sessionRepo.findById.mockResolvedValue({
+      id: "session-1",
+      plate: "ABC-123",
+      vehicleType: "auto",
+      status: "dentro",
+      entryAt,
+    });
+    deps.sessionRepo.update.mockImplementation(async (_ctx, _id, data) => ({
+      id: "session-1",
+      plate: "ABC-123",
+      vehicleType: "auto",
+      entryAt,
+      exitAt: data.exitAt ?? fixedDate,
+      checkoutAt: data.checkoutAt ?? fixedDate,
+      checkoutBy: "operator-1",
+      totalAmount: data.totalAmount,
+      discountAmount: data.discountAmount,
+      amountPaid: data.amountPaid,
+      balanceDue: data.balanceDue,
+      paymentMode: data.paymentMode,
+      paymentMethod: data.paymentMethod,
+      responsibleName: data.responsibleName,
+      responsiblePhone: data.responsiblePhone,
+    }));
+
+    const service = new CocheraCheckoutService(
+      deps.sessionRepo as never,
+      deps.settingsRepo as never,
+      deps.subscriptionService as never
+    );
+
+    const result = await service.checkout(ctx as never, "session-1", {
+      paymentMode: "a_cuenta",
+      amountPaid: 5,
+      paymentMethod: "efectivo",
+      responsibleName: "Juan Perez",
+    });
+
+    expect(result.paymentMode).toBe("a_cuenta");
+    expect(result.amountPaid).toBe("5.00");
+    expect(result.balanceDue).toBe("10.00");
+    expect(result.responsibleName).toBe("Juan Perez");
+  });
+
+  it("closes a session as debt without treating debt as a payment method", async () => {
+    const fixedDate = new Date();
+    const entryAt = new Date(Date.now() - 150 * 60 * 1000);
+
+    const deps = createDeps();
+    deps.settingsRepo.findByBusinessId.mockResolvedValue({
+      hourlyRate: "5.00",
+      graceMinutes: 10,
+      acceptedPaymentMethods: ["efectivo"],
+    });
+    deps.sessionRepo.findById.mockResolvedValue({
+      id: "session-1",
+      plate: "ABC-123",
+      vehicleType: "auto",
+      status: "dentro",
+      entryAt,
+    });
+    deps.sessionRepo.update.mockImplementation(async (_ctx, _id, data) => ({
+      id: "session-1",
+      plate: "ABC-123",
+      vehicleType: "auto",
+      entryAt,
+      exitAt: data.exitAt ?? fixedDate,
+      checkoutAt: data.checkoutAt ?? fixedDate,
+      checkoutBy: "operator-1",
+      totalAmount: data.totalAmount,
+      discountAmount: data.discountAmount,
+      amountPaid: data.amountPaid,
+      balanceDue: data.balanceDue,
+      paymentMode: data.paymentMode,
+      paymentMethod: data.paymentMethod,
+      responsibleName: data.responsibleName,
+      responsiblePhone: data.responsiblePhone,
+    }));
+
+    const service = new CocheraCheckoutService(
+      deps.sessionRepo as never,
+      deps.settingsRepo as never,
+      deps.subscriptionService as never
+    );
+
+    const result = await service.checkout(ctx as never, "session-1", {
+      paymentMode: "debe_todo",
+      responsibleName: "Maria Lopez",
+    });
+
+    expect(result.paymentMode).toBe("debe_todo");
+    expect(result.amountPaid).toBe("0.00");
+    expect(result.balanceDue).toBe("15.00");
+    expect(result.paymentMethod).toBeNull();
+  });
+
+  it("rejects partial payment without responsible person", async () => {
+    const deps = createDeps();
+    deps.settingsRepo.findByBusinessId.mockResolvedValue({
+      hourlyRate: "5.00",
+      graceMinutes: 10,
+      acceptedPaymentMethods: ["efectivo"],
+    });
+    deps.sessionRepo.findById.mockResolvedValue({
+      id: "session-1",
+      status: "dentro",
+      entryAt: new Date("2026-05-07T10:00:00.000Z"),
+    });
+
+    const service = new CocheraCheckoutService(
+      deps.sessionRepo as never,
+      deps.settingsRepo as never,
+      deps.subscriptionService as never
+    );
+
+    await expect(
+      service.checkout(ctx as never, "session-1", {
+        paymentMode: "a_cuenta",
+        amountPaid: 5,
+        paymentMethod: "efectivo",
+      })
+    ).rejects.toThrow(ValidationError);
   });
 });

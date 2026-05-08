@@ -68,6 +68,7 @@ import { CocheraSessionRepository } from "../services/repository/cochera-session
 import { CocheraSessionService } from "../services/business/cochera-session.service";
 import { CocheraCheckoutService } from "../services/business/cochera-checkout.service";
 import { CocheraReportService } from "../services/business/cochera-report.service";
+import { CocheraDebtService } from "../services/business/cochera-debt.service";
 import { initializeStateMachines } from "../services/transitions";
 
 export const servicesPlugin = new Elysia({ name: "services" })
@@ -164,6 +165,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       subscriptionService
     );
     const cocheraReportService = new CocheraReportService(subscriptionService);
+    const cocheraDebtService = new CocheraDebtService(cocheraSessionRepo, cocheraSettingsRepo);
 
     return {
       businessRepo,
@@ -232,5 +234,6 @@ export const servicesPlugin = new Elysia({ name: "services" })
       cocheraSessionService,
       cocheraCheckoutService,
       cocheraReportService,
+      cocheraDebtService,
     };
   });

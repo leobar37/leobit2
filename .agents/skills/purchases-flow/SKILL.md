@@ -1,3 +1,8 @@
+---
+name: purchases-flow
+description: Comprehensive knowledge for the purchases (compras) workflow across all layers, including state transitions, backend services, API routes, offline-first frontend hooks, forms, and business rules.
+---
+
 # Purchases Flow Skill
 
 Comprehensive knowledge for the purchases (compras) workflow across all layers.

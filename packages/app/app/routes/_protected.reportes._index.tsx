@@ -75,6 +75,21 @@ function vehicleTypeLabel(type: CocheraReportRow["vehicleType"]): string {
   return labels[type] ?? type;
 }
 
+function settlementStatus(row: CocheraReportRow): { label: string; className: string } {
+  const balanceDue = Number(row.balanceDue ?? "0") || 0;
+  const amountPaid = Number(row.amountPaid ?? "0") || 0;
+
+  if (balanceDue <= 0) {
+    return { label: "Cobrado", className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200" };
+  }
+
+  if (amountPaid > 0 || row.paymentMode === "a_cuenta") {
+    return { label: "A cuenta", className: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200" };
+  }
+
+  return { label: "Pendiente", className: "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200" };
+}
+
 function ReportsMenu() {
   return (
     <MobilePage.Root maxWidth="md" className="space-y-4">
@@ -163,14 +178,14 @@ function CocheraReportsContent() {
         </Card>
         <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Ingresos</p>
+            <p className="text-sm text-muted-foreground">Cobrado</p>
             <p className="mt-1 text-2xl font-bold">S/ {formatCurrency(report.data?.summary.totalIncome)}</p>
           </CardContent>
         </Card>
         <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Promedio</p>
-            <p className="mt-1 text-2xl font-bold">S/ {formatCurrency(report.data?.summary.averagePerVehicle)}</p>
+            <p className="text-sm text-muted-foreground">Pendiente</p>
+            <p className="mt-1 text-2xl font-bold">S/ {formatCurrency(report.data?.summary.totalPending)}</p>
           </CardContent>
         </Card>
       </div>
@@ -216,28 +231,49 @@ function CocheraReportsContent() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {rows.map((row) => (
-            <Card key={row.id} className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
-              <CardContent className="p-4" data-testid={`cochera-report-row-${row.plate}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold tracking-wide">{row.plate}</p>
-                      <Badge variant="outline">{vehicleTypeLabel(row.vehicleType)}</Badge>
+          {rows.map((row) => {
+            const status = settlementStatus(row);
+            return (
+              <Card key={row.id} className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+                <CardContent className="p-4" data-testid={`cochera-report-row-${row.plate}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-bold tracking-wide">{row.plate}</p>
+                        <Badge variant="outline">{vehicleTypeLabel(row.vehicleType)}</Badge>
+                        <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${status.className}`}>
+                          {status.label}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatDateTime(row.entryAt)} → {formatDateTime(row.exitAt)}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatDuration(row.durationMinutes)}</p>
+                      {row.responsibleName ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Responsable: {row.responsibleName}
+                          {row.responsiblePhone ? ` · ${row.responsiblePhone}` : ""}
+                        </p>
+                      ) : null}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDateTime(row.entryAt)} → {formatDateTime(row.exitAt)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">{formatDuration(row.durationMinutes)}</p>
+                    <div className="text-right">
+                      <p className="font-bold">S/ {formatCurrency(row.amountPaid)}</p>
+                      {Number(row.balanceDue ?? "0") > 0 ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-300">
+                          Pend. S/ {formatCurrency(row.balanceDue)}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Total S/ {formatCurrency(row.totalAmount)}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">{row.paymentMethod ?? "Sin método"}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold">S/ {formatCurrency(row.totalAmount)}</p>
-                    <p className="text-xs text-muted-foreground">{row.paymentMethod ?? "Sin método"}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </MobilePage.Root>

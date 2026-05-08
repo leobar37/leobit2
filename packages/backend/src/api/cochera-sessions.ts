@@ -84,11 +84,21 @@ export const cocheraSessionRoutes = new Elysia({ prefix: "/cochera/sessions" })
         id: t.String(),
       }),
       body: t.Object({
-        paymentMethod: t.Union([
+        paymentMode: t.Optional(t.Union([
+          t.Literal("pago_total"),
+          t.Literal("a_cuenta"),
+          t.Literal("debe_todo"),
+        ])),
+        amountPaid: t.Optional(t.Number({ minimum: 0 })),
+        paymentMethod: t.Optional(t.Union([
           t.Literal("efectivo"),
           t.Literal("yape"),
           t.Literal("plin"),
-        ]),
+        ])),
+        responsibleCustomerId: t.Optional(t.Nullable(t.String())),
+        responsibleName: t.Optional(t.Nullable(t.String({ maxLength: 160 }))),
+        responsiblePhone: t.Optional(t.Nullable(t.String({ maxLength: 40 }))),
+        notes: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),
         discount: t.Optional(t.Number({ minimum: 0 })),
       }),
     }

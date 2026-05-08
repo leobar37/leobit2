@@ -11,15 +11,30 @@ import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
 import { z } from "zod";
 
+type PaymentMode = "pago_total" | "a_cuenta" | "debe_todo";
+type CocheraPaymentMethod = "efectivo" | "yape" | "plin";
+
 const checkoutSchema = z.object({
+  paymentMode: z.enum(["pago_total", "a_cuenta", "debe_todo"]).optional().default("pago_total"),
+  amountPaid: z.number().min(0).optional(),
   paymentMethod: z.enum(["efectivo", "yape", "plin"], {
     message: "Método de pago inválido",
-  }),
+  }).optional(),
+  responsibleCustomerId: z.string().uuid().nullable().optional(),
+  responsibleName: z.string().trim().max(160).nullable().optional(),
+  responsiblePhone: z.string().trim().max(40).nullable().optional(),
+  notes: z.string().trim().max(500).nullable().optional(),
   discount: z.number().min(0).optional().default(0),
 });
 
 export type CocheraCheckoutInput = {
-  paymentMethod: "efectivo" | "yape" | "plin";
+  paymentMode?: PaymentMode;
+  amountPaid?: number;
+  paymentMethod?: CocheraPaymentMethod;
+  responsibleCustomerId?: string | null;
+  responsibleName?: string | null;
+  responsiblePhone?: string | null;
+  notes?: string | null;
   discount?: number;
 };
 
@@ -35,8 +50,21 @@ export interface CocheraCheckoutResult {
   hourlyRate: string;
   discountAmount: string;
   totalAmount: string;
-  paymentMethod: string;
+  amountPaid: string;
+  balanceDue: string;
+  paymentMode: PaymentMode;
+  paymentMethod: string | null;
+  responsibleName: string | null;
+  responsiblePhone: string | null;
   checkoutBy: string | null;
+}
+
+function toMoney(value: number): string {
+  return value.toFixed(2);
+}
+
+function parseMoney(value: string | null | undefined): number {
+  return Number.parseFloat(value ?? "0") || 0;
 }
 
 export class CocheraCheckoutService {
@@ -52,6 +80,84 @@ export class CocheraCheckoutService {
         "Esta función solo está disponible para cocheras"
       );
     }
+  }
+
+  private calculateSettlement(
+    totalAmount: number,
+    input: z.infer<typeof checkoutSchema>
+  ): {
+    paymentMode: PaymentMode;
+    amountPaid: string;
+    balanceDue: string;
+    paymentMethod: CocheraPaymentMethod | null;
+    responsibleName: string | null;
+    responsiblePhone: string | null;
+    responsibleCustomerId: string | null;
+    settlementNotes: string | null;
+  } {
+    const paymentMode = input.paymentMode;
+    const responsibleName = input.responsibleName?.trim() || null;
+    const responsiblePhone = input.responsiblePhone?.trim() || null;
+    const settlementNotes = input.notes?.trim() || null;
+
+    if (paymentMode === "pago_total") {
+      if (totalAmount > 0 && !input.paymentMethod) {
+        throw new ValidationError("Selecciona un método de pago");
+      }
+
+      return {
+        paymentMode,
+        amountPaid: toMoney(totalAmount),
+        balanceDue: "0.00",
+        paymentMethod: input.paymentMethod ?? null,
+        responsibleName: null,
+        responsiblePhone: null,
+        responsibleCustomerId: null,
+        settlementNotes,
+      };
+    }
+
+    if (!responsibleName) {
+      throw new ValidationError("Ingresa el responsable de la deuda");
+    }
+
+    if (paymentMode === "debe_todo") {
+      return {
+        paymentMode,
+        amountPaid: "0.00",
+        balanceDue: toMoney(totalAmount),
+        paymentMethod: null,
+        responsibleName,
+        responsiblePhone,
+        responsibleCustomerId: input.responsibleCustomerId ?? null,
+        settlementNotes,
+      };
+    }
+
+    const amountPaid = input.amountPaid ?? 0;
+
+    if (amountPaid <= 0) {
+      throw new ValidationError("El monto a cuenta debe ser mayor a cero");
+    }
+
+    if (amountPaid >= totalAmount) {
+      throw new ValidationError("El monto a cuenta debe ser menor al total");
+    }
+
+    if (!input.paymentMethod) {
+      throw new ValidationError("Selecciona un método de pago");
+    }
+
+    return {
+      paymentMode,
+      amountPaid: toMoney(amountPaid),
+      balanceDue: toMoney(totalAmount - amountPaid),
+      paymentMethod: input.paymentMethod,
+      responsibleName,
+      responsiblePhone,
+      responsibleCustomerId: input.responsibleCustomerId ?? null,
+      settlementNotes,
+    };
   }
 
   /**
@@ -118,6 +224,7 @@ export class CocheraCheckoutService {
     }
 
     if (
+      parsed.data.paymentMethod &&
       !settings.acceptedPaymentMethods.includes(parsed.data.paymentMethod)
     ) {
       throw new ValidationError("Método de pago no aceptado");
@@ -131,6 +238,11 @@ export class CocheraCheckoutService {
       settings.hourlyRate,
       settings.graceMinutes,
       parsed.data.discount
+    );
+
+    const settlement = this.calculateSettlement(
+      parseMoney(calculation.totalAmount),
+      parsed.data
     );
 
     const result = await db.transaction(async (tx) => {
@@ -148,7 +260,14 @@ export class CocheraCheckoutService {
           checkoutBy: ctx.businessUserId,
           totalAmount: calculation.totalAmount,
           discountAmount: calculation.discountAmount,
-          paymentMethod: parsed.data.paymentMethod,
+          amountPaid: settlement.amountPaid,
+          balanceDue: settlement.balanceDue,
+          paymentMode: settlement.paymentMode,
+          paymentMethod: settlement.paymentMethod,
+          responsibleCustomerId: settlement.responsibleCustomerId,
+          responsibleName: settlement.responsibleName,
+          responsiblePhone: settlement.responsiblePhone,
+          settlementNotes: settlement.settlementNotes,
         },
         tx
       );
@@ -168,7 +287,12 @@ export class CocheraCheckoutService {
       hourlyRate: settings.hourlyRate,
       discountAmount: calculation.discountAmount,
       totalAmount: calculation.totalAmount,
-      paymentMethod: result.paymentMethod!,
+      amountPaid: result.amountPaid ?? settlement.amountPaid,
+      balanceDue: result.balanceDue ?? settlement.balanceDue,
+      paymentMode: (result.paymentMode ?? settlement.paymentMode) as PaymentMode,
+      paymentMethod: result.paymentMethod ?? null,
+      responsibleName: result.responsibleName ?? null,
+      responsiblePhone: result.responsiblePhone ?? null,
       checkoutBy: result.checkoutBy ?? null,
     };
   }

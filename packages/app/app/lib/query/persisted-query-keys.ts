@@ -26,6 +26,7 @@ export const PERSISTED_REMOTE_QUERY_KEYS = {
   paymentMethodsConfig: withPersistedRemotePrefix(["payment-methods-config"] as const),
   cocheraSettings: withPersistedRemotePrefix(["cochera", "settings"] as const),
   cocheraSessions: withPersistedRemotePrefix(["cochera", "sessions"] as const),
+  cocheraDebts: withPersistedRemotePrefix(["cochera", "debts"] as const),
   cocheraDashboard: withPersistedRemotePrefix(["cochera", "dashboard"] as const),
   cocheraReports: withPersistedRemotePrefix(["cochera", "reports"] as const),
   subscriptionStatus: withPersistedRemotePrefix(["subscription", "status"] as const),

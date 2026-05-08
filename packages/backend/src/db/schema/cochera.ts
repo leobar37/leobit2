@@ -14,7 +14,10 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { businesses } from "./businesses";
+import { businesses, businessUsers } from "./businesses";
+import { customers } from "./customers";
+import { files } from "./files";
+import { paymentMethodEnum } from "./enums";
 
 export const cocheraSettings = pgTable(
   "cochera_settings",
@@ -92,7 +95,14 @@ export const cocheraSessions = pgTable(
     // Checkout fields prepared for F-005
     totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
     discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
+    amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),
+    balanceDue: decimal("balance_due", { precision: 10, scale: 2 }).default("0"),
+    paymentMode: varchar("payment_mode", { length: 20 }),
     paymentMethod: varchar("payment_method", { length: 20 }),
+    responsibleCustomerId: uuid("responsible_customer_id").references(() => customers.id),
+    responsibleName: varchar("responsible_name", { length: 160 }),
+    responsiblePhone: varchar("responsible_phone", { length: 40 }),
+    settlementNotes: text("settlement_notes"),
     checkoutAt: timestamp("checkout_at"),
     checkoutBy: uuid("checkout_by"),
 
@@ -117,3 +127,57 @@ export const cocheraSessionsRelations = relations(cocheraSessions, ({ one }) => 
     references: [businesses.id],
   }),
 }));
+
+export const cocheraSessionPayments = pgTable(
+  "cochera_session_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cocheraSessions.id, { onDelete: "cascade" }),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    paymentMethod: paymentMethodEnum("payment_method").notNull().default("efectivo"),
+    referenceNumber: varchar("reference_number", { length: 50 }),
+    proofImageId: uuid("proof_image_id").references(() => files.id),
+    notes: text("notes"),
+    collectedBy: uuid("collected_by").references(() => businessUsers.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_cochera_session_payments_business_id").on(table.businessId),
+    index("idx_cochera_session_payments_session_id").on(table.sessionId),
+    index("idx_cochera_session_payments_payment_method").on(table.paymentMethod),
+    index("idx_cochera_session_payments_proof_image_id").on(table.proofImageId),
+    index("idx_cochera_session_payments_collected_by").on(table.collectedBy),
+    index("idx_cochera_session_payments_created_at").on(table.createdAt),
+  ]
+);
+
+export type CocheraSessionPayment = typeof cocheraSessionPayments.$inferSelect;
+export type NewCocheraSessionPayment = typeof cocheraSessionPayments.$inferInsert;
+
+export const cocheraSessionPaymentsRelations = relations(
+  cocheraSessionPayments,
+  ({ one }) => ({
+    business: one(businesses, {
+      fields: [cocheraSessionPayments.businessId],
+      references: [businesses.id],
+    }),
+    session: one(cocheraSessions, {
+      fields: [cocheraSessionPayments.sessionId],
+      references: [cocheraSessions.id],
+    }),
+    proofImage: one(files, {
+      fields: [cocheraSessionPayments.proofImageId],
+      references: [files.id],
+    }),
+    collector: one(businessUsers, {
+      fields: [cocheraSessionPayments.collectedBy],
+      references: [businessUsers.id],
+    }),
+  })
+);

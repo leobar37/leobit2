@@ -372,6 +372,20 @@
       "when": 1778198400000,
       "tag": "0070_add_cochera_vertical_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1778284800000,
+      "tag": "0071_add_cochera_settlement_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1778371200000,
+      "tag": "0072_add_cochera_session_payments",
+      "breakpoints": true
     }
   ]
 }
