@@ -150,12 +150,10 @@ export default function RegisterPage() {
   return (
     <MobileSlotProvider>
       <MobileShell.Root variant="public">
-        <MobileShell.Content className="flex items-start justify-center sm:items-center">
+        <MobileShell.Content className="flex items-start justify-center px-5 pt-8 sm:items-center sm:px-4 sm:pt-5">
           <MobilePage.Root maxWidth="sm" className="w-full">
-            <MobilePage.Card className="w-full overflow-hidden rounded-none border-0 bg-transparent shadow-none">
-              <div className="h-1.5 w-full bg-gradient-to-r from-primary via-orange-400 to-amber-300" />
-
-              <div className="space-y-3 px-5 pb-2 pt-4 sm:space-y-4 sm:px-6 sm:pt-5">
+            <section className="w-full bg-transparent">
+              <div className="space-y-3 pb-2 sm:space-y-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-primary shadow-lg sm:h-14 sm:w-14 sm:rounded-[20px]">
                   <Route className="h-6 w-6 text-primary-foreground sm:h-7 sm:w-7" />
                 </div>
@@ -174,7 +172,7 @@ export default function RegisterPage() {
               </div>
 
               {isInvitationInvalid && (
-                <div className="px-5 sm:px-6 pb-2">
+                <div className="pb-2">
                   <div className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 p-3">
                     <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-300" />
                     <div className="text-sm text-amber-900 dark:text-amber-100">
@@ -188,7 +186,7 @@ export default function RegisterPage() {
               <FormProvider {...form}>
                 <form id="register-form" onSubmit={form.handleSubmit(onSubmit)}>
                   <div
-                    className="space-y-3 px-5 pb-2 sm:px-6"
+                    className="space-y-3 pb-2"
                     style={{
                       paddingBottom:
                         "calc(var(--shell-public-footer-offset, 0px) + var(--shell-safe-area-bottom, env(safe-area-inset-bottom)))",
@@ -250,7 +248,7 @@ export default function RegisterPage() {
                   </div>
                 </form>
               </FormProvider>
-            </MobilePage.Card>
+            </section>
           </MobilePage.Root>
         </MobileShell.Content>
 

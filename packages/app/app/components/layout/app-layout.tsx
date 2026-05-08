@@ -71,6 +71,7 @@ const cocheraMenuItems: MenuItem[] = [
 interface LayoutConfig {
   title?: string;
   actions?: ReactNode;
+  showHeader?: boolean;
   showBottomNav?: boolean;
   showBackButton?: boolean;
   backHref?: string;
@@ -84,11 +85,12 @@ interface LayoutContextValue {
 const LayoutContext = createContext<LayoutContextValue | null>(null);
 
 type RouteLayoutConfig = Required<
-  Pick<LayoutConfig, "title" | "showBottomNav" | "showBackButton" | "backHref">
+  Pick<LayoutConfig, "title" | "showHeader" | "showBottomNav" | "showBackButton" | "backHref">
 >;
 
 const DEFAULT_ROUTE_LAYOUT: RouteLayoutConfig = {
   title: "Avileo",
+  showHeader: true,
   showBottomNav: true,
   showBackButton: false,
   backHref: "/dashboard",
@@ -129,7 +131,7 @@ const ROUTE_LAYOUTS: Array<[pattern: RegExp, config: Partial<RouteLayoutConfig>]
   [/^\/proveedores\/[^/]+\/?$/, { title: "Proveedor", showBackButton: true, backHref: "/proveedores" }],
   [/^\/proveedores\/?$/, { title: "Proveedores" }],
   [/^\/business\/edit\/?$/, { title: "Mi Negocio", showBackButton: true, backHref: "/config" }],
-  [/^\/business\/create\/?$/, { title: "Crear negocio", showBottomNav: false }],
+  [/^\/business\/create\/?$/, { title: "Crear negocio", showHeader: false, showBottomNav: false }],
   [/^\/profile\/?$/, { title: "Mi Perfil", showBackButton: true, backHref: "/config" }],
   [/^\/team\/?$/, { title: "Equipo", showBackButton: true, backHref: "/config" }],
   [/^\/invitations\/?$/, { title: "Invitaciones", showBackButton: true, backHref: "/team" }],
@@ -180,12 +182,14 @@ export function useSetLayout(config: LayoutConfig) {
   const stableConfig = useMemo(
     () => ({
       title: config.title,
+      showHeader: config.showHeader,
       showBottomNav: config.showBottomNav,
       showBackButton: config.showBackButton,
       backHref: config.backHref,
     }),
     [
       config.title,
+      config.showHeader,
       config.showBottomNav,
       config.showBackButton,
       config.backHref,
@@ -252,6 +256,7 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
   const {
     title = "Avileo",
     actions,
+    showHeader = true,
     showBottomNav = true,
     showBackButton = false,
     backHref = "/dashboard",
@@ -384,7 +389,7 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
           {headerControls}
         </MobileSlot>
 
-        <MobileShell.Header />
+        {showHeader ? <MobileShell.Header /> : null}
         <MobileShell.Content>{children}</MobileShell.Content>
         {showBottomNav ? <MobileShell.Footer /> : null}
 

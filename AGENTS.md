@@ -16,7 +16,7 @@ All other `AGENTS.md` files under this repo were intentionally removed to avoid 
 
 ## Project Overview
 
-Avileo is a **mobile-vendor chicken sales management system** with:
+Avileo is a **pocket-sized business app** that replaces the notebook for small businesses -- chicken vendors, distributors, garage shops, and anyone moving from pen and paper to their first digital tool. Simple enough to use day one, powerful enough to grow with you, and fully offline-capable.
 
 - Bun + ElysiaJS backend
 - React Router v7 + React 19 frontend
@@ -31,6 +31,7 @@ Avileo is a **mobile-vendor chicken sales management system** with:
 packages/
 ├── app/      # React Router v7 frontend
 ├── backend/  # ElysiaJS API server
+├── cli/      # CLI unificada (avileo) — logs, dashboard, dev
 └── shared/   # Shared types/contracts/schemas utilities
 ```
 
@@ -83,8 +84,16 @@ import { CustomerRepository } from "./services/repository/customer.repository";
 ## Quick commands
 
 ```bash
-bun run dev                    # Start monorepo dev
-bun run build                  # Build all packages
+# CLI unificada (recomendada)
+bun run avileo dev              # Start monorepo dev (backend + app + dashboard)
+bun run avileo dev --only backend  # Solo backend
+bun run avileo logs --level error  # Ver errores en logs
+bun run avileo logs -f             # Tail logs en vivo
+bun run avileo logs --stats        # Resumen de logs
+bun run avileo status              # Estado de servicios
+bun run avileo dashboard           # Dashboard web de logs
+bun run avileo --help              # Ayuda de la CLI
+bun run build                      # Build all packages
 
 # Backend database
 cd packages/backend
@@ -100,6 +109,17 @@ cd packages/app && bun run test:e2e
 cd packages/backend && bun test
 cd packages/backend && bun run test:e2e
 ```
+
+## CLI (`avileo`)
+
+La CLI unificada (`packages/cli/`) gestiona el ciclo de desarrollo. Escribe logs en `logs/` (JSONL por servicio), sirve un dashboard web React con SSE en `http://localhost:5174`, y expone una API de logs (`GET /api/logs`, `GET /api/logs/stream`).
+
+- **Comandos**: `dev`, `logs`, `status`, `dashboard`
+- **Config**: `config.json` (auto-generado, contiene puertos/URLs/estado)
+- **Logs**: `logs/backend.jsonl`, `logs/app.jsonl`
+- **Dashboard**: construido desde `packages/cli/dashboard/` con Vite
+
+Para troubleshooting: `avileo logs --level error` o el dashboard web.
 
 ## Sync & data model orientation
 

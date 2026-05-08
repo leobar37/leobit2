@@ -47,3 +47,7 @@ tmp/
 
 # Backups
 backups/
+
+# Avileo CLI runtime
+config.json
+logs/

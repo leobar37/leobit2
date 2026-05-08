@@ -93,7 +93,7 @@ test.describe("Register", () => {
 
   test("server error shows error message", async ({ page, context }) => {
     mockSignUpError(context, {
-      message: "A user with this email already exists",
+      message: "Este correo ya está registrado. Usa otro correo o inicia sesión.",
     });
 
     await registerPage.goto();

@@ -4,7 +4,8 @@
   "type": "module",
   "packageManager": "bun@1.1.38",
   "scripts": {
-    "dev": "turbo run dev",
+    "avileo": "bun packages/cli/src/index.ts",
+    "dev": "bun packages/cli/src/index.ts dev",
     "build": "turbo run build",
     "db:migrate": "turbo run db:migrate",
     "db:generate": "turbo run db:generate",
