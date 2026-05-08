@@ -6,7 +6,6 @@ import { eq, and, inArray, desc } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customerGroups, customerGroupMembers, customers, type CustomerGroup, type NewCustomerGroup, type CustomerGroupMember, type NewCustomerGroupMember } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export interface CustomerGroupWithMemberCount extends CustomerGroup {
   memberCount: number;

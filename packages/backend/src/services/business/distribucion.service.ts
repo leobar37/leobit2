@@ -19,7 +19,6 @@ import { getToday } from "../../lib/date-utils";
 import type { Distribucion, DistribucionItem, NewDistribucionItem } from "../../db/schema";
 import { db } from "../../lib/db";
 import { sales, visitas, distribucionItems } from "../../db/schema";
-import type { DbTransaction } from "../../lib/txid";
 import { isPositive, isGreaterThanOrEqual, add, subtract as decimalSubtract } from "../../lib/decimal";
 
 // Types for item management

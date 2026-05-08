@@ -1,6 +1,5 @@
 import { eq, and, desc, gte, lte, like, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
-import type { DbTransaction } from "../../lib/txid";
 import {
   whatsAppMessages,
   type WhatsAppMessage,

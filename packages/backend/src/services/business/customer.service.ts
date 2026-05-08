@@ -2,7 +2,6 @@ import type { CustomerRepository, AccountsReceivableItem } from "../repository/c
 import type { WaterCustomerProfileRepository, WaterCustomerProfileInput } from "../repository/water-customer-profile.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -65,7 +64,7 @@ export class CustomerService {
       notes?: string | null;
       waterProfile?: WaterCustomerProfileInput | null;
     }
-  ): Promise<MutationResult<CustomerWithWaterProfile>> {
+  ): Promise<CustomerWithWaterProfile> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para crear clientes");
     }
@@ -107,7 +106,7 @@ export class CustomerService {
 
       return {
         data: { ...customer, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -123,7 +122,7 @@ export class CustomerService {
       notes?: string | null;
       waterProfile?: WaterCustomerProfileInput | null;
     }
-  ): Promise<MutationResult<CustomerWithWaterProfile>> {
+  ): Promise<CustomerWithWaterProfile> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para editar clientes");
     }
@@ -165,7 +164,7 @@ export class CustomerService {
 
       return {
         data: { ...updated, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }

@@ -16,7 +16,6 @@ import {
   type WaterDeliveryStop,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export interface VisitaWithCustomer extends Visita {
   customerName: string;

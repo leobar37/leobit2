@@ -6,7 +6,6 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { customerTags, tags, customers, type CustomerTag, type NewCustomerTag, type Tag } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export interface CustomerTagWithDetails extends CustomerTag {
   tag: Tag;

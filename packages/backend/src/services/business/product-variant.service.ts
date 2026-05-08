@@ -1,7 +1,6 @@
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -62,7 +61,7 @@ export class ProductVariantService {
       price: number;
       isActive?: boolean;
     }
-  ): Promise<MutationResult<ProductVariant>> {
+  ): Promise<ProductVariant> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para crear variantes");
     }
@@ -99,7 +98,7 @@ export class ProductVariantService {
 
       return {
         data: variant,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -114,7 +113,7 @@ export class ProductVariantService {
       price?: number;
       isActive?: boolean;
     }
-  ): Promise<MutationResult<ProductVariant>> {
+  ): Promise<ProductVariant> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para editar variantes");
     }
@@ -154,12 +153,12 @@ export class ProductVariantService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
 
-  async deactivateVariant(ctx: RequestContext, id: string): Promise<MutationResult<ProductVariant>> {
+  async deactivateVariant(ctx: RequestContext, id: string): Promise<ProductVariant> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para desactivar variantes");
     }
@@ -177,7 +176,7 @@ export class ProductVariantService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -224,7 +223,7 @@ export class ProductVariantService {
     ctx: RequestContext,
     variantId: string,
     quantity: number
-  ): Promise<MutationResult<VariantInventory>> {
+  ): Promise<VariantInventory> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para actualizar inventario");
     }
@@ -246,7 +245,7 @@ export class ProductVariantService {
 
       return {
         data: inventory,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -255,7 +254,7 @@ export class ProductVariantService {
     ctx: RequestContext,
     variantId: string,
     adjustment: number
-  ): Promise<MutationResult<VariantInventory>> {
+  ): Promise<VariantInventory> {
     if (!ctx.hasPermission("products.manage") && !ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para ajustar inventario");
     }
@@ -273,7 +272,7 @@ export class ProductVariantService {
 
       return {
         data: inventory,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }

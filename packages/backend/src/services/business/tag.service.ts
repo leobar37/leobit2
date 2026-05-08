@@ -5,7 +5,6 @@
 import type { TagRepository } from "../repository/tag.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -56,7 +55,7 @@ export class TagService {
       name: string;
       color?: string;
     }
-  ): Promise<MutationResult<Tag>> {
+  ): Promise<Tag> {
     if (!ctx.hasPermission("tags.write")) {
       throw new ForbiddenError("No tiene permisos para crear etiquetas");
     }
@@ -82,7 +81,7 @@ export class TagService {
 
       return {
         data: tag,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -94,7 +93,7 @@ export class TagService {
       name?: string;
       color?: string;
     }
-  ): Promise<MutationResult<Tag>> {
+  ): Promise<Tag> {
     if (!ctx.hasPermission("tags.write")) {
       throw new ForbiddenError("No tiene permisos para editar etiquetas");
     }
@@ -125,7 +124,7 @@ export class TagService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }

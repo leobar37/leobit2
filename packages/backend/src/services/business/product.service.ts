@@ -4,7 +4,6 @@ import type { ProductRecord } from "../repository/product.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   NotFoundError,
   ValidationError,
@@ -71,7 +70,7 @@ export class ProductService {
       imageId?: string;
       hasVariants?: boolean;
     }
-  ): Promise<MutationResult<ProductRecord>> {
+  ): Promise<ProductRecord> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para crear productos");
     }
@@ -120,7 +119,7 @@ export class ProductService {
 
       return {
         data: product,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -137,7 +136,7 @@ export class ProductService {
       isActive?: boolean;
       imageId?: string | null;
     }
-  ): Promise<MutationResult<ProductRecord>> {
+  ): Promise<ProductRecord> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para editar productos");
     }
@@ -182,7 +181,7 @@ export class ProductService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }

@@ -6,7 +6,6 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { distribucionGroups, customerGroups, type DistribucionGroup, type NewDistribucionGroup } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export interface GroupWithName {
   id: string;

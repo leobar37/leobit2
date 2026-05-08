@@ -4,7 +4,6 @@ import type { RequestContext } from "../../context/request-context";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../errors";
 import type { Expense } from "../../db/schema";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
 import { normalizeAmount } from "../../lib/number-utils";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -78,7 +77,7 @@ export class ExpenseService {
       referenceNumber?: string;
       receiptImageId?: string;
     }
-  ): Promise<MutationResult<Expense>> {
+  ): Promise<Expense> {
     if (!ctx.hasPermission("reports.view")) {
       throw new ForbiddenError("No tiene permisos para registrar gastos");
     }
@@ -115,7 +114,7 @@ export class ExpenseService {
 
       return {
         data: expense,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -134,7 +133,7 @@ export class ExpenseService {
       referenceNumber?: string | null;
       receiptImageId?: string | null;
     }
-  ): Promise<MutationResult<Expense>> {
+  ): Promise<Expense> {
     if (!ctx.hasPermission("reports.view")) {
       throw new ForbiddenError("No tiene permisos para actualizar gastos");
     }
@@ -176,7 +175,7 @@ export class ExpenseService {
       const expense = await this.repository.update(ctx, id, updateData, tx);
       return {
         data: expense,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -209,7 +208,7 @@ export class ExpenseService {
     ctx: RequestContext,
     id: string,
     receiptImageId: string | null
-  ): Promise<MutationResult<Expense>> {
+  ): Promise<Expense> {
     if (!ctx.hasPermission("reports.view")) {
       throw new ForbiddenError("No tiene permisos para actualizar gastos");
     }
@@ -225,7 +224,7 @@ export class ExpenseService {
       }, tx);
       return {
         data: expense,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }

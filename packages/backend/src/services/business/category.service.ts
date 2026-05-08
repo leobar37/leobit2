@@ -6,7 +6,6 @@ import { and, eq, sql } from "drizzle-orm";
 import type { CategoryRepository } from "../repository/category.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getTxid, type MutationResult } from "../../lib/txid";
 import {
   ConflictError,
   ForbiddenError,
@@ -42,7 +41,7 @@ export class CategoryService {
   async createCategory(
     ctx: RequestContext,
     data: { name: string; color?: string }
-  ): Promise<MutationResult<ProductCategory>> {
+  ): Promise<ProductCategory> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para crear categorías de productos");
     }
@@ -67,7 +66,7 @@ export class CategoryService {
 
       return {
         data: category,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }
@@ -76,7 +75,7 @@ export class CategoryService {
     ctx: RequestContext,
     id: string,
     data: { name?: string; color?: string }
-  ): Promise<MutationResult<ProductCategory>> {
+  ): Promise<ProductCategory> {
     if (!ctx.hasPermission("products.manage")) {
       throw new ForbiddenError("No tiene permisos para editar categorías de productos");
     }
@@ -114,7 +113,7 @@ export class CategoryService {
 
       return {
         data: updated,
-        txid: await getTxid(tx),
+        txid: ,
       };
     });
   }

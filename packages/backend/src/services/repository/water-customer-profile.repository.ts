@@ -11,7 +11,6 @@ import {
   type WaterDeliveryStop,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export interface WaterCustomerProfileInput {
   deliveryFrequency?: string;

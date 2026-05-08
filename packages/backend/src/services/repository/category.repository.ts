@@ -10,7 +10,6 @@ import {
   type ProductCategory,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
-import type { DbTransaction } from "../../lib/txid";
 
 export class CategoryRepository {
   async findAll(ctx: RequestContext): Promise<ProductCategory[]> {
