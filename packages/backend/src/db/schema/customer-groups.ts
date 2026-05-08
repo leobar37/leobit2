@@ -13,6 +13,7 @@ import {
 import { relations } from "drizzle-orm";
 import { businesses } from "./businesses";
 import { customerGroupMembers } from "./customer-group-members";
+import { distribucionGroups } from "./distribucion-groups";
 
 // Table definition
 export const customerGroups = pgTable(
@@ -48,4 +49,5 @@ export const customerGroupsRelations = relations(customerGroups, ({ one, many })
     references: [businesses.id],
   }),
   members: many(customerGroupMembers),
+  distribuciones: many(distribucionGroups),
 }));

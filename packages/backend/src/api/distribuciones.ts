@@ -155,6 +155,26 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       },
     }
   )
+  .get(
+    "/:id/groups",
+    async ({ ctx, params, distribucionService }) => {
+      const groups = await distribucionService.getDistribucionGroups(ctx, params.id);
+      return {
+        success: true,
+        data: groups,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: "Grupos de la distribución",
+        description: "Obtiene los grupos de clientes asignados a una distribución",
+        tags: ["Distribuciones"],
+      },
+    }
+  )
   .post(
     "/",
     async ({ ctx, body, distribucionService }) => {
@@ -164,7 +184,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         puntoVentaId: body.puntoVentaId,
         notaCreacion: body.notaCreacion,
         fecha: body.fecha,
-        groupId: body.groupId,
+        groupIds: body.groupIds,
         items: body.items?.map(item => ({
           ...item,
           cantidadAsignada: item.cantidadAsignada.toString(),
@@ -182,7 +202,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
         puntoVentaId: t.Optional(t.String()),
         notaCreacion: t.Optional(t.String()),
         fecha: t.Optional(t.String()),
-        groupId: t.Optional(t.String()),
+        groupIds: t.Optional(t.Array(t.String())),
         items: t.Optional(t.Array(
           t.Object({
             variantId: t.String(),
@@ -193,7 +213,7 @@ export const distribucionRoutes = new Elysia({ prefix: "/distribuciones" })
       }),
       detail: {
         summary: "Crear distribución",
-        description: "Crea una nueva asignación a un vendedor. Si se proporciona groupId, se crean visitas automáticamente para todos los clientes del grupo.",
+        description: "Crea una nueva asignación a un vendedor. Si se proporciona groupIds, se crean visitas automáticamente para todos los clientes de los grupos.",
         tags: ["Distribuciones"],
       },
     }

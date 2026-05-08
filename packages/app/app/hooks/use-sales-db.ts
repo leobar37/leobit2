@@ -9,7 +9,7 @@ import {
   useDeleteSale,
   useDeliverSale,
 } from "./use-sales";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
@@ -121,6 +121,13 @@ export function useCreateSale() {
   };
 }
 
+async function syncSaleDetail(queryClient: QueryClient, id: string): Promise<SaleWithItems> {
+  const response = await api.sales({ id }).get();
+  const sale = extractData<SaleWithItems>(response);
+  queryClient.setQueryData(queryKeys.sales.detail(id), sale);
+  return sale;
+}
+
 export function useFinalizeSale() {
   const queryClient = useQueryClient();
 
@@ -163,7 +170,8 @@ export function useFinalizeSale() {
           extractData(patchResponse);
         }
 
-        const deliverResponse = await api.sales({ id }).deliver.post({ baseVersion: version });
+        const syncedSale = await syncSaleDetail(queryClient, id);
+        const deliverResponse = await api.sales({ id }).deliver.post({ baseVersion: syncedSale.version ?? version });
         extractData(deliverResponse);
         return;
       }
@@ -237,10 +245,11 @@ export function useAddSaleItem() {
       addOptimisticSaleItem(queryClient, saleId, optimisticItem);
       return { optimisticId: optimisticItem.id };
     },
-    onSuccess: ({ saleId, createdItem }, _variables, context) => {
+    onSuccess: async ({ saleId, createdItem }, _variables, context) => {
       if (context?.optimisticId) {
         replaceOptimisticSaleItem(queryClient, saleId, context.optimisticId, createdItem);
       }
+      await syncSaleDetail(queryClient, saleId);
     },
     onError: (_error, { saleId, optimisticItem }) => {
       removeOptimisticSaleItem(queryClient, saleId, optimisticItem.id);
@@ -263,7 +272,7 @@ export function useRemoveSaleItem() {
       if (response.error) throw new Error(String(response.error.value));
       return saleId;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: async (_data, variables) => {
       queryClient.setQueryData(queryKeys.sales.detail(variables.saleId), (previous: SaleWithItems | null | undefined) => {
         if (!previous) return previous;
 
@@ -281,6 +290,7 @@ export function useRemoveSaleItem() {
           updatedAt: new Date().toISOString(),
         };
       });
+      await syncSaleDetail(queryClient, variables.saleId);
     },
   });
 }
@@ -310,7 +320,7 @@ export function useUpdateSaleItem() {
       const updatedItem = extractData<SaleItem>(response);
       return { saleId, itemId, updatedItem };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       queryClient.setQueryData(queryKeys.sales.detail(result.saleId), (previous: SaleWithItems | null | undefined) => {
         if (!previous) return previous;
 
@@ -334,6 +344,7 @@ export function useUpdateSaleItem() {
           updatedAt: new Date().toISOString(),
         };
       });
+      await syncSaleDetail(queryClient, result.saleId);
     },
   });
 }

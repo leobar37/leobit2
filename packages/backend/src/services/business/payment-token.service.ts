@@ -3,7 +3,7 @@ import type { PaymentTokenRepository } from "../repository/payment-token.reposit
 import type { PaymentRepository } from "../repository/payment.repository";
 import type { RequestContext } from "../../context/request-context";
 import type { PaymentToken } from "../../db/schema/payment-tokens";
-import { ConflictError, NotFoundError, ValidationError } from "../../errors";
+import { NotFoundError, ValidationError } from "../../errors";
 
 const ALLOWED_CHARS_REGEX = /^[a-zA-Z0-9_-]+$/;
 const TOKEN_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
@@ -45,7 +45,7 @@ export class PaymentTokenService {
 
     const existingToken = await this.repository.findByPaymentId(ctx, paymentId);
     if (existingToken) {
-      throw new ConflictError("Ya existe un token para este pago");
+      return { token: existingToken.token };
     }
 
     let token: string;

@@ -492,6 +492,10 @@ type RouteFiles = {
     id: "routes/_protected.compras.$id";
     page: "/compras/:id" | "/compras/:id/editar" | "/compras/:id/editar/calculadora";
   };
+  "routes/_protected.compras.$id._index.tsx": {
+    id: "routes/_protected.compras.$id._index";
+    page: "/compras/:id";
+  };
   "routes/_protected.compras.$id.editar.tsx": {
     id: "routes/_protected.compras.$id.editar";
     page: "/compras/:id/editar" | "/compras/:id/editar/calculadora";
@@ -638,6 +642,7 @@ type RouteModules = {
   "routes/_protected.compras.nueva.($draftId).calculadora": typeof import("./app/routes/_protected.compras.nueva.($draftId).calculadora.tsx");
   "routes/_protected.compras.nueva.($draftId)._index": typeof import("./app/routes/_protected.compras.nueva.($draftId)._index.tsx");
   "routes/_protected.compras.$id": typeof import("./app/routes/_protected.compras.$id.tsx");
+  "routes/_protected.compras.$id._index": typeof import("./app/routes/_protected.compras.$id._index.tsx");
   "routes/_protected.compras.$id.editar": typeof import("./app/routes/_protected.compras.$id.editar.tsx");
   "routes/_protected.compras.$id.editar.calculadora": typeof import("./app/routes/_protected.compras.$id.editar.calculadora.tsx");
   "routes/_protected.compras.$id.editar._index": typeof import("./app/routes/_protected.compras.$id.editar._index.tsx");

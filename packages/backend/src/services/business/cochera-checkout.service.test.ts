@@ -130,6 +130,8 @@ describe("CocheraCheckoutService", () => {
 
   it("records subscription usage and closes the session atomically", async () => {
     const fixedDate = new Date("2026-05-07T12:30:00.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedDate);
 
     const deps = createDeps();
     deps.settingsRepo.findByBusinessId.mockResolvedValue({
@@ -182,6 +184,6 @@ describe("CocheraCheckoutService", () => {
       }),
       { tx: true }
     );
-    expect(result.totalAmount).toBe("40.00");
+    expect(result.totalAmount).toBe("15.00");
   });
 });

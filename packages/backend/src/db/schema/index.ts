@@ -144,6 +144,14 @@ export {
   type NewCustomerGroupMember,
 } from "./customer-group-members";
 
+// Distribucion Groups (junction table)
+export {
+  distribucionGroups,
+  distribucionGroupsRelations,
+  type DistribucionGroup,
+  type NewDistribucionGroup,
+} from "./distribucion-groups";
+
 // Sales (Unified for instant_sales and pre_orders)
 export {
   sales,

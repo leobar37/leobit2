@@ -3,6 +3,8 @@ import { randomUUID } from "crypto";
 import { contextPlugin } from "../plugins/context";
 import { servicesPlugin } from "../plugins/services";
 import type { RequestContext } from "../context/request-context";
+import { auth } from "../lib/auth";
+import { UnauthorizedError } from "../errors";
 
 const INVITATION_EXPIRY_DAYS = 7;
 
@@ -73,7 +75,6 @@ export const invitationRoutes = new Elysia({ prefix: "/invitations" })
 export const publicInvitationRoutes = new Elysia({
   prefix: "/public/invitations",
 })
-  .use(contextPlugin)
   .use(servicesPlugin)
   .get(
     "/:token",
@@ -91,11 +92,23 @@ export const publicInvitationRoutes = new Elysia({
   )
   .post(
     "/accept",
-    async ({ staffInvitationService, ctx, body }) => {
-      // Derive userId from authenticated session, ignore client-supplied userId
-      await staffInvitationService.acceptInvitation(body.token, ctx.userId);
+    async ({ staffInvitationService, request, body }) => {
+      const session = await auth.api.getSession({ headers: request.headers });
 
-      return { success: true };
+      if (!session) {
+        throw new UnauthorizedError();
+      }
+
+      // Derive userId from authenticated session, ignore client-supplied userId
+      const membership = await staffInvitationService.acceptInvitation(
+        body.token,
+        session.user.id
+      );
+
+      return {
+        success: true,
+        data: membership,
+      };
     },
     {
       body: t.Object({

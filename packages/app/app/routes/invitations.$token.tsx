@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { hydrateCurrentBusinessContext } from "~/lib/business-context";
 
 export default function AcceptInvitationPage() {
   const { token } = useParams<{ token: string }>();
@@ -26,7 +27,8 @@ export default function AcceptInvitationPage() {
     if (!token || !user) return;
 
     try {
-      await acceptInvitation.mutateAsync({ token, userId: user.id });
+      await acceptInvitation.mutateAsync({ token });
+      await hydrateCurrentBusinessContext();
       navigate("/dashboard");
     } catch (error) {
       console.error("Error accepting invitation:", error);
@@ -35,10 +37,10 @@ export default function AcceptInvitationPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
+      <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
+        <Card className="w-full max-w-sm rounded-3xl border border-border/70 bg-card shadow-xl shadow-black/5 dark:shadow-black/30">
           <CardContent className="p-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">Verificando invitación...</p>
           </CardContent>
         </Card>
@@ -48,10 +50,10 @@ export default function AcceptInvitationPage() {
 
   if (error || !invitation) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
+      <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
+        <Card className="w-full max-w-sm rounded-3xl border border-border/70 bg-card shadow-xl shadow-black/5 dark:shadow-black/30">
           <CardContent className="p-8 text-center">
-            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
             <CardTitle className="text-xl mb-2">Invitación no válida</CardTitle>
             <CardDescription>
               {error instanceof Error
@@ -65,11 +67,11 @@ export default function AcceptInvitationPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-sm border-0 shadow-xl rounded-3xl">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
+      <Card className="w-full max-w-sm rounded-3xl border border-border/70 bg-card shadow-xl shadow-black/5 dark:shadow-black/30">
         <CardHeader className="text-center pb-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg mb-4">
-            <Route className="w-8 h-8 text-white" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20">
+            <Route className="h-8 w-8 text-primary-foreground" />
           </div>
           <CardTitle className="text-2xl">¡Te han invitado!</CardTitle>
           <CardDescription>
@@ -77,11 +79,11 @@ export default function AcceptInvitationPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="bg-muted rounded-2xl p-4 text-center">
+          <div className="rounded-2xl border border-border/60 bg-muted/60 p-4 text-center dark:bg-muted/30">
             <p className="font-semibold text-lg">{invitation.name}</p>
             <p className="text-sm text-muted-foreground">{invitation.email}</p>
             {invitation.salesPoint && (
-              <p className="text-sm text-orange-600 mt-2">
+              <p className="mt-2 text-sm font-medium text-primary">
                 Punto de venta: {invitation.salesPoint}
               </p>
             )}
@@ -94,7 +96,7 @@ export default function AcceptInvitationPage() {
               </p>
               <Button
                 className="w-full h-12 rounded-xl"
-                onClick={() => navigate(`/register?invitation=${token}`)}
+                onClick={() => navigate(`/register?token=${token}`)}
               >
                 Crear cuenta y unirme
               </Button>
@@ -105,7 +107,7 @@ export default function AcceptInvitationPage() {
                 Estás registrado como <strong>{user.email}</strong>
               </p>
               <Button
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600"
+                className="h-12 w-full rounded-xl"
                 onClick={handleAccept}
                 disabled={acceptInvitation.isPending}
               >

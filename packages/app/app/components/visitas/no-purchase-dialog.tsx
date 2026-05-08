@@ -1,6 +1,7 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircleOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "~/lib/utils";
 import {
   Drawer,
   DrawerContent,
@@ -9,13 +10,6 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from "@/components/ui/drawer";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { Visita } from "~/hooks/use-visitas";
 
 const motivoOptions = [
@@ -53,61 +47,85 @@ export function NoPurchaseDialog({
   const isConfirmDisabled =
     isUpdating ||
     !selectedReason ||
-    (selectedReason === "Otro" && !customReason);
+    (selectedReason === "Otro" && !customReason.trim());
 
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
       <DrawerContent className="px-4 pb-4">
-        <DrawerHeader>
-          <DrawerTitle>¿Por qué no compró?</DrawerTitle>
-          <DrawerDescription>
-            Selecciona el motivo por el cual{" "}
-            <span className="font-semibold">
-              {visita?.customer?.name}
-            </span>{" "}
-            no realizó la compra
+        <DrawerHeader className="px-0 text-left">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-orange-600 dark:bg-orange-400/10 dark:text-orange-200">
+            <MessageCircleOff className="h-5 w-5" />
+          </div>
+          <DrawerTitle className="text-xl">Registrar no compra</DrawerTitle>
+          <DrawerDescription className="text-sm leading-5">
+            Guarda el motivo de{" "}
+            <span className="font-medium text-foreground">
+              {visita?.customer?.name || "este cliente"}
+            </span>
+            . Te ayudará a entender mejor la ruta sin cerrar la visita como venta.
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="space-y-4 py-4">
-          <Select
-            value={selectedReason}
-            onValueChange={onReasonChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar motivo" />
-            </SelectTrigger>
-            <SelectContent>
-              {motivoOptions.map((motivo) => (
-                <SelectItem key={motivo} value={motivo}>
-                  {motivo}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Motivo
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {motivoOptions.map((motivo) => {
+                const isSelected = selectedReason === motivo;
+                return (
+                  <Button
+                    key={motivo}
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "h-auto min-h-10 justify-start whitespace-normal rounded-xl px-3 py-2 text-left text-xs font-medium",
+                      isSelected &&
+                        "border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-50 dark:border-orange-400/30 dark:bg-orange-500/20 dark:text-orange-100 dark:hover:bg-orange-500/25"
+                    )}
+                    onClick={() => onReasonChange(motivo)}
+                  >
+                    {motivo}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
 
           {selectedReason === "Otro" && (
-            <Input
-              placeholder="Especificar motivo..."
-              value={customReason}
-              onChange={(e) => onCustomReasonChange(e.target.value)}
-            />
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Detalle
+              </p>
+              <Input
+                placeholder="Escribe el motivo"
+                value={customReason}
+                onChange={(e) => onCustomReasonChange(e.target.value)}
+                className="h-11 rounded-xl"
+              />
+            </div>
           )}
         </div>
 
-        <DrawerFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
+        <DrawerFooter className="flex-col gap-2 px-0 pt-4 sm:flex-col sm:space-x-0">
           <Button
             onClick={onConfirm}
             disabled={isConfirmDisabled}
-            className="bg-red-600 hover:bg-red-700"
+            className="h-11 rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:bg-muted disabled:text-muted-foreground"
           >
             {isUpdating && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Confirmar
+            Guardar motivo
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-10 rounded-xl"
+            onClick={() => onOpenChange(false)}
+            disabled={isUpdating}
+          >
+            Volver
           </Button>
         </DrawerFooter>
       </DrawerContent>

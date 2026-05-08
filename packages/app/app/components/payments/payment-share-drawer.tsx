@@ -1,7 +1,5 @@
-import { useEffect } from "react";
 import { Copy, MessageCircle, Receipt, RefreshCw, Share2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { toast } from "sonner";
 import {
   Drawer,
   DrawerContent,
@@ -15,12 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useBusiness } from "~/hooks/use-business";
 import {
-  useGeneratePaymentToken,
-  usePaymentToken,
+  usePaymentTokenWithAutoGenerate,
   useRegeneratePaymentToken,
-  useSharePayment,
   useTogglePaymentToken,
 } from "~/hooks/use-payment-token";
+import { useSharePayment } from "~/hooks/use-share-payment";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 
 interface PaymentShareDrawerProps {
@@ -36,8 +33,9 @@ export function PaymentShareDrawer({
   paymentId,
   amount,
 }: PaymentShareDrawerProps) {
-  const { data: tokenData } = usePaymentToken(open ? paymentId : null);
-  const generateToken = useGeneratePaymentToken();
+  const { data: tokenData, isLoading: isTokenLoading } = usePaymentTokenWithAutoGenerate(
+    open ? paymentId : null
+  );
   const regenerateToken = useRegeneratePaymentToken();
   const toggleToken = useTogglePaymentToken();
   const { data: business } = useBusiness();
@@ -52,14 +50,6 @@ export function PaymentShareDrawer({
       ? buildDetailUrl(publicCatalogSlug, tokenData.token)
       : "";
   const shareMessage = detailUrl ? buildMessage(detailUrl, amount) : "";
-
-  useEffect(() => {
-    if (!open || !paymentId || tokenData || generateToken.isPending || !publicCatalogSlug) {
-      return;
-    }
-
-    generateToken.mutate(paymentId);
-  }, [generateToken, open, paymentId, publicCatalogSlug, tokenData]);
 
   const handleRegenerate = async () => {
     if (!paymentId) return;
@@ -125,7 +115,7 @@ export function PaymentShareDrawer({
               </div>
             ) : !tokenData ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                {generateToken.isPending ? "Preparando enlace..." : "Generando confirmación..."}
+                {isTokenLoading ? "Preparando enlace..." : "Generando confirmación..."}
               </div>
             ) : (
               <>

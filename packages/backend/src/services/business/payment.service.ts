@@ -10,6 +10,7 @@ import {
 import type { Abono } from "../../db/schema";
 import { db } from "../../lib/db";
 import { getTxid, type MutationResult } from "../../lib/txid";
+import { decimalToNumber } from "@avileo/shared";
 
 export class PaymentService {
   constructor(
@@ -75,9 +76,11 @@ export class PaymentService {
         throw new ValidationError("El abono no pertenece a este cliente");
       }
 
-      const saleTotalAmount = Number.parseFloat(sale.totalAmount);
+      const saleTotalAmount = decimalToNumber(sale.totalAmount);
+      const initialSalePaid = decimalToNumber(sale.amountPaid);
       const totalPaidForSale = await this.repository.getTotalBySale(ctx, data.relatedSaleId);
-      const remainingSaleDebt = Math.max(saleTotalAmount - totalPaidForSale, 0);
+      const effectivePaidForSale = Math.max(initialSalePaid, totalPaidForSale);
+      const remainingSaleDebt = Math.max(saleTotalAmount - effectivePaidForSale, 0);
 
       const OVERPAYMENT_TOLERANCE = 0.01;
       if (remainingSaleDebt <= 0) {

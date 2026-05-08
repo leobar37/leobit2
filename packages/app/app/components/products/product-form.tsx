@@ -53,6 +53,8 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
     setValue,
     formState: { errors, isValid },
   } = form;
+  const imageValue = watch("imageId");
+  const imageId = typeof imageValue === "string" ? imageValue : undefined;
   const saveDisabledReason = !isValid
     ? "Completa nombre, unidad y precio para guardar."
     : null;
@@ -81,7 +83,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
         <div className="space-y-1.5">
           <Label className="text-sm">Imagen del producto</Label>
           <AssetPicker
-            value={watch("imageId")}
+            value={imageId}
             onChange={(id) => setValue("imageId", id, { shouldDirty: true })}
             placeholder="Seleccionar imagen"
           />

@@ -135,7 +135,7 @@ export interface CreateSaleItemInput {
 }
 
 export interface UpdateSaleInput {
-  customerId?: string;
+  customerId?: string | null;
   saleType?: SalePaymentType;
   type?: SaleType;
   totalAmount?: number;
@@ -402,7 +402,6 @@ export function useCreateSale() {
  */
 export function useCreateDraftSale() {
   const queryClient = useQueryClient();
-  const { data: business } = useBusiness();
 
   return useMutation({
     mutationFn: async (options?: {
@@ -412,12 +411,6 @@ export function useCreateDraftSale() {
       type?: "instant_sale" | "pre_order";
       deliveryDate?: string;
     }): Promise<Sale> => {
-      const sellerId = business?.businessUserId;
-
-      if (!sellerId) {
-        throw new Error("Business seller is not available");
-      }
-
       const response = await api.sales.post({
         saleType: "contado",
         totalAmount: 0,
@@ -555,11 +548,11 @@ export function useUpdateSale() {
       }: {
         id: string;
         input: UpdateSaleInput;
-      }): Promise<void> => {
+      }): Promise<SaleWithItems> => {
         const payload: Record<string, unknown> = {};
 
         if ("customerId" in input) {
-          payload.customerId = input.customerId;
+          payload.customerId = input.customerId ?? null;
         }
 
         if ("deliveryDate" in input) {
@@ -599,19 +592,32 @@ export function useUpdateSale() {
         }
 
         const response = await api.sales({ id }).patch(payload as any);
-        extractData(response);
+        return extractData<SaleWithItems>(response);
       },
       onMutate: async (variables) => {
         await queryClient.cancelQueries({ queryKey: queryKeys.sales.detail(variables.id) });
         const previousSale = queryClient.getQueryData<SaleWithItems>(queryKeys.sales.detail(variables.id));
 
-        if (previousSale && variables.input.customerId !== undefined) {
+        if (previousSale) {
           const customersCache = queryClient.getQueryData<Customer[]>(queryKeys.customers.all) || [];
-          const customer = customersCache.find((c) => c.id === variables.input.customerId);
+          const nextCustomerId =
+            variables.input.customerId !== undefined
+              ? variables.input.customerId
+              : previousSale.customerId;
+          const customer = customersCache.find((c) => c.id === nextCustomerId);
+          const nextSaleType = variables.input.saleType ?? previousSale.saleType;
+          const nextTotalAmount = variables.input.totalAmount ?? decimalToNumber(previousSale.totalAmount);
+          const nextAmountPaid = variables.input.amountPaid ?? decimalToNumber(previousSale.amountPaid);
+          const { balanceDue } = getSaleFinancialState({
+            saleType: nextSaleType,
+            totalAmount: nextTotalAmount,
+            amountPaid: nextAmountPaid,
+          });
 
           queryClient.setQueryData(queryKeys.sales.detail(variables.id), {
             ...previousSale,
-            customerId: variables.input.customerId,
+            ...variables.input,
+            customerId: nextCustomerId,
             customer: customer
               ? {
                   id: customer.id,
@@ -619,13 +625,20 @@ export function useUpdateSale() {
                   dni: customer.dni,
                   phone: customer.phone,
                 }
-              : null,
+              : previousSale.customerId === nextCustomerId
+                ? previousSale.customer
+                : null,
+            saleType: nextSaleType,
+            totalAmount: nextTotalAmount.toString(),
+            amountPaid: nextAmountPaid.toString(),
+            balanceDue: balanceDue.toString(),
+            updatedAt: new Date().toISOString(),
           });
         }
 
         return { previousSale };
       },
-      onSuccess: async (_data, variables) => {
+      onSuccess: async (updatedSale, variables) => {
         queryClient.setQueryData(
           queryKeys.sales.detail(variables.id),
           (previous: SaleWithItems | null | undefined) => {
@@ -642,11 +655,13 @@ export function useUpdateSale() {
 
             return {
               ...previous,
+              ...updatedSale,
               ...variables.input,
               totalAmount: nextTotalAmount.toString(),
               amountPaid: nextAmountPaid.toString(),
               balanceDue: balanceDue.toString(),
-              updatedAt: new Date().toISOString(),
+              updatedAt: updatedSale.updatedAt ?? new Date().toISOString(),
+              items: previous.items,
             };
           }
         );

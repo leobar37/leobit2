@@ -3,17 +3,18 @@
  * Single flow for both new purchases and editing existing purchases
  */
 
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { FormProvider, type UseFormReturn } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useBusiness } from "~/hooks/use-business";
 import { useSuppliers, type Supplier } from "~/hooks/use-suppliers";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { purchaseItemTransformer } from "@avileo/shared";
 import { useWrapperForm } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
+import { usePurchaseItems } from "~/hooks/use-purchase-items";
+import { usePurchaseReceipt } from "~/hooks/use-purchase-receipt";
 
 /** Purchase status from API */
 type PurchaseStatus = "draft" | "pending" | "received" | "cancelled";
@@ -98,9 +99,9 @@ interface PurchaseFormContextType {
   supplier: Supplier | null;
   setSupplier: (supplier: Supplier | null) => void;
   items: PurchaseItem[];
-  addItem: (item: Omit<PurchaseItem, "id">) => Promise<void>;
-  removeItem: (id: string) => Promise<void>;
-  updateItem: (id: string, updates: Partial<Omit<PurchaseItem, "id">>) => Promise<void>;
+  addItem: (item: Omit<PurchaseItem, "id">) => void;
+  removeItem: (id: string) => void;
+  updateItem: (id: string, updates: Partial<Omit<PurchaseItem, "id">>) => void;
   receiptFile: File | null;
   receiptPreview: string | null;
   handleReceiptSelect: (file: File) => void;
@@ -139,10 +140,9 @@ interface PurchaseFormProviderProps {
 export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { draftId } = useParams<{ draftId: string }>();
-  const purchaseId = draftId || null;
+  const { id, draftId } = useParams<{ id: string; draftId: string }>();
+  const purchaseId = id || draftId || null;
 
-  const { data: business } = useBusiness();
   const { data: suppliers } = useSuppliers();
 
   // Load purchase if editing, or null if creating new
@@ -159,19 +159,27 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const purchase = purchaseData || null;
   const canEdit = !purchase || purchase.status === "pending" || purchase.status === "draft";
 
-  // Form state
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const [fileUploadStatus, setFileUploadStatus] = useState({
-    isUploading: false,
-    isPending: false,
-    isError: false,
-  });
-  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  // Extracted hooks
+  const {
+    items,
+    setItems,
+    addItem,
+    removeItem,
+    updateItem,
+    totalAmount,
+    cartItemsCount,
+  } = usePurchaseItems();
 
-  // Local state for new purchases (API does not support drafts or incremental item ops)
-  const [localItems, setLocalItems] = useState<PurchaseItem[]>([]);
+  const {
+    receiptFile,
+    receiptPreview,
+    fileUploadStatus,
+    handleReceiptSelect: handleReceiptSelectBase,
+    handleReceiptClear: handleReceiptClearBase,
+  } = usePurchaseReceipt();
+
   const [localSupplier, setLocalSupplier] = useState<Supplier | null>(null);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const form = useWrapperForm<PurchaseFormValues>({
     defaultValues: {
@@ -180,6 +188,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         : new Date().toISOString().split("T")[0],
       invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
+      receiptImageId: purchase?.receiptImageId ?? undefined,
     },
     values: {
       purchaseDate: purchase?.purchaseDate
@@ -187,16 +196,24 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         : new Date().toISOString().split("T")[0],
       invoiceNumber: purchase?.invoiceNumber || "",
       notes: purchase?.notes || "",
+      receiptImageId: purchase?.receiptImageId ?? undefined,
     },
     fields: {
       receiptImageId: fileField(),
     },
   });
 
-  // Items from purchase (existing) or local state (new)
-  const items = useMemo(() => {
-    if (purchase?.items) {
-      return purchase.items.map((item) => ({
+  const supplier = useMemo(() => {
+    if (!purchase?.supplierId || !suppliers) return null;
+    return suppliers.find((s) => s.id === purchase.supplierId) || null;
+  }, [purchase?.supplierId, suppliers]);
+
+  // FIX: Added purchase?.items to dependency array
+  useEffect(() => {
+    if (!purchase) return;
+
+    setItems(
+      purchase.items.map((item) => ({
         id: item.id,
         productId: item.productId,
         variantId: item.variantId,
@@ -204,15 +221,14 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         productName: item.productName || item.product?.name || "Producto",
         variantName: item.variantName || item.variant?.name || "",
         ...(purchaseItemTransformer.toForm(item) as Pick<PurchaseItem, "quantity" | "unitCost" | "totalCost">),
-      }));
-    }
-    return localItems;
-  }, [purchase?.items, localItems]);
+      }))
+    );
+  }, [purchase?.id, purchase?.items, setItems]);
 
-  const supplier = useMemo(() => {
-    if (!purchase?.supplierId || !suppliers) return null;
-    return suppliers.find((s) => s.id === purchase.supplierId) || null;
-  }, [purchase?.supplierId, suppliers]);
+  useEffect(() => {
+    if (!supplier) return;
+    setLocalSupplier(supplier);
+  }, [supplier?.id]);
 
   const effectiveSupplier = localSupplier || supplier;
 
@@ -228,54 +244,15 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     [purchase]
   );
 
-  const addItem = useCallback(
-    async (item: Omit<PurchaseItem, "id">) => {
-      setLocalItems((prev) => [...prev, { ...item, id: crypto.randomUUID() }]);
-    },
-    []
-  );
-
-  const removeItem = useCallback(
-    async (itemId: string) => {
-      setLocalItems((prev) => prev.filter((item) => item.id !== itemId));
-    },
-    []
-  );
-
-  const updateItem = useCallback(
-    async (
-      itemId: string,
-      updates: Partial<Omit<PurchaseItem, "id">>
-    ) => {
-      setLocalItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId ? { ...item, ...updates } : item
-        )
-      );
-    },
-    []
-  );
-
   const handleReceiptSelect = useCallback((file: File) => {
-    setReceiptFile(file);
-    setReceiptPreview(URL.createObjectURL(file));
-    form.setValue("receiptImageId", file as unknown as string);
-    setFileUploadStatus({ isUploading: false, isPending: true, isError: false });
-  }, [form]);
+    handleReceiptSelectBase(file, (value) => form.setValue("receiptImageId", value));
+  }, [handleReceiptSelectBase, form]);
 
   const handleReceiptClear = useCallback(() => {
-    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-    setReceiptFile(null);
-    setReceiptPreview(null);
-    form.setValue("receiptImageId", undefined);
-    setFileUploadStatus({ isUploading: false, isPending: false, isError: false });
-  }, [receiptPreview, form]);
+    handleReceiptClearBase(() => form.setValue("receiptImageId", undefined));
+  }, [handleReceiptClearBase, form]);
 
   const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
-
-  const totalAmount = useMemo(() => {
-    return items.reduce((sum, item) => sum + (parseFloat(item.totalCost) || 0), 0);
-  }, [items]);
 
   const purchaseDate = form.watch("purchaseDate");
   const isFormValid = items.length > 0 && effectiveSupplier !== null && !!purchaseDate;
@@ -283,29 +260,27 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
   const saveMutation = useMutation({
     mutationFn: async () => {
       // Upload receipt if provided
-      let receiptImageId: string | undefined;
+      let resolvedReceiptImageId: string | undefined;
       if (receiptFile) {
         const resolved = await form.resolveField("receiptImageId", receiptFile as unknown as string);
-        receiptImageId = typeof resolved === "string" ? resolved : undefined;
+        resolvedReceiptImageId = typeof resolved === "string" ? resolved : undefined;
       }
 
       if (purchase?.status === "draft") {
-        // Confirm existing draft purchase
         if (!effectiveSupplier) {
           throw new Error("Se requiere un proveedor");
         }
-        if (localItems.length === 0) {
+        if (items.length === 0) {
           throw new Error("La compra debe tener al menos un item");
         }
 
-        // Update the draft with items and supplier first, then confirm
         const input: CreatePurchaseInput = {
           supplierId: effectiveSupplier.id,
           purchaseDate: form.getValues("purchaseDate"),
           invoiceNumber: form.getValues("invoiceNumber") || undefined,
           notes: form.getValues("notes") || undefined,
-          receiptImageId,
-          items: localItems.map((item) => ({
+          receiptImageId: resolvedReceiptImageId,
+          items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId || undefined,
             unitId: item.unitId,
@@ -325,18 +300,38 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
       }
 
       if (purchase) {
-        // Existing non-draft purchase: API only supports status updates.
-        if (receiptFile) {
-          await form.resolveField("receiptImageId", receiptFile as unknown as string);
+        if (!effectiveSupplier) {
+          throw new Error("Se requiere un proveedor");
         }
-        return purchase.id;
+        if (items.length === 0) {
+          throw new Error("La compra debe tener al menos un item");
+        }
+
+        const input: CreatePurchaseInput = {
+          supplierId: effectiveSupplier.id,
+          purchaseDate: form.getValues("purchaseDate"),
+          invoiceNumber: form.getValues("invoiceNumber") || undefined,
+          notes: form.getValues("notes") || undefined,
+          receiptImageId: resolvedReceiptImageId || purchase.receiptImageId || undefined,
+          items: items.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId || undefined,
+            unitId: item.unitId,
+            quantity: parseFloat(item.quantity),
+            unitCost: parseFloat(item.unitCost),
+          })),
+        };
+
+        const response = await api.purchases({ id: purchase.id }).put(input);
+        const result = extractData<PurchaseWithItems>(response);
+        return result.id;
       }
 
       // New purchase: submit everything via POST /purchases
       if (!effectiveSupplier) {
         throw new Error("Se requiere un proveedor");
       }
-      if (localItems.length === 0) {
+      if (items.length === 0) {
         throw new Error("La compra debe tener al menos un item");
       }
 
@@ -345,8 +340,8 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
         purchaseDate: form.getValues("purchaseDate"),
         invoiceNumber: form.getValues("invoiceNumber") || undefined,
         notes: form.getValues("notes") || undefined,
-        receiptImageId,
-        items: localItems.map((item) => ({
+        receiptImageId: resolvedReceiptImageId,
+        items: items.map((item) => ({
           productId: item.productId,
           variantId: item.variantId || undefined,
           unitId: item.unitId,
@@ -394,7 +389,7 @@ export function PurchaseFormProvider({ children }: PurchaseFormProviderProps) {
     clearPurchaseError,
     form,
     totalAmount,
-    cartItemsCount: items.length,
+    cartItemsCount,
     isFormValid,
     canEdit,
     onSave,

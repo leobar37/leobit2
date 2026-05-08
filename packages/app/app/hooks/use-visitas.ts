@@ -9,6 +9,11 @@ import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
 import { toast } from "sonner";
 
+export interface VisitaGroup {
+  id: string;
+  name: string;
+}
+
 export interface Visita {
   id: string;
   businessId: string;
@@ -41,6 +46,7 @@ export interface Visita {
     status: string;
     notes: string | null;
   } | null;
+  groups?: VisitaGroup[];
 }
 
 export interface CreateVisitaInput {
@@ -73,6 +79,7 @@ interface BackendVisita {
   customerAddress?: string | null;
   customerPhone?: string | null;
   waterStop?: Visita["waterStop"];
+  groups?: VisitaGroup[];
 }
 
 /**
@@ -100,6 +107,7 @@ function mapVisita(v: BackendVisita): Visita {
         }
       : undefined,
     waterStop: v.waterStop ?? null,
+    groups: v.groups,
   };
 }
 
@@ -204,13 +212,23 @@ export function useCreateVisitasFromGroup() {
 
   return useMutation<Visita[], Error, { distribucionId: string; groupId: string }>({
     mutationFn: async ({ distribucionId, groupId }) => {
+      // Fetch group members from the backend
       const groupResponse = await api.groups({ id: groupId }).get();
       const group = extractData<{
-        members: Array<{ customerId: string }>;
+        members?: Array<{ customerId: string }>;
+        memberCount?: number;
       }>(groupResponse);
 
-      if (!group?.members?.length) {
+      // Support both members array and memberCount fallback
+      const hasMembers = (group?.members?.length ?? 0) > 0 || (group?.memberCount ?? 0) > 0;
+      if (!hasMembers) {
         throw new Error("El grupo no tiene miembros");
+      }
+
+      // If members array is not provided but memberCount > 0, we can't proceed
+      // The backend bulk API needs customerIds
+      if (!group?.members?.length) {
+        throw new Error("No se pudieron cargar los miembros del grupo");
       }
 
       const customerIds = group.members.map((m) => m.customerId);

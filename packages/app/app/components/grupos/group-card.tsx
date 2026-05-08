@@ -22,7 +22,7 @@ export function GroupCard({
 	return (
 		<Card
 			onClick={onClick}
-			className="group relative flex items-center gap-3 rounded-[24px] border border-stone-200/80 bg-white/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.03)] transition-colors hover:border-stone-300/90 cursor-pointer"
+			className="group relative flex items-center gap-3 rounded-[24px] border border-border/60 bg-card/90 p-4 shadow-sm transition-colors hover:border-border cursor-pointer"
 		>
 			<div className="flex flex-1 items-center justify-between gap-3">
 				<div className="min-w-0 flex-1">

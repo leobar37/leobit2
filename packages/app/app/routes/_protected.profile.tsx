@@ -1,26 +1,34 @@
-import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Camera, Loader2, User, Moon, Sun, Monitor } from "lucide-react";
+import { Camera, Loader2, User, Moon, Sun, Monitor, Download, Check, Smartphone, Share2, X } from "lucide-react";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
+import { usePWAInstall } from "~/hooks/use-pwa-install";
 import { useFile } from "~/hooks/use-files";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormDate } from "@/components/forms/form-date";
 import { FormMediaField } from "@/components/forms/form-media-field";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { MobileSlot, MobilePage } from "~/components/mobile";
 import { useTheme } from "~/components/theme";
 import { cn } from "~/lib/utils";
 import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
+import { CameraGalleryDrawer } from "~/components/ui/camera-gallery-drawer";
+import { getErrorMessage } from "~/lib/api-utils";
 
 const profileSchema = z.object({
   dni: z.string().max(20).optional(),
   phone: z.string().max(50).optional(),
   birthDate: z.string().optional(),
-  avatarId: z.string().optional(),
+  avatarId: z
+    .union([
+      z.string(),
+      z.custom<File>((value) => typeof File !== "undefined" && value instanceof File),
+      z.null(),
+    ])
+    .optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -35,13 +43,16 @@ export default function ProfilePage() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: avatarFile } = useFile(profile?.avatarId ?? "");
   const updateProfile = useUpdateProfile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [avatarDrawerOpen, setAvatarDrawerOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const isLoading = profileLoading;
   const { mode, setMode } = useTheme();
+  const { canInstall, isInstalled, isIOS, install } = usePWAInstall();
 
   const wrapperForm = useWrapperForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
+    mode: "onChange",
     defaultValues: {
       dni: "",
       phone: "",
@@ -60,8 +71,21 @@ export default function ProfilePage() {
       avatarId: fileField(),
     },
   });
+  const avatarValue = wrapperForm.watch("avatarId");
 
-  const onSubmit = async (data: ProfileFormData) => {
+  useEffect(() => {
+    if (!(avatarValue instanceof File)) {
+      setAvatarPreview(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(avatarValue);
+    setAvatarPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [avatarValue]);
+
+  const saveProfile = async (data: ProfileFormData) => {
+    setIsUploading(true);
     try {
       const payload: Record<string, string> = {};
       if (data.dni && data.dni.trim()) {
@@ -73,26 +97,46 @@ export default function ProfilePage() {
       if (data.birthDate && data.birthDate.trim()) {
         payload.birthDate = data.birthDate.trim();
       }
-      if (data.avatarId) {
+      if (typeof data.avatarId === "string" && data.avatarId) {
         payload.avatarId = data.avatarId;
       }
       await updateProfile.mutateAsync(payload);
       toast.success("Perfil actualizado correctamente");
     } catch (error) {
-      toast.error("Error al actualizar el perfil");
+      toast.error("Error al actualizar el perfil", {
+        description: getErrorMessage(error),
+      });
       console.error("Error updating profile:", error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleAvatarClick = () => {
-    fileInputRef.current?.click();
+    setAvatarDrawerOpen(true);
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    wrapperForm.setValue("avatarId", file as unknown as string);
+  const handleAvatarFileSelect = (file: File) => {
+    wrapperForm.setValue("avatarId", file, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
   };
+
+  const handleSubmit = wrapperForm.handleSubmit(async (rawData) => {
+    setIsUploading(true);
+    try {
+      const data = await wrapperForm.resolvePayload(rawData);
+      await saveProfile(data);
+    } catch (error) {
+      toast.error("Error al actualizar el perfil", {
+        description: getErrorMessage(error),
+      });
+      console.error("Error updating profile:", error);
+      setIsUploading(false);
+    }
+  });
 
   if (isLoading) {
     return (
@@ -118,9 +162,9 @@ export default function ProfilePage() {
               >
                 {isUploading ? (
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
-                ) : avatarFile?.url ? (
+                ) : avatarPreview || avatarFile?.url ? (
                   <img
-                    src={avatarFile.url}
+                    src={avatarPreview || avatarFile?.url}
                     alt="Avatar"
                     className="w-full h-full object-cover"
                   />
@@ -135,13 +179,6 @@ export default function ProfilePage() {
               >
                 <Camera className="h-4 w-4 text-orange-600" />
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handleFileChange}
-              />
             </div>
             <div>
               <h2 className="text-xl font-semibold">{profile?.name}</h2>
@@ -151,7 +188,7 @@ export default function ProfilePage() {
 
           <div>
             <WrapperFormProvider form={wrapperForm}>
-              <form onSubmit={wrapperForm.handleResolvedSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <FormMediaField
                   name="avatarId"
                   label="Avatar"
@@ -179,7 +216,7 @@ export default function ProfilePage() {
                 <Button
                   type="submit"
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg shadow-orange-500/25 transition-all duration-200"
-                  disabled={updateProfile.isPending || !wrapperForm.formState.isValid}
+                  disabled={updateProfile.isPending || isUploading}
                 >
                   {updateProfile.isPending ? (
                     <>
@@ -228,7 +265,68 @@ export default function ProfilePage() {
             })}
           </div>
         </div>
+
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Aplicación</h3>
+            <p className="text-sm text-muted-foreground">
+              Instala Avileo en tu dispositivo para acceso rápido
+            </p>
+          </div>
+          {isInstalled ? (
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-green-200 bg-green-50">
+              <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                <Check className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-800">Avileo instalado</p>
+                <p className="text-xs text-green-600">La app está en tu pantalla de inicio</p>
+              </div>
+            </div>
+          ) : canInstall ? (
+            <button
+              type="button"
+              onClick={install}
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                {isIOS ? (
+                  <Share2 className="h-5 w-5 text-orange-600" />
+                ) : (
+                  <Download className="h-5 w-5 text-orange-600" />
+                )}
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-medium text-orange-800">
+                  {isIOS ? "Agregar a pantalla de inicio" : "Instalar Avileo"}
+                </p>
+                <p className="text-xs text-orange-600">
+                  {isIOS
+                    ? "Toca el botón compartir y selecciona 'Agregar a pantalla de inicio'"
+                    : "Agrega la app para acceso sin conexión"}
+                </p>
+              </div>
+            </button>
+          ) : (
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-gray-50">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                <Smartphone className="h-5 w-5 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Avileo Web</p>
+                <p className="text-xs text-gray-500">Usa tu navegador para acceder a Avileo</p>
+              </div>
+            </div>
+          )}
+        </div>
       </MobilePage.Root>
+
+      <CameraGalleryDrawer
+        open={avatarDrawerOpen}
+        onOpenChange={setAvatarDrawerOpen}
+        onFileSelect={handleAvatarFileSelect}
+        title="Avatar"
+      />
     </>
   );
 }

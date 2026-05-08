@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
+import { extractData } from "~/lib/api-utils";
 
 export interface Profile {
   id: string;
@@ -19,31 +20,11 @@ export interface UpdateProfileInput {
 }
 
 async function getProfile(): Promise<Profile> {
-  const { data, error } = await api.profile.me.get();
-
-  if (error) {
-    const err = error.value as { message?: string; code?: string } | undefined;
-    throw new Error(err?.message || err?.code || "Request failed");
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to fetch profile");
-  }
-
-  return data.data as Profile;
+  return extractData<Profile>(await api.profile.me.get(), "No se pudo cargar el perfil");
 }
 
 async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
-  const { data, error } = await api.profile.me.put(input);
-
-  if (error) {
-    const err = error.value as { message?: string; code?: string } | undefined;
-    throw new Error(err?.message || err?.code || "Request failed");
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to update profile");
-  }
-
-  return data.data as Profile;
+  return extractData<Profile>(await api.profile.me.put(input), "No se pudo actualizar el perfil");
 }
 
 export function useProfile() {
@@ -63,4 +44,3 @@ export function useUpdateProfile() {
     },
   });
 }
-

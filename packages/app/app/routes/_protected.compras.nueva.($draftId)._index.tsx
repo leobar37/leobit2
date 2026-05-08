@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { cn, formatCurrency } from "~/lib/utils";
 import { useNavigate, useLocation, useParams } from "react-router";
 import { ShoppingCart, Loader2, Save, Receipt, Calculator, ChevronRight, FileEdit, CircleAlert, CircleCheckBig, CircleDollarSign, Truck } from "lucide-react";
@@ -114,12 +114,15 @@ function PurchaseFormInner() {
   const navigate = useNavigate();
   const location = useLocation();
   const { draftId } = useParams<{ draftId: string }>();
+  const processedSupplierRef = useRef(false);
 
   useEffect(() => {
+    if (processedSupplierRef.current) return;
     const stateSupplier = location.state?.supplier as Supplier | undefined;
     if (stateSupplier) {
       setSupplier(stateSupplier);
       window.history.replaceState({}, document.title);
+      processedSupplierRef.current = true;
     }
   }, [location.state, setSupplier]);
 

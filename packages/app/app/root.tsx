@@ -27,13 +27,13 @@ import { registerSW } from "virtual:pwa-register";
 
 export function HydrateFallback() {
   return (
-    <div className="min-h-screen bg-orange-500 flex flex-col items-center justify-center gap-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
       <img src="/logo.svg" alt="Avileo" className="w-20 h-20" />
       <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold text-white">Avileo</h1>
+        <h1 className="text-2xl font-bold">Avileo</h1>
         <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-white/80" />
-          <p className="text-sm text-white/80">Cargando...</p>
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
     </div>
@@ -98,59 +98,81 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof registerSW === "function") {
-      const updateSW = registerSW({
-        immediate: true,
-        onRegistered(r: ServiceWorkerRegistration | undefined) {
-          console.log("[PWA] Service Worker registered:", r);
-          // Check for updates immediately and periodically
-          if (r) {
-            // Check for updates every 5 minutes
-            setInterval(() => {
-              console.log("[PWA] Checking for updates...");
-              r.update();
-            }, 5 * 60 * 1000);
+    if (import.meta.env.DEV) {
+      if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-            // Also check immediately if there's a waiting worker
-            if (r.waiting) {
-              console.log("[PWA] Update already waiting, reloading...");
-              r.waiting.postMessage({ type: "SKIP_WAITING" });
-              window.location.reload();
-            }
-          }
-        },
-        onRegisterError(error: Error | undefined) {
-          console.error("[PWA] Service Worker registration failed:", error);
-        },
-        onOfflineReady() {
-          console.log("[PWA] App ready");
-        },
-        onNeedRefresh() {
-          // Force reload when new version is available to avoid stale chunks
-          console.log("[PWA] New version available, reloading...");
+      navigator.serviceWorker.getRegistrations().then(async (regs) => {
+        if (regs.length === 0) return;
+        await Promise.all(regs.map((r) => r.unregister()));
+        const cacheKeys = "caches" in window ? await window.caches.keys() : [];
+        await Promise.all(cacheKeys.map((name) => window.caches.delete(name)));
+
+        if (!sessionStorage.getItem("avileo_dev_sw_cleared")) {
+          sessionStorage.setItem("avileo_dev_sw_cleared", "true");
           window.location.reload();
-        },
+        }
       });
+      return;
+    }
 
-      // Listen for messages from SW about updates
-      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-        navigator.serviceWorker.addEventListener("message", (event) => {
-          if (event.data && event.data.type === "SW_UPDATED") {
-            console.log("[PWA] SW reports new version, reloading...");
+    if (typeof registerSW !== "function") return;
+
+    const intervals: ReturnType<typeof setInterval>[] = [];
+
+    const updateSW = registerSW({
+      immediate: true,
+      onRegistered(r: ServiceWorkerRegistration | undefined) {
+        console.log("[PWA] Service Worker registered:", r);
+        if (r) {
+          const interval = setInterval(() => {
+            console.log("[PWA] Checking for updates...");
+            r.update();
+          }, 5 * 60 * 1000);
+          intervals.push(interval);
+
+          if (r.waiting) {
+            console.log("[PWA] Update already waiting, reloading...");
+            r.waiting.postMessage({ type: "SKIP_WAITING" });
             window.location.reload();
           }
-        });
+        }
+      },
+      onRegisterError(error: Error | undefined) {
+        console.error("[PWA] Service Worker registration failed:", error);
+      },
+      onOfflineReady() {
+        console.log("[PWA] App ready");
+      },
+      onNeedRefresh() {
+        console.log("[PWA] New version available, reloading...");
+        window.location.reload();
+      },
+    });
 
-        // Listen for controllerchange (new SW activated)
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          console.log("[PWA] New Service Worker activated");
-        });
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === "SW_UPDATED") {
+        console.log("[PWA] SW reports new version, reloading...");
+        window.location.reload();
       }
+    };
 
-      return () => {
-        updateSW && updateSW();
-      };
+    const handleControllerChange = () => {
+      console.log("[PWA] New Service Worker activated");
+    };
+
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", handleSWMessage);
+      navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
     }
+
+    return () => {
+      intervals.forEach(clearInterval);
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("message", handleSWMessage);
+        navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+      }
+      if (updateSW) updateSW();
+    };
   }, []);
 
   useEffect(() => {

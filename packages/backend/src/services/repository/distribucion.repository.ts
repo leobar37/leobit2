@@ -110,9 +110,12 @@ export class DistribucionRepository {
 
   async findByIdWithItems(
     ctx: RequestContext,
-    id: string
+    id: string,
+    tx?: DbTransaction
   ): Promise<(Distribucion & { items: DistribucionItem[] }) | undefined> {
-    return db.query.distribuciones.findFirst({
+    const executor = tx ?? db;
+
+    return executor.query.distribuciones.findFirst({
       where: and(
         eq(distribuciones.id, id),
         eq(distribuciones.businessId, ctx.businessId)

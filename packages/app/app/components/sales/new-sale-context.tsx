@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, type ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useReturnNavigation } from "~/hooks/use-return-navigation";
 import { useSale } from "~/hooks/use-sales-db";
@@ -30,27 +30,23 @@ interface NewSaleProviderProps {
   linkedVisitaId?: string | null;
 }
 
-function buildInitialPaymentForm(
-  sale: SaleWithItems | null,
-  saleId: string | null
-): SalePaymentForm {
+function buildPaymentFormFromSale(sale: SaleWithItems): SalePaymentForm {
+  return {
+    paymentMode: sale.paymentMode ?? DEFAULT_PAYMENT_FORM.paymentMode,
+    amountPaid: sale.paymentMode === "a_cuenta" ? sale.amountPaid || "" : "",
+    paymentMethod: (sale.paymentMethod as SalePaymentForm["paymentMethod"]) || null,
+    referenceNumber: sale.advanceReferenceNumber || "",
+    proofImageId: sale.advanceProofImageId || null,
+  };
+}
+
+function buildInitialPaymentForm(sale: SaleWithItems | null, saleId: string | null): SalePaymentForm {
   if (!saleId) return DEFAULT_PAYMENT_FORM;
 
   const cached = salePaymentCache.get(saleId);
   if (cached) return cached;
 
-  // Seed from existing sale data if available
-  if (sale?.paymentMode) {
-    return {
-      paymentMode: sale.paymentMode,
-      amountPaid: sale.paymentMode === "a_cuenta" ? sale.amountPaid || "" : "",
-      paymentMethod: (sale.paymentMethod as SalePaymentForm["paymentMethod"]) || null,
-      referenceNumber: sale.advanceReferenceNumber || "",
-      proofImageId: sale.advanceProofImageId || null,
-    };
-  }
-
-  return DEFAULT_PAYMENT_FORM;
+  return sale ? buildPaymentFormFromSale(sale) : DEFAULT_PAYMENT_FORM;
 }
 
 export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaId }: NewSaleProviderProps) {
@@ -70,6 +66,22 @@ export function NewSaleProvider({ children, linkedVisitaId: initialLinkedVisitaI
   const [paymentForm, setPaymentForm] = useState<SalePaymentForm>(() =>
     buildInitialPaymentForm(sale, saleId)
   );
+
+  useEffect(() => {
+    if (!saleId || !sale) return;
+    if (salePaymentCache.get(saleId)) return;
+
+    const next = buildPaymentFormFromSale(sale);
+    setPaymentForm(next);
+    salePaymentCache.set(saleId, next);
+  }, [
+    saleId,
+    sale?.paymentMode,
+    sale?.amountPaid,
+    sale?.paymentMethod,
+    sale?.advanceReferenceNumber,
+    sale?.advanceProofImageId,
+  ]);
 
   const updatePaymentForm = useCallback(
     (updates: Partial<SalePaymentForm>) => {

@@ -83,6 +83,7 @@ describe("useCalculator", () => {
 			expect(result.current.formValues).toEqual({
 				totalAmount: "",
 				packs: "",
+				pricePerPack: "",
 				units: "",
 			});
 		});
@@ -353,6 +354,7 @@ describe("useCalculator", () => {
 			expect(result.current.form.getValues()).toEqual({
 				totalAmount: "",
 				packs: "",
+				pricePerPack: "",
 				units: "",
 			});
 		});

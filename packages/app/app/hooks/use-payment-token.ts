@@ -1,29 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "~/lib/api-client";
+import { extractData, getErrorMessage } from "~/lib/api-utils";
 
-interface PaymentToken {
+export interface PaymentToken {
   id: string;
   paymentId: string;
   token: string;
   isActive: boolean;
   createdAt: string;
   lastUsedAt?: string | null;
-}
-
-function extractErrorMessage(errorValue: unknown): string {
-  if (typeof errorValue === "string") {
-    return errorValue;
-  }
-
-  if (errorValue && typeof errorValue === "object") {
-    if ("message" in errorValue && typeof errorValue.message === "string") {
-      return errorValue.message;
-    }
-    return JSON.stringify(errorValue);
-  }
-
-  return "Error desconocido";
 }
 
 export function usePaymentToken(paymentId: string | null) {
@@ -33,31 +19,41 @@ export function usePaymentToken(paymentId: string | null) {
       if (!paymentId) return null;
       const response = await api.payments({ id: paymentId }).token.get();
       if (response.error) {
-        throw new Error(extractErrorMessage(response.error.value));
+        throw new Error(getErrorMessage(response.error.value));
       }
-      return response.data?.data as PaymentToken | null;
+      return (response.data?.data ?? null) as PaymentToken | null;
     },
     enabled: !!paymentId,
   });
 }
 
-export function useGeneratePaymentToken() {
+export function usePaymentTokenWithAutoGenerate(paymentId: string | null) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (paymentId: string) => {
-      const response = await api.payments({ id: paymentId }).token.post();
+  return useQuery({
+    queryKey: ["payment-token", paymentId],
+    queryFn: async () => {
+      if (!paymentId) return null;
+
+      const response = await api.payments({ id: paymentId }).token.get();
       if (response.error) {
-        throw new Error(extractErrorMessage(response.error.value));
+        throw new Error(getErrorMessage(response.error.value));
       }
-      return response.data?.data as { token: string };
+
+      const existing = (response.data?.data ?? null) as PaymentToken | null;
+      if (existing) {
+        return existing;
+      }
+
+      const createResponse = await api.payments({ id: paymentId }).token.post();
+      if (createResponse.error) {
+        throw new Error(getErrorMessage(createResponse.error.value));
+      }
+
+      const created = (createResponse.data?.data ?? null) as PaymentToken | null;
+      return created;
     },
-    onSuccess: (_, paymentId) => {
-      queryClient.invalidateQueries({ queryKey: ["payment-token", paymentId] });
-    },
-    onError: (error) => {
-      toast.error(error.message || "No se pudo generar el enlace");
-    },
+    enabled: !!paymentId,
   });
 }
 
@@ -67,17 +63,14 @@ export function useRegeneratePaymentToken() {
   return useMutation({
     mutationFn: async (paymentId: string) => {
       const response = await api.payments({ id: paymentId }).token.regenerate.post();
-      if (response.error) {
-        throw new Error(extractErrorMessage(response.error.value));
-      }
-      return response.data?.data as { token: string };
+      return extractData<{ token: string }>(response);
     },
     onSuccess: (_, paymentId) => {
       queryClient.invalidateQueries({ queryKey: ["payment-token", paymentId] });
       toast.success("Enlace regenerado");
     },
     onError: (error) => {
-      toast.error(error.message || "No se pudo regenerar el enlace");
+      toast.error(getErrorMessage(error) || "No se pudo regenerar el enlace");
     },
   });
 }
@@ -94,17 +87,14 @@ export function useTogglePaymentToken() {
       isActive: boolean;
     }) => {
       const response = await api.payments({ id: paymentId }).token.toggle.post({ isActive });
-      if (response.error) {
-        throw new Error(extractErrorMessage(response.error.value));
-      }
-      return response.data?.data as unknown as PaymentToken;
+      return extractData<PaymentToken>(response);
     },
     onSuccess: (_, { paymentId, isActive }) => {
       queryClient.invalidateQueries({ queryKey: ["payment-token", paymentId] });
       toast.success(isActive ? "Enlace activado" : "Enlace desactivado");
     },
     onError: (error) => {
-      toast.error(error.message || "No se pudo cambiar el estado del enlace");
+      toast.error(getErrorMessage(error) || "No se pudo cambiar el estado del enlace");
     },
   });
 }

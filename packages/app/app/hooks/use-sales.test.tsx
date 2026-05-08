@@ -139,19 +139,35 @@ describe("useCreateDraftSale", () => {
     );
   });
 
-  it("fails with a clear error when the business user is missing", async () => {
+  it("creates a draft sale even when the business user is missing", async () => {
     (useBusiness as ReturnType<typeof vi.fn>).mockReturnValue({
       data: undefined,
+    });
+    const mockSale = {
+      id: "sale-1",
+      type: "instant_sale",
+      saleType: "contado",
+      totalAmount: "0",
+      amountPaid: "0",
+      status: "draft",
+      businessId: "biz-1",
+      balanceDue: "0",
+      items: [],
+    };
+    (api.sales.post as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        success: true,
+        data: mockSale,
+      },
+      error: null,
     });
 
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useCreateDraftSale(), { wrapper });
 
-    const mutationPromise = result.current.mutateAsync();
+    const sale = await result.current.mutateAsync();
 
-    await expect(mutationPromise).rejects.toThrow(
-      "Business seller is not available"
-    );
-    expect(api.sales.post).not.toHaveBeenCalled();
+    expect(api.sales.post).toHaveBeenCalled();
+    expect(sale).toEqual(mockSale);
   });
 });

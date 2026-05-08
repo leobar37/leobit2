@@ -263,11 +263,15 @@ export class SaleService {
       throw new ValidationError("La venta a crédito requiere cliente");
     }
 
-    if (saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
+    // Strict payment validations only apply when confirming a sale,
+    // not while editing a draft. Draft edits should be flexible.
+    const isDraft = sale.status === "draft";
+
+    if (!isDraft && saleType === "contado" && Math.abs(amountPaid - totalAmount) > 0.01) {
       throw new ValidationError("En venta al contado, el monto pagado debe ser igual al total");
     }
 
-    if (saleType === "credito" && amountPaid > totalAmount) {
+    if (!isDraft && saleType === "credito" && amountPaid > totalAmount) {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
     }
 
@@ -278,7 +282,7 @@ export class SaleService {
         ? data.paymentMode
         : this.derivePaymentMode(saleType, totalAmount, amountPaid);
 
-    this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid);
+    this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid, isDraft);
 
     return db.transaction(async (tx) => {
       const updateData: Parameters<typeof this.repository.update>[2] = {
@@ -366,9 +370,15 @@ export class SaleService {
     paymentMode: "pago_total" | "a_cuenta" | "debe_todo" | null,
     saleType: "contado" | "credito",
     totalAmount: number,
-    amountPaid: number
+    amountPaid: number,
+    isDraft: boolean = false
   ) {
     if (!paymentMode) {
+      return;
+    }
+
+    // Draft sales are tolerant — strict payment validations only apply on confirmation
+    if (isDraft) {
       return;
     }
 
@@ -420,6 +430,30 @@ export class SaleService {
       throw new ValidationError("No puedes confirmar una venta sin productos");
     }
 
+    // Pre-orders are confirmed as orders, not collected as final sales.
+    // Payment is handled later when the order is delivered or converted.
+    if (sale.type === "pre_order") {
+      if (baseVersion === undefined) {
+        throw new ValidationError("baseVersion es requerido para confirmar pedidos");
+      }
+      return db.transaction(async (tx) => {
+        const confirmedSale = await this.repository.update(
+          ctx,
+          id,
+          {
+            status: "confirmed",
+            version: baseVersion + 1,
+          },
+          tx,
+          baseVersion
+        );
+        return {
+          data: confirmedSale,
+          txid: await getTxid(tx),
+        };
+      });
+    }
+
     // Determine final payment state from provided data or existing sale
     const totalAmount = decimalToNumber(sale.totalAmount);
     const paymentMode = paymentData?.paymentMode ?? sale.paymentMode ?? "pago_total";
@@ -441,29 +475,6 @@ export class SaleService {
 
     if (saleType === "credito" && amountPaid > totalAmount) {
       throw new ValidationError("El monto pagado no puede ser mayor al total");
-    }
-
-    // For pre_orders, use the generic versioned update path.
-    if (sale.type === "pre_order") {
-      if (baseVersion === undefined) {
-        throw new ValidationError("baseVersion es requerido para confirmar pedidos");
-      }
-      return db.transaction(async (tx) => {
-        const confirmedSale = await this.repository.update(
-          ctx,
-          id,
-          {
-            status: "confirmed",
-            version: baseVersion + 1,
-          },
-          tx,
-          baseVersion
-        );
-        return {
-          data: confirmedSale,
-          txid: await getTxid(tx),
-        };
-      });
     }
 
     // For instant_sales

@@ -27,7 +27,7 @@ describe("MobileSlot", () => {
     expect(screen.queryByText("Guardar")).toBeNull();
   });
 
-  it("warns and renders the last writer for single-writer slots", () => {
+  it("renders the last writer for single-writer slots", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     render(
@@ -38,7 +38,7 @@ describe("MobileSlot", () => {
       </MobileSlotProvider>,
     );
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).not.toHaveBeenCalled();
     expect(screen.getByTestId("footer-host").textContent).toContain("Segundo");
     expect(screen.queryByText("Primero")).toBeNull();
 

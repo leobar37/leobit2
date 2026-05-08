@@ -20,7 +20,7 @@ interface CreateDistribucionFormProps {
 }
 
 export interface CreateDistribucionFormRef {
-  submit: () => void;
+  submit: () => { submitted: boolean; reason?: string };
 }
 
 export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, CreateDistribucionFormProps>(
@@ -44,13 +44,20 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         });
       }
     }, [team, user?.id]);
-    const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
+    const [selectedGroups, setSelectedGroups] = useState<CustomerGroup[]>([]);
     const [selectedPuntoVenta, setSelectedPuntoVenta] = useState<PuntoVenta | null>(null);
     const [notaCreacion, setNotaCreacion] = useState("");
     const [assignItems, setAssignItems] = useState(false);
     const [items, setItems] = useState<CreateDistribucionItemInput[]>([]);
 
-    const isValid = !!selectedVendedor && !!selectedPuntoVenta && (!assignItems || items.length > 0);
+    const validationMessage = !selectedVendedor
+      ? "Selecciona un vendedor"
+      : !selectedPuntoVenta
+        ? "Selecciona un punto de venta"
+        : assignItems && items.length === 0
+          ? "Agrega al menos un producto asignado"
+          : undefined;
+    const isValid = !validationMessage;
 
     useEffect(() => {
       onValidityChange?.(isValid);
@@ -65,18 +72,21 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         puntoVenta: selectedPuntoVenta.name,
         puntoVentaId: selectedPuntoVenta.id,
         notaCreacion: notaCreacion.trim() || undefined,
-        groupId: selectedGroup?.id,
-        items: assignItems ? items : undefined,
+        groupIds: selectedGroups.map((g) => g.id),
+        items: assignItems ? items : [],
       });
     };
 
     useImperativeHandle(ref, () => ({
       submit: () => {
-        if (isValid) {
-          handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+        if (!isValid) {
+          return { submitted: false, reason: validationMessage };
         }
+
+        handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+        return { submitted: true };
       },
-    }));
+    }), [isValid, validationMessage, handleSubmit]);
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,17 +115,20 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Grupo de Clientes
+            Grupos de Clientes
           </Label>
           <GroupSelect
-            value={selectedGroup?.id || null}
-            selectedGroup={selectedGroup}
-            onChange={setSelectedGroup}
-            helperText="Se crearán visitas para todos los clientes del grupo"
+            value={null}
+            values={selectedGroups.map((g) => g.id)}
+            selectedGroups={selectedGroups}
+            onChange={() => {}}
+            onMultiChange={setSelectedGroups}
+            helperText="Se crearán visitas para todos los clientes de los grupos seleccionados"
+            multi
           />
-          {selectedGroup && (
+          {selectedGroups.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              Se crearán {selectedGroup.memberCount ?? 0} visitas automáticamente
+              Se crearán {selectedGroups.reduce((sum, g) => sum + (g.memberCount ?? 0), 0)} visitas automáticamente
             </p>
           )}
         </div>
@@ -149,7 +162,7 @@ export const CreateDistribucionForm = forwardRef<CreateDistribucionFormRef, Crea
           />
         )}
 
-        <button type="submit" disabled className="hidden" />
+        <button type="submit" className="hidden" />
       </form>
     );
   }

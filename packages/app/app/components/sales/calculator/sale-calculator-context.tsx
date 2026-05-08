@@ -4,6 +4,7 @@ import {
   useMemo,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { useParams, useNavigate } from "react-router";
@@ -124,6 +125,10 @@ export function SaleCalculatorProvider({
   });
 
   // Populate calculator values when editing and product/variant loads
+  // Use a ref to avoid adding calculator.form to dependency array
+  const calculatorFormRef = useRef(calculator.form);
+  calculatorFormRef.current = calculator.form;
+
   useEffect(() => {
     if (
       !isEditMode ||
@@ -136,7 +141,7 @@ export function SaleCalculatorProvider({
     const formValues = saleItemTransformer.toForm(editingItem);
 
     if (calculator.isKgProduct) {
-      calculator.form.reset({
+      calculatorFormRef.current.reset({
         totalAmount: formValues.subtotal || "",
         pricePerKg: formValues.unitPrice || "",
         kilos: formValues.quantity || "",
@@ -146,7 +151,7 @@ export function SaleCalculatorProvider({
         units: "",
       });
     } else {
-      calculator.form.reset({
+      calculatorFormRef.current.reset({
         totalAmount: formValues.subtotal || "",
         pricePerKg: "",
         kilos: "",
@@ -162,7 +167,6 @@ export function SaleCalculatorProvider({
     picker.selectedProduct,
     picker.selectedVariant,
     calculator.isKgProduct,
-    calculator.form,
   ]);
 
   const save = useCallback(() => {

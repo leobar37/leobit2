@@ -288,7 +288,7 @@ export function MobileSlot({
   } = useMobileSlot();
   const slotIsSingleWriter = isSingleWriterSlot(name);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     registerSlot({
       id: slotId,
       name,

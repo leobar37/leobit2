@@ -90,12 +90,7 @@ export default function SalesPage() {
     setPage(1);
   }, [tab, tipo, debouncedSearch, saleType, startDate, endDate, hasBalanceDue]);
 
-  // Log any query errors for debugging
-  useEffect(() => {
-    if (error) {
-      console.error("[SalesPage] Error loading sales:", error);
-    }
-  }, [error]);
+
 
   return (
     <>

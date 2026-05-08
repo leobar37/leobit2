@@ -9,35 +9,61 @@ import { cn } from "~/lib/utils";
 
 interface GroupSelectProps {
   value: string | null;
+  values?: string[];
   selectedGroup?: CustomerGroup | null;
+  selectedGroups?: CustomerGroup[];
   onChange: (group: CustomerGroup | null) => void;
+  onMultiChange?: (groups: CustomerGroup[]) => void;
   disabled?: boolean;
   placeholder?: string;
   helperText?: string;
+  multi?: boolean;
 }
 
 export function GroupSelect({
   value,
+  values,
   selectedGroup: propSelectedGroup,
+  selectedGroups: propSelectedGroups,
   onChange,
+  onMultiChange,
   disabled = false,
   placeholder = "Seleccionar grupo (opcional)",
   helperText,
+  multi = false,
 }: GroupSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { data: groups = [], isLoading } = useCustomerGroups();
 
   const selectedGroup = propSelectedGroup || groups.find((g) => g.id === value);
+  const selectedGroups =
+    propSelectedGroups ??
+    (values ? groups.filter((g) => values.includes(g.id)) : []);
 
   const handleSelectGroup = (group: CustomerGroup) => {
-    onChange(group);
-    setIsOpen(false);
-    setSearchQuery("");
+    if (multi && onMultiChange) {
+      const isSelected = selectedGroups.some((g) => g.id === group.id);
+      if (isSelected) {
+        onMultiChange(selectedGroups.filter((g) => g.id !== group.id));
+      } else {
+        onMultiChange([...selectedGroups, group]);
+      }
+    } else {
+      onChange(group);
+      setIsOpen(false);
+      setSearchQuery("");
+    }
   };
 
   const handleClearGroup = () => {
     onChange(null);
+  };
+
+  const handleRemoveGroup = (groupId: string) => {
+    if (multi && onMultiChange) {
+      onMultiChange(selectedGroups.filter((g) => g.id !== groupId));
+    }
   };
 
   const filteredGroups = groups.filter((g) =>
@@ -61,15 +87,40 @@ export function GroupSelect({
                 <Users className="h-6 w-6 text-blue-600" />
               </div>
               <div className="min-w-0">
-                <p className="truncate font-semibold">
-                  {selectedGroup?.name || placeholder}
-                </p>
-                {selectedGroup && (
-                  <p className="text-sm text-muted-foreground truncate">
-                    {selectedGroup.memberCount ?? 0} clientes
-                  </p>
+                {multi && selectedGroups.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {selectedGroups.map((g) => (
+                      <span
+                        key={g.id}
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                      >
+                        {g.name}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveGroup(g.id);
+                          }}
+                          className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-500/30"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <p className="truncate font-semibold">
+                      {selectedGroup?.name || placeholder}
+                    </p>
+                    {selectedGroup && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {selectedGroup.memberCount ?? 0} clientes
+                      </p>
+                    )}
+                  </>
                 )}
-                {!selectedGroup && helperText && (
+                {!selectedGroup && selectedGroups.length === 0 && helperText && (
                   <p className="text-sm text-muted-foreground">
                     {helperText}
                   </p>
@@ -78,7 +129,7 @@ export function GroupSelect({
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {selectedGroup && !disabled && (
+              {!multi && selectedGroup && !disabled && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -140,29 +191,41 @@ export function GroupSelect({
                   : "No hay grupos creados. Crea uno en /grupos"}
               </p>
             ) : (
-              filteredGroups.map((group) => (
-                <button
-                  key={group.id}
-                  type="button"
-                  onClick={() => handleSelectGroup(group)}
-                  className={cn(
-                    "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
-                    value === group.id
-                      ? "shell-card-muted border-blue-300 bg-blue-50/90 dark:border-blue-400/30 dark:bg-blue-500/12"
-                      : "border-border bg-card hover:bg-accent",
-                  )}
-                >
-                  <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100/80 dark:bg-blue-500/14">
-                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{group.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {group.memberCount ?? 0} clientes
-                    </p>
-                  </div>
-                </button>
-              ))
+              filteredGroups.map((group) => {
+                const isSelected = multi
+                  ? selectedGroups.some((g) => g.id === group.id)
+                  : value === group.id;
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => handleSelectGroup(group)}
+                    className={cn(
+                      "w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
+                      isSelected
+                        ? "shell-card-muted border-blue-300 bg-blue-50/90 dark:border-blue-400/30 dark:bg-blue-500/12"
+                        : "border-border bg-card hover:bg-accent",
+                    )}
+                  >
+                    <div className="shell-card-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100/80 dark:bg-blue-500/14">
+                      <Users className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{group.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {group.memberCount ?? 0} clientes
+                      </p>
+                    </div>
+                    {isSelected && multi && (
+                      <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center">
+                        <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         </AppDrawer.Body>

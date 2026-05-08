@@ -5,7 +5,7 @@
  * and provide typed error handling for all API calls.
  */
 
-import { extractData } from "~/lib/api-client";
+import { extractData, getApiErrorMessage } from "~/lib/api-client";
 
 // Re-export extractData with the naming convention used in hooks
 export { extractData, extractData as unwrapApiResponse };
@@ -51,8 +51,5 @@ export function isApiSuccess<T>(
  * Useful in catch blocks and mutation onError handlers.
  */
 export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  if (isApiError(error)) return String(error.value);
-  return "An unexpected error occurred";
+  return getApiErrorMessage(error, "Ocurrió un error inesperado");
 }
