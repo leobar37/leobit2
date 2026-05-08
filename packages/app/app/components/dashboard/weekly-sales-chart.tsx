@@ -84,7 +84,9 @@ export function WeeklySalesChart({
               tickLine={false}
               tick={{ fontSize: 10, fill: isDark ? "#a8acb7" : "#6b7280" }}
               tickFormatter={(value) =>
-                value >= 1000 ? `S/${(value / 1000).toFixed(0)}k` : `S/${value}`
+                Number(value) >= 1000
+                  ? `S/${(Number(value) / 1000).toFixed(0)}k`
+                  : `S/${formatCurrency(Number(value), 0)}`
               }
               domain={[0, maxValue * 1.1]}
               width={38}

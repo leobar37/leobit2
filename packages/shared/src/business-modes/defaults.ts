@@ -27,6 +27,8 @@ export const BUSINESS_MODE_DEFAULTS: Record<string, BusinessModeFlags> = {
     closeFields: ["llevado", "vendido", "devuelto"],
     saleCalculatorTitle: "Venta de Pollo",
     showVisitStatus: true,
+    supportsCreditSettlement: true,
+    supportsPartialSettlement: true,
   },
   agua: {
     useTara: false,
@@ -56,6 +58,8 @@ export const BUSINESS_MODE_DEFAULTS: Record<string, BusinessModeFlags> = {
     closeFields: ["entregado"],
     saleCalculatorTitle: "Entrega de Agua",
     showVisitStatus: true,
+    supportsCreditSettlement: false,
+    supportsPartialSettlement: false,
   },
   cochera: {
     useTara: false,
@@ -70,6 +74,8 @@ export const BUSINESS_MODE_DEFAULTS: Record<string, BusinessModeFlags> = {
     closeFields: [],
     saleCalculatorTitle: "Nueva Venta",
     showVisitStatus: false,
+    supportsCreditSettlement: true,
+    supportsPartialSettlement: true,
   },
 };
 
@@ -92,6 +98,8 @@ export function getDefaultFlags(mode: string): BusinessModeFlags {
       closeFields: [],
       saleCalculatorTitle: "Nueva Venta",
       showVisitStatus: true,
+      supportsCreditSettlement: true,
+      supportsPartialSettlement: true,
     }
   );
 }

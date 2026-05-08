@@ -4,6 +4,7 @@ import type { ProductRecord } from "../repository/product.repository";
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -119,7 +120,7 @@ export class ProductService {
 
       return {
         data: product,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -181,7 +182,7 @@ export class ProductService {
 
       return {
         data: updated,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

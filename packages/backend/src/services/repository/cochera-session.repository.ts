@@ -241,7 +241,7 @@ export class CocheraSessionRepository {
 
     const rows = await dbOrTx
       .select({
-        date: sql<string>`date(${cocheraSessions.checkoutAt})`,
+        date: sql<string>`to_char(date(${cocheraSessions.checkoutAt}), 'YYYY-MM-DD')`,
         income: sql<string>`coalesce(sum(${cocheraSessions.totalAmount}), 0)`,
         count: sql<number>`count(*)`,
       })

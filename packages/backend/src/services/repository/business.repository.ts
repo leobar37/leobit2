@@ -26,14 +26,15 @@ export class BusinessRepository {
   async findByUserIdAndBusinessId(
     userId: string,
     businessId: string
-  ): Promise<BusinessUser | undefined> {
+  ): Promise<(BusinessUser & { business: Business }) | undefined> {
     const membership = await db.query.businessUsers.findFirst({
       where: and(
         eq(businessUsers.userId, userId),
         eq(businessUsers.businessId, businessId)
       ),
+      with: { business: true },
     });
-    return membership;
+    return membership as (BusinessUser & { business: Business }) | undefined;
   }
 
   async create(

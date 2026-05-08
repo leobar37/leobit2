@@ -44,7 +44,9 @@ export class BusinessService {
   ) {}
 
   async getBusiness(ctx: RequestContext) {
-    const membership = await this.repository.findByUserId(ctx);
+    const membership = ctx.businessId
+      ? await this.repository.findByUserIdAndBusinessId(ctx.userId, ctx.businessId)
+      : await this.repository.findByUserId(ctx);
 
     if (!membership) {
       throw new NotFoundError("Negocio");

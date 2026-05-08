@@ -15,16 +15,16 @@ import {
 import { useBusiness } from "~/hooks/use-business";
 import { BusinessUserRole } from "@avileo/shared";
 
-function numberOrZero(value: string | null | undefined): number {
-  if (value == null) return 0;
+function decimalStringOrZero(value: string | null | undefined): number {
+  if (value == null) return "0.00" as unknown as number;
   const parsed = Number(value);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  return (Number.isNaN(parsed) ? "0.00" : parsed.toFixed(2)) as unknown as number;
 }
 
-function numberOrNull(value: string | null | undefined): number | null {
+function decimalStringOrNull(value: string | null | undefined): number | null {
   if (value == null) return null;
   const parsed = Number(value);
-  return Number.isNaN(parsed) ? null : parsed;
+  return Number.isNaN(parsed) ? null : (parsed.toFixed(2) as unknown as number);
 }
 
 export default function CocheraConfigPage() {
@@ -123,7 +123,7 @@ export default function CocheraConfigPage() {
 
         <MobileShell.Content>
           <MobilePage.Root maxWidth="md">
-            <div className="text-center space-y-4 py-12">
+            <div data-testid="cochera-config-restricted" className="text-center space-y-4 py-12">
               <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-amber-600" />
               </div>
@@ -182,10 +182,10 @@ export default function CocheraConfigPage() {
     ? {
         displayName: settings.displayName ?? undefined,
         displayAddress: settings.displayAddress ?? undefined,
-        hourlyRate: numberOrZero(settings.hourlyRate),
-        dailyRate: numberOrNull(settings.dailyRate),
-        graceMinutes: settings.graceMinutes,
-        totalSpaces: settings.totalSpaces,
+        hourlyRate: decimalStringOrZero(settings.hourlyRate),
+        dailyRate: decimalStringOrNull(settings.dailyRate),
+        graceMinutes: String(settings.graceMinutes) as unknown as number,
+        totalSpaces: String(settings.totalSpaces) as unknown as number,
         acceptedPaymentMethods: settings.acceptedPaymentMethods,
       }
     : undefined;
@@ -225,9 +225,9 @@ export default function CocheraConfigPage() {
 
             <div data-testid="cochera-config-form">
               <CocheraSettingsForm
-              defaultValues={defaultValues}
-              onSubmit={handleSubmit}
-              isSubmitting={updateMutation.isPending}
+                defaultValues={defaultValues}
+                onSubmit={handleSubmit}
+                isSubmitting={updateMutation.isPending}
               />
             </div>
           </div>

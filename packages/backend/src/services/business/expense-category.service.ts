@@ -4,6 +4,7 @@ import type { RequestContext } from "../../context/request-context";
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from "../../errors";
 import type { ExpenseCategory } from "../../db/schema";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 
 export class ExpenseCategoryService {
   constructor(
@@ -67,7 +68,7 @@ export class ExpenseCategoryService {
 
       return {
         data: category,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -108,7 +109,7 @@ export class ExpenseCategoryService {
       const category = await this.repository.update(ctx, id, updateData, tx);
       return {
         data: category,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

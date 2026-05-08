@@ -18,6 +18,7 @@ import {
   Plus,
   Clock,
   CalendarDays,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
@@ -45,7 +46,7 @@ import { useCocheraDashboard } from "~/hooks/use-cochera-dashboard";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data: business } = useBusiness();
+  const { data: business, isLoading: isLoadingBusiness } = useBusiness();
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
 
   const [period, setPeriod] = useState<PeriodValue>({
@@ -92,11 +93,36 @@ export default function DashboardPage() {
           ? "Este mes"
           : "Rango personalizado";
 
+  if (isLoadingBusiness || !business) {
+    return (
+      <div className="flex min-h-[55vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-7 w-7 animate-spin text-orange-500" />
+          <p className="text-sm font-medium">Cargando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Cochera mode: simplified dashboard with parking-focused quick actions
   if (isCocheraMode) {
+    const formatChartDate = (value: string) => {
+      const [year, month, day] = value.split("-").map(Number);
+      const date =
+        year && month && day
+          ? new Date(year, month - 1, day)
+          : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+
+      return date
+        .toLocaleDateString("es-PE", { weekday: "short" })
+        .replace(".", "");
+    };
+
     const chartLabels = cocheraDashboard?.chartData.map((d) => {
-      const date = new Date(d.date + "T00:00:00");
-      return date.toLocaleDateString("es-PE", { weekday: "short" }).replace(".", "");
+      return formatChartDate(String(d.date));
     }) ?? [];
     const chartValues = cocheraDashboard?.chartData.map((d) => Number(d.income)) ?? [];
 

@@ -41,6 +41,7 @@ test.describe("Avileo Cocheras", () => {
 
     await cocheraPage.gotoReports();
     await cocheraPage.expectReportRow(uniquePlate);
+    await page.getByTestId("cochera-report-period-week").click();
     await cocheraPage.expectReportRow(COCHERA_FIXTURES.completedPlate);
   });
 

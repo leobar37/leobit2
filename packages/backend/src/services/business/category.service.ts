@@ -6,6 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { CategoryRepository } from "../repository/category.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   ConflictError,
   ForbiddenError,
@@ -66,7 +67,7 @@ export class CategoryService {
 
       return {
         data: category,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -113,7 +114,7 @@ export class CategoryService {
 
       return {
         data: updated,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

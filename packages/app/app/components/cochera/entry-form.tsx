@@ -75,8 +75,8 @@ export function EntryForm({ onSubmit, isSubmitting = false }: EntryFormProps) {
                   className={cn(
                     "flex flex-col items-center justify-center gap-2 rounded-2xl border-2 px-3 py-4 text-sm font-medium transition-all",
                     isSelected
-                      ? "border-orange-200 bg-orange-50 text-orange-700"
-                      : "border-gray-100 bg-gray-50/50 text-muted-foreground hover:border-gray-200"
+                      ? "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-300/70 dark:bg-orange-500/15 dark:text-orange-100"
+                      : "border-gray-100 bg-gray-50/50 text-muted-foreground hover:border-gray-200 hover:text-foreground dark:border-white/12 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-orange-300/60 dark:hover:bg-orange-500/10 dark:hover:text-orange-50"
                   )}
                 >
                   <option.icon className="h-6 w-6" />

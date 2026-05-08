@@ -2,6 +2,7 @@ import type { CustomerRepository, AccountsReceivableItem } from "../repository/c
 import type { WaterCustomerProfileRepository, WaterCustomerProfileInput } from "../repository/water-customer-profile.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -106,7 +107,7 @@ export class CustomerService {
 
       return {
         data: { ...customer, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -164,7 +165,7 @@ export class CustomerService {
 
       return {
         data: { ...updated, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

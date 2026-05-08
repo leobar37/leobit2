@@ -8,6 +8,7 @@ import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale, SaleItem } from "../../db/schema";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { toISODateString, now, parseDateString } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
 import { decimalToNumber } from "@avileo/shared";
@@ -195,7 +196,7 @@ export class SaleService {
 
       return {
         data: sale,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -316,7 +317,7 @@ export class SaleService {
 
       return {
         data: updatedSale,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -448,7 +449,7 @@ export class SaleService {
         );
         return {
           data: confirmedSale,
-          txid: ,
+          txid: await getCurrentTransactionId(tx),
         };
       });
     }
@@ -525,7 +526,7 @@ export class SaleService {
 
       return {
         data: confirmedSale,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -561,7 +562,7 @@ export class SaleService {
       );
       return {
         data: deliveredSale,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -812,7 +813,7 @@ export class SaleService {
 
       return {
         data: item,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -915,7 +916,7 @@ export class SaleService {
 
       return {
         data: updatedItem,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -954,7 +955,7 @@ export class SaleService {
 
       return {
         data: undefined,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

@@ -9,6 +9,7 @@ import {
 } from "../../errors";
 import type { Abono } from "../../db/schema";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { decimalToNumber } from "@avileo/shared";
 
 export class PaymentService {
@@ -123,7 +124,7 @@ export class PaymentService {
 
       return {
         data: abono,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -179,7 +180,7 @@ export class PaymentService {
       const abono = await this.repository.update(ctx, id, data, tx);
       return {
         data: abono,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -207,7 +208,7 @@ export class PaymentService {
       const abono = await this.repository.update(ctx, id, data, tx);
       return {
         data: abono,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

@@ -1,6 +1,7 @@
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -90,7 +91,7 @@ export class SupplierService {
 
       return {
         data: supplier,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -151,7 +152,7 @@ export class SupplierService {
 
       return {
         data: updated,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }

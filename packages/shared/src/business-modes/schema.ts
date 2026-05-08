@@ -50,6 +50,10 @@ export const BusinessModeFlagsSchema = z.object({
   // UI labels
   saleCalculatorTitle: z.string().default("Nueva Venta"),
   showVisitStatus: z.boolean().default(true),
+
+  // Settlement capabilities
+  supportsCreditSettlement: z.boolean().default(true),
+  supportsPartialSettlement: z.boolean().default(true),
 });
 
 export type BusinessModeFlags = z.infer<typeof BusinessModeFlagsSchema>;

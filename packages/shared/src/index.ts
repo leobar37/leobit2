@@ -644,8 +644,9 @@ export interface CreateCocheraSessionInput {
 
 // Cochera Checkout
 export interface CocheraCheckoutInput {
-  paymentMethod: "efectivo" | "yape" | "plin";
+  paymentMethod?: "efectivo" | "yape" | "plin";
   discount?: number;
+  settlement?: SettlementInput;
 }
 
 export interface CocheraCheckoutResult {
@@ -660,8 +661,66 @@ export interface CocheraCheckoutResult {
   hourlyRate: string;
   discountAmount: string;
   totalAmount: string;
+  amountPaid: string;
+  balanceDue: string;
+  paymentMode: PaymentMode;
   paymentMethod: string;
   checkoutBy: string | null;
+}
+
+export type PaymentMode = "pago_total" | "a_cuenta" | "debe_todo";
+export type SettlementPaymentMethod =
+  | "efectivo"
+  | "yape"
+  | "plin"
+  | "transferencia"
+  | "tarjeta"
+  | "saldo";
+
+export interface SettlementInput {
+  paymentMode: PaymentMode;
+  amountPaid?: number;
+  paymentMethod?: SettlementPaymentMethod | null;
+  responsibleCustomerId?: string | null;
+  responsibleName?: string | null;
+  responsiblePhone?: string | null;
+  notes?: string | null;
+  referenceNumber?: string | null;
+  proofImageId?: string | null;
+}
+
+export interface SettlementResult {
+  paymentMode: PaymentMode;
+  amountPaid: string;
+  balanceDue: string;
+  requiresResponsible: boolean;
+  requiresPaymentMethod: boolean;
+}
+
+export interface ReceivableEntry {
+  id: string;
+  businessId: string;
+  sourceType: "cochera_session";
+  sourceId: string;
+  sourceLabel: string;
+  customerId: string | null;
+  responsibleName: string;
+  responsiblePhone: string | null;
+  originalAmount: string;
+  amountPaid: string;
+  balanceDue: string;
+  status: "pending" | "partial" | "paid" | "cancelled";
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReceivablePaymentInput {
+  amount: number;
+  paymentMethod: SettlementPaymentMethod;
+  notes?: string | null;
+  referenceNumber?: string | null;
+  proofImageId?: string | null;
 }
 
 // Cochera Dashboard

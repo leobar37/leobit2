@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,10 +11,22 @@ import { cn } from "~/lib/utils";
 export const cocheraSettingsSchema = z.object({
   displayName: z.string().max(120, "Máximo 120 caracteres").optional(),
   displayAddress: z.string().optional(),
-  hourlyRate: z.number({ message: "Ingresa un número válido" }).min(0, "Debe ser mayor o igual a 0"),
-  dailyRate: z.number().min(0, "Debe ser mayor o igual a 0").nullable().optional(),
-  graceMinutes: z.number({ message: "Ingresa un número válido" }).int("Debe ser un número entero").min(0, "Mínimo 0").max(120, "Máximo 120 minutos"),
-  totalSpaces: z.number({ message: "Ingresa un número válido" }).int("Debe ser un número entero").min(0, "Mínimo 0"),
+  hourlyRate: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ message: "Ingresa un número válido" }).min(0, "Debe ser mayor o igual a 0")
+  ),
+  dailyRate: z.preprocess(
+    (value) => (value === "" || value == null ? null : Number(value)),
+    z.number().min(0, "Debe ser mayor o igual a 0").nullable().optional()
+  ),
+  graceMinutes: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ message: "Ingresa un número válido" }).int("Debe ser un número entero").min(0, "Mínimo 0").max(120, "Máximo 120 minutos")
+  ),
+  totalSpaces: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ message: "Ingresa un número válido" }).int("Debe ser un número entero").min(0, "Mínimo 0")
+  ),
   acceptedPaymentMethods: z.array(z.enum(["efectivo", "yape", "plin"])).min(1, "Selecciona al menos un método de pago"),
 });
 
@@ -51,6 +63,23 @@ export function CocheraSettingsForm({
       ...defaultValues,
     },
   });
+
+  useEffect(() => {
+    if (!defaultValues) {
+      return;
+    }
+
+    form.reset({
+      displayName: "",
+      displayAddress: "",
+      hourlyRate: 0,
+      dailyRate: null,
+      graceMinutes: 10,
+      totalSpaces: 20,
+      acceptedPaymentMethods: ["efectivo"],
+      ...defaultValues,
+    });
+  }, [defaultValues, form]);
 
   const {
     formState: { errors, isValid, isDirty },

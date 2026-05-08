@@ -6,6 +6,7 @@ import type { ProductUnitRepository } from "../repository/product-unit.repositor
 import type { FileRepository } from "../repository/file.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
+import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -160,7 +161,7 @@ export class PurchaseService {
 
     return {
       data: purchase,
-      txid: Date.now(),
+      txid: await getCurrentTransactionId(tx),
     };
   }
 
@@ -267,7 +268,7 @@ export class PurchaseService {
 
       return {
         data: updated,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
@@ -304,7 +305,7 @@ export class PurchaseService {
 
     return {
       data: { ...existing, status: "pending" },
-      txid: Date.now(),
+      txid: await getCurrentTransactionId(tx),
     };
   }
 
@@ -340,7 +341,7 @@ export class PurchaseService {
 
       return {
         data: updated,
-        txid: ,
+        txid: await getCurrentTransactionId(tx),
       };
     });
   }
