@@ -114,6 +114,8 @@ export class SaleService {
       data.amountPaid ?? (data.saleType === "contado" ? totalAmount : 0);
     const amountPaid = parseFloat(normalizeAmount(amountPaidInput, 2, "amountPaid"));
 
+    this.validateWaterFullPayment(ctx, data.saleType, "pago_total", totalAmount, amountPaid);
+
     const balanceDue = data.saleType === "credito" ? Math.max(totalAmount - amountPaid, 0) : 0;
 
     if (data.saleType === "credito" && !data.customerId) {
@@ -283,6 +285,7 @@ export class SaleService {
         : this.derivePaymentMode(saleType, totalAmount, amountPaid);
 
     this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid, isDraft);
+    this.validateWaterFullPayment(ctx, saleType, paymentMode, totalAmount, amountPaid);
 
     return db.transaction(async (tx) => {
       const updateData: Parameters<typeof this.repository.update>[2] = {
@@ -403,6 +406,30 @@ export class SaleService {
     }
   }
 
+  private validateWaterFullPayment(
+    ctx: RequestContext,
+    saleType: "contado" | "credito",
+    paymentMode: "pago_total" | "a_cuenta" | "debe_todo" | null,
+    totalAmount: number,
+    amountPaid: number
+  ) {
+    if (ctx.businessMode !== "agua") {
+      return;
+    }
+
+    if (saleType !== "contado") {
+      throw new ValidationError("El modo agua solo permite ventas al contado");
+    }
+
+    if (paymentMode !== "pago_total") {
+      throw new ValidationError("El modo agua solo permite pago total");
+    }
+
+    if (Math.abs(amountPaid - totalAmount) > 0.01) {
+      throw new ValidationError("El modo agua requiere cubrir el monto completo");
+    }
+  }
+
   async confirmSale(
     ctx: RequestContext,
     id: string,
@@ -464,6 +491,7 @@ export class SaleService {
 
     // Validate payment state
     this.validatePaymentMode(paymentMode, saleType, totalAmount, amountPaid);
+    this.validateWaterFullPayment(ctx, saleType, paymentMode, totalAmount, amountPaid);
 
     if (saleType === "credito" && !sale.customerId) {
       throw new ValidationError("La venta a crédito requiere cliente");

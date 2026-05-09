@@ -112,6 +112,14 @@ export const visitaRoutes = new Elysia({ prefix: "/visitas" })
         damaged: t.Optional(t.Number({ minimum: 0 })),
         lost: t.Optional(t.Number({ minimum: 0 })),
         notes: t.Optional(t.Union([t.String(), t.Null()])),
+        variantId: t.Optional(t.String({ format: "uuid" })),
+        paymentMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+          t.Literal("transferencia"),
+          t.Literal("tarjeta"),
+        ])),
       }),
     }
   )

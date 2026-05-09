@@ -83,16 +83,22 @@ const WATER_CUSTOMERS = [
     dni: "12345678",
     phone: "999333444",
     address: "Av. Los Pinos 789",
-    notes: "Depósito completo, 2 garrafones",
+    notes: "Cliente recurrente, ruta norte",
   },
   {
     name: "Luis Ramírez",
     dni: "87654321",
     phone: "999555666",
     address: "Calle Luna 321",
-    notes: "Paga puntual, ruta norte",
+    notes: "Paga puntual, ruta sur",
   },
 ];
+
+const WATER_VENDEDOR = {
+  email: "repartidor.agua@avileo.com",
+  password: "agua123456",
+  name: "Repartidor Agua",
+};
 
 const WATER_ROUTES = [
   { name: "Ruta Norte", zone: "Los Olivos", description: "Zona norte de Lima" },
@@ -191,6 +197,30 @@ export async function seedWaterUser() {
 
     console.log(`✓ Water business created: ${business.name} (ID: ${business.id})`);
     console.log(`✓ User linked to business as ADMIN_NEGOCIO`);
+
+    // Create vendedor/repartidor user for route assignment
+    try {
+      const vendedorResult = await auth.api.signUpEmail({
+        body: {
+          email: WATER_VENDEDOR.email,
+          password: WATER_VENDEDOR.password,
+          name: WATER_VENDEDOR.name,
+        },
+      });
+      await db.insert(businessUsers).values({
+        businessId: business.id,
+        userId: vendedorResult.user.id,
+        role: "VENDEDOR",
+        salesPoint: "Movil",
+      });
+      console.log(`✓ Vendedor created: ${WATER_VENDEDOR.email}`);
+    } catch (error: any) {
+      if (error?.message?.includes("already exists") || error?.message?.includes("already registered")) {
+        console.log(`⚠ Vendedor already exists`);
+      } else {
+        console.log(`⚠ Could not create vendedor: ${error?.message || error}`);
+      }
+    }
   }
 
   // Create context for seeding data
@@ -200,9 +230,12 @@ export async function seedWaterUser() {
   await seedWaterDemoData(ctx);
 
   console.log("\n✅ Water user seed completed!");
-  console.log("\nLogin credentials:");
+  console.log("\nLogin credentials (Admin):");
   console.log(`  Email: ${WATER_USER.email}`);
   console.log(`  Password: ${WATER_USER.password}`);
+  console.log("\nLogin credentials (Repartidor):");
+  console.log(`  Email: ${WATER_VENDEDOR.email}`);
+  console.log(`  Password: ${WATER_VENDEDOR.password}`);
 }
 
 async function seedWaterDemoData(ctx: RequestContext) {
@@ -376,32 +409,32 @@ async function seedWaterCustomerProfiles(
       customerIndex: 0,
       routeIndex: 0,
       frequency: "weekly" as const,
-      days: ["lunes"],
+      days: ["monday"],
       defaultQty: 2,
-      containersAtCustomer: 2,
-      depositAmount: "20.00",
-      depositStatus: "paid" as const,
+      containersAtCustomer: 0,
+      depositAmount: "0",
+      depositStatus: "none" as const,
       instructions: "Dejar en la puerta",
     },
     {
       customerIndex: 1,
       routeIndex: 0,
       frequency: "weekly" as const,
-      days: ["martes"],
+      days: ["tuesday"],
       defaultQty: 1,
-      containersAtCustomer: 1,
-      depositAmount: "20.00",
-      depositStatus: "paid" as const,
+      containersAtCustomer: 0,
+      depositAmount: "0",
+      depositStatus: "none" as const,
       instructions: "Llamar antes de llegar",
     },
     {
       customerIndex: 2,
       routeIndex: 1,
       frequency: "biweekly" as const,
-      days: ["viernes"],
+      days: ["friday"],
       defaultQty: 3,
-      containersAtCustomer: 3,
-      depositAmount: "0.00",
+      containersAtCustomer: 0,
+      depositAmount: "0",
       depositStatus: "none" as const,
       instructions: "Entregar después de las 3pm",
     },

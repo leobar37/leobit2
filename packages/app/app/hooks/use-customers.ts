@@ -47,10 +47,6 @@ export interface WaterCustomerProfileInput {
   deliveryFrequency?: string;
   deliveryDays?: string[];
   defaultContainerQuantity?: number;
-  containersAtCustomer?: number;
-  depositAmount?: string | number;
-  depositStatus?: string;
-  depositExceptionReason?: string | null;
   waterRouteId?: string | null;
   preferredRoute?: string | null;
   deliveryInstructions?: string | null;

@@ -275,20 +275,10 @@ export class CustomerService {
   }
 
   private normalizeWaterProfileInput(input: WaterCustomerProfileInput): WaterCustomerProfileInput {
-    const defaultContainerQuantity = Math.max(0, Number(input.defaultContainerQuantity ?? 1));
-    const containersAtCustomer = Math.max(0, Number(input.containersAtCustomer ?? 0));
-    const depositAmount = String(input.depositAmount ?? "0");
-    const depositStatus = input.depositStatus || "none";
-    const depositExceptionReason = input.depositExceptionReason?.trim() || null;
-
     return {
       deliveryFrequency: input.deliveryFrequency || "weekly",
       deliveryDays: Array.isArray(input.deliveryDays) ? input.deliveryDays : [],
-      defaultContainerQuantity,
-      containersAtCustomer,
-      depositAmount,
-      depositStatus,
-      depositExceptionReason,
+      defaultContainerQuantity: Math.max(0, Number(input.defaultContainerQuantity ?? 1)),
       waterRouteId: input.waterRouteId || null,
       preferredRoute: input.preferredRoute?.trim() || null,
       deliveryInstructions: input.deliveryInstructions?.trim() || null,

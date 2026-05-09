@@ -16,10 +16,6 @@ export interface WaterCustomerProfileInput {
   deliveryFrequency?: string;
   deliveryDays?: string[];
   defaultContainerQuantity?: number;
-  containersAtCustomer?: number;
-  depositAmount?: string | number;
-  depositStatus?: string;
-  depositExceptionReason?: string | null;
   waterRouteId?: string | null;
   preferredRoute?: string | null;
   deliveryInstructions?: string | null;
@@ -360,10 +356,10 @@ export class WaterCustomerProfileRepository {
       deliveryFrequency: data.deliveryFrequency ?? "weekly",
       deliveryDays: data.deliveryDays ?? [],
       defaultContainerQuantity: data.defaultContainerQuantity ?? 1,
-      containersAtCustomer: data.containersAtCustomer ?? 0,
-      depositAmount: String(data.depositAmount ?? "0"),
-      depositStatus: data.depositStatus ?? "none",
-      depositExceptionReason: data.depositExceptionReason ?? null,
+      containersAtCustomer: 0,
+      depositAmount: "0",
+      depositStatus: "none",
+      depositExceptionReason: null,
       waterRouteId: data.waterRouteId ?? null,
       preferredRoute: data.preferredRoute ?? null,
       deliveryInstructions: data.deliveryInstructions ?? null,
@@ -376,10 +372,6 @@ export class WaterCustomerProfileRepository {
       ...(data.deliveryFrequency !== undefined && { deliveryFrequency: data.deliveryFrequency }),
       ...(data.deliveryDays !== undefined && { deliveryDays: data.deliveryDays }),
       ...(data.defaultContainerQuantity !== undefined && { defaultContainerQuantity: data.defaultContainerQuantity }),
-      ...(data.containersAtCustomer !== undefined && { containersAtCustomer: data.containersAtCustomer }),
-      ...(data.depositAmount !== undefined && { depositAmount: String(data.depositAmount) }),
-      ...(data.depositStatus !== undefined && { depositStatus: data.depositStatus }),
-      ...(data.depositExceptionReason !== undefined && { depositExceptionReason: data.depositExceptionReason }),
       ...(data.waterRouteId !== undefined && { waterRouteId: data.waterRouteId }),
       ...(data.preferredRoute !== undefined && { preferredRoute: data.preferredRoute }),
       ...(data.deliveryInstructions !== undefined && { deliveryInstructions: data.deliveryInstructions }),

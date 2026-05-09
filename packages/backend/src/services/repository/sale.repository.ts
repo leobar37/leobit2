@@ -16,6 +16,7 @@ export interface CreateSaleInput {
   visitaId?: string;
   type?: "instant_sale" | "pre_order";
   saleType: "contado" | "credito";
+  status?: "draft" | "confirmed" | "active" | "delivered" | "cancelled";
   totalAmount: string;
   amountPaid: string;
   balanceDue: string;
@@ -24,6 +25,8 @@ export interface CreateSaleInput {
   saleDate?: string;
   deliveryDate?: string;
   orderDate?: string;
+  paymentMode?: "pago_total" | "a_cuenta" | "debe_todo" | null;
+  paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" | "saldo" | null;
   items: Array<{
     productId: string;
     productName: string;
@@ -110,7 +113,7 @@ export class SaleRepository {
     const start = Date.now();
     logger.info({ id: data.id, businessId: ctx.businessId, saleType: data.saleType, totalAmount: data.totalAmount }, "📝 SaleRepository.create");
 
-    const { items, id, sellerId, customerId, distribucionId, visitaId, type, saleType, totalAmount, amountPaid, balanceDue, tara, netWeight, saleDate, deliveryDate, orderDate } = data;
+    const { items, id, sellerId, customerId, distribucionId, visitaId, type, saleType, status, totalAmount, amountPaid, balanceDue, tara, netWeight, saleDate, deliveryDate, orderDate, paymentMode, paymentMethod } = data;
 
     const executor = tx ?? db;
 
@@ -120,6 +123,7 @@ export class SaleRepository {
       visitaId: visitaId ?? null,
       type: type ?? "instant_sale",
       saleType,
+      ...(status ? { status } : {}),
       totalAmount,
       amountPaid,
       balanceDue,
@@ -128,6 +132,8 @@ export class SaleRepository {
       saleDate: toTimestampColumnValue(saleDate),
       deliveryDate: toDateColumnValue(deliveryDate),
       orderDate: toDateColumnValue(orderDate),
+      paymentMode: paymentMode ?? null,
+      paymentMethod: paymentMethod ?? null,
       businessId: ctx.businessId,
       sellerId: sellerId ?? ctx.businessUserId,
       ...(id ? { id } : {}),

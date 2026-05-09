@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
+import { PERSISTED_REMOTE_QUERY_KEYS, PERSISTED_REMOTE_QUERY_PREFIX } from "~/lib/query/persisted-query-keys";
 import { useBusiness } from "./use-business";
 import { getStoredBusinessId } from "~/lib/session-storage";
 import { distribucionItemTransformer } from "@avileo/shared";
@@ -222,7 +223,7 @@ export function useMiDistribucion(fecha?: string) {
   const vendedorId = business?.businessUserId;
 
   return useQuery({
-    queryKey: queryKeys.distribuciones.mine(vendedorId || "", fecha),
+    queryKey: PERSISTED_REMOTE_QUERY_KEYS.distribuciones.mine(vendedorId || "", fecha),
     queryFn: async () => {
       if (!vendedorId) return null;
       const response = await api.distribuciones.mine.get({
@@ -275,6 +276,11 @@ export function useCreateDistribucion() {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "visitas",
       });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === PERSISTED_REMOTE_QUERY_PREFIX &&
+          (query.queryKey[1] === "distribuciones" || query.queryKey[1] === "visitas"),
+      });
     },
   });
 }
@@ -308,6 +314,11 @@ export function useGenerateWaterRoute() {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "visitas",
       });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === PERSISTED_REMOTE_QUERY_PREFIX &&
+          (query.queryKey[1] === "distribuciones" || query.queryKey[1] === "visitas"),
+      });
     },
   });
 }
@@ -331,6 +342,11 @@ export function useCloseDistribucion() {
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.distribuciones.all,
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === PERSISTED_REMOTE_QUERY_PREFIX &&
+          query.queryKey[1] === "distribuciones",
       });
     },
   });

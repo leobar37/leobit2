@@ -66,6 +66,7 @@ export const queryKeys = {
     byStatus: (status: string) => ["purchases", "status", status] as const,
   },
   variants: {
+    all: ["variants", "all"] as const,
     byProduct: (productId: string) => ["products", productId, "variants"] as const,
     detail: (id: string) => ["variants", id] as const,
   },

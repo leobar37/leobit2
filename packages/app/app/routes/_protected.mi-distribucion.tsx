@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { InventoryCard } from "~/components/inventory/inventory-card";
 import { ToolbarActions } from "~/components/layout/toolbar-actions";
 import { useSetLayout } from "~/components/layout/app-layout";
@@ -14,15 +21,37 @@ import { useSales } from "~/hooks/use-sales";
 import { useExpenses } from "~/hooks/use-expenses";
 import { useCreateSale } from "~/hooks/use-sales";
 import { useCompleteWaterDelivery, useVisitas } from "~/hooks/use-visitas";
+import { useAllVariants } from "~/hooks/use-all-variants";
 import { getSaleEditorPath } from "~/lib/sales/navigation";
 import { formatKilos, formatCurrency } from "~/lib/utils";
 import { BusinessUserRole, decimalToNumber } from "@avileo/shared";
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { createModal } from "~/lib/modal/create-modal";
 import { Loader2 } from "lucide-react";
 import type { DistribucionWithItems } from "~/hooks/use-distribuciones";
+
+function useBrowserOnline() {
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  return isOnline;
+}
 
 // Simple Confirmation Dialog for Cierre
 interface CierreConfirmData {
@@ -33,7 +62,7 @@ function CierreConfirmContent({
   close,
   distribucionId,
 }: { close: () => void } & CierreConfirmData) {
-  const isOnline = true;
+  const isOnline = useBrowserOnline();
   const closeDistribucion = useCloseDistribucion();
   const [notaCierre, setNotaCierre] = useState("");
 
@@ -116,18 +145,21 @@ export default function MiDistribucionPage() {
   const navigate = useNavigate();
   const { data: distribucion, isLoading, error } = useMiDistribucion();
   const { data: business } = useBusiness();
-  const isOnline = true;
+  const isOnline = useBrowserOnline();
   const createSale = useCreateSale();
   const completeWaterDelivery = useCompleteWaterDelivery();
   const cierreConfirm = useCierreConfirmDialog();
   const isWaterMode = business?.businessMode === "agua";
   const { data: waterVisits = [] } = useVisitas(isWaterMode ? distribucion?.id : undefined);
+  const { data: allVariants = [] } = useAllVariants();
   const [waterCompletionDrafts, setWaterCompletionDrafts] = useState<Record<string, {
     delivered: number;
     collected: number;
     damaged: number;
     lost: number;
     notes: string;
+    variantId: string;
+    paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
   }>>({});
 
   // Fetch sales for this distribution
@@ -203,6 +235,11 @@ export default function MiDistribucionPage() {
   });
 
   const handleNewSale = async () => {
+    if (!isOnline) {
+      toast.error("Se requiere conexión a internet para registrar una venta");
+      return;
+    }
+
     if (!business?.id || !business.businessUserId || createSale.isPending) {
       return;
     }
@@ -238,7 +275,7 @@ export default function MiDistribucionPage() {
 
   const handleWaterDraftChange = (
     visitId: string,
-    patch: Partial<{ delivered: number; collected: number; damaged: number; lost: number; notes: string }>
+    patch: Partial<{ delivered: number; collected: number; damaged: number; lost: number; notes: string; variantId: string; paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" }>
   ) => {
     setWaterCompletionDrafts((drafts) => ({
       ...drafts,
@@ -248,6 +285,8 @@ export default function MiDistribucionPage() {
         damaged: drafts[visitId]?.damaged ?? 0,
         lost: drafts[visitId]?.lost ?? 0,
         notes: drafts[visitId]?.notes ?? "",
+        variantId: drafts[visitId]?.variantId ?? "",
+        paymentMethod: drafts[visitId]?.paymentMethod ?? "efectivo",
         ...patch,
       },
     }));
@@ -258,7 +297,16 @@ export default function MiDistribucionPage() {
     status: "entregado" | "no_atendido" | "reprogramado",
     expected: number
   ) => {
+    if (!isOnline) {
+      toast.error("Se requiere conexión a internet para completar la entrega");
+      return;
+    }
+
     const draft = waterCompletionDrafts[visitId];
+    if (status === "entregado" && !draft?.variantId) {
+      toast.error("Selecciona un producto para registrar la venta");
+      return;
+    }
     await completeWaterDelivery.mutateAsync({
       id: visitId,
       status,
@@ -267,6 +315,8 @@ export default function MiDistribucionPage() {
       damaged: 0,
       lost: 0,
       notes: draft?.notes?.trim() || null,
+      variantId: draft?.variantId,
+      paymentMethod: draft?.paymentMethod,
     });
   };
 
@@ -337,6 +387,11 @@ export default function MiDistribucionPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {!isOnline && (
+                <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                  Estás sin conexión. Puedes revisar la ruta guardada, pero las entregas se registran al reconectarte.
+                </p>
+              )}
               {waterVisits.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Aún no hay paradas en esta ruta.
@@ -394,6 +449,46 @@ export default function MiDistribucionPage() {
                               className="shell-field h-11 w-full rounded-xl px-3 text-sm"
                             />
                           </label>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Producto</Label>
+                            <Select
+                              value={draft.variantId}
+                              onValueChange={(value) => handleWaterDraftChange(visit.id, { variantId: value })}
+                            >
+                              <SelectTrigger className="h-11 rounded-xl text-sm">
+                                <SelectValue placeholder="Seleccionar producto..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {allVariants.map((variant) => (
+                                  <SelectItem key={variant.id} value={variant.id}>
+                                    {variant.productName} — {variant.name} (S/ {variant.price})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Método de pago</Label>
+                            <Select
+                              value={draft.paymentMethod}
+                              onValueChange={(value) =>
+                                handleWaterDraftChange(visit.id, {
+                                  paymentMethod: value as "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta",
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-11 rounded-xl text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="efectivo">Efectivo</SelectItem>
+                                <SelectItem value="yape">Yape</SelectItem>
+                                <SelectItem value="plin">Plin</SelectItem>
+                                <SelectItem value="transferencia">Transferencia</SelectItem>
+                                <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <Textarea
                             value={draft.notes}
                             onChange={(event) => handleWaterDraftChange(visit.id, { notes: event.target.value })}
@@ -404,7 +499,7 @@ export default function MiDistribucionPage() {
                             <Button
                               type="button"
                               onClick={() => handleCompleteWaterStop(visit.id, "entregado", expected)}
-                              disabled={completeWaterDelivery.isPending}
+                              disabled={completeWaterDelivery.isPending || !isOnline || !draft.variantId}
                               className="rounded-xl bg-sky-600 hover:bg-sky-700"
                             >
                               Entregado
@@ -413,7 +508,7 @@ export default function MiDistribucionPage() {
                               type="button"
                               variant="outline"
                               onClick={() => handleCompleteWaterStop(visit.id, "no_atendido", expected)}
-                              disabled={completeWaterDelivery.isPending}
+                              disabled={completeWaterDelivery.isPending || !isOnline}
                               className="rounded-xl"
                             >
                               No atendió
@@ -422,7 +517,7 @@ export default function MiDistribucionPage() {
                               type="button"
                               variant="outline"
                               onClick={() => handleCompleteWaterStop(visit.id, "reprogramado", expected)}
-                              disabled={completeWaterDelivery.isPending}
+                              disabled={completeWaterDelivery.isPending || !isOnline}
                               className="rounded-xl"
                             >
                               Reprogramar
@@ -567,7 +662,7 @@ export default function MiDistribucionPage() {
             {!isWaterMode && (
             <Button
               onClick={handleNewSale}
-              disabled={createSale.isPending}
+              disabled={createSale.isPending || !isOnline}
               className="h-14 w-full rounded-2xl bg-orange-500 hover:bg-orange-600"
             >
               <Package className="mr-2 h-5 w-5" />

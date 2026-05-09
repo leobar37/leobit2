@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
+import { PERSISTED_REMOTE_QUERY_PREFIX, PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 import { toast } from "sonner";
 
 export interface VisitaGroup {
@@ -116,7 +117,7 @@ function mapVisita(v: BackendVisita): Visita {
  */
 export function useVisitas(distribucionId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.visitas.byDistribucion(distribucionId || ""),
+    queryKey: PERSISTED_REMOTE_QUERY_KEYS.visitas.byDistribucion(distribucionId || ""),
     queryFn: async () => {
       if (!distribucionId) return [];
       const response = await api.visitas.get({
@@ -141,6 +142,8 @@ export function useCompleteWaterDelivery() {
       damaged?: number;
       lost?: number;
       notes?: string | null;
+      variantId?: string;
+      paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
     }) => {
       const { id, ...body } = input;
       const response = await api.visitas({ id }).water.complete.post(body);
@@ -148,6 +151,16 @@ export function useCompleteWaterDelivery() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visitas"] });
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === PERSISTED_REMOTE_QUERY_PREFIX &&
+          (query.queryKey[1] === "visitas" ||
+            query.queryKey[1] === "sales" ||
+            query.queryKey[1] === "variants" ||
+            query.queryKey[1] === "variant-inventory"),
+      });
       toast.success("Entrega actualizada correctamente");
     },
   });
@@ -199,6 +212,9 @@ export function useCreateVisita() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.visitas.byDistribucion(variables.distribucionId),
       });
+      queryClient.invalidateQueries({
+        queryKey: PERSISTED_REMOTE_QUERY_KEYS.visitas.byDistribucion(variables.distribucionId),
+      });
       toast.success("Visita creada correctamente");
     },
   });
@@ -243,6 +259,9 @@ export function useCreateVisitasFromGroup() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.visitas.byDistribucion(variables.distribucionId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: PERSISTED_REMOTE_QUERY_KEYS.visitas.byDistribucion(variables.distribucionId),
       });
       toast.success("Visitas creadas correctamente");
     },

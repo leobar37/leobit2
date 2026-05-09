@@ -29,5 +29,21 @@ export const PERSISTED_REMOTE_QUERY_KEYS = {
   cocheraDebts: withPersistedRemotePrefix(["cochera", "debts"] as const),
   cocheraDashboard: withPersistedRemotePrefix(["cochera", "dashboard"] as const),
   cocheraReports: withPersistedRemotePrefix(["cochera", "reports"] as const),
+  sales: {
+    all: withPersistedRemotePrefix(["sales"] as const),
+    lists: (filters: object) =>
+      withPersistedRemotePrefix(["sales", "list", filters as Record<string, unknown>] as const),
+  },
+  variants: {
+    all: withPersistedRemotePrefix(["variants", "all"] as const),
+  },
+  visitas: {
+    byDistribucion: (distribucionId: string) =>
+      withPersistedRemotePrefix(["visitas", distribucionId] as const),
+  },
+  distribuciones: {
+    mine: (vendedorId: string, fecha?: string) =>
+      withPersistedRemotePrefix(["distribuciones", "mine", vendedorId, fecha] as const),
+  },
   subscriptionStatus: withPersistedRemotePrefix(["subscription", "status"] as const),
 } as const;

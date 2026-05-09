@@ -28,10 +28,6 @@ export const customerSchema = z.object({
       deliveryFrequency: z.string(),
       deliveryDays: z.array(z.string()),
       defaultContainerQuantity: z.coerce.number().min(0),
-      containersAtCustomer: z.coerce.number().min(0),
-      depositAmount: z.coerce.number().min(0),
-      depositStatus: z.string(),
-      depositExceptionReason: z.string().nullable(),
       waterRouteId: z.string().nullable(),
       preferredRoute: z.string().nullable(),
       deliveryInstructions: z.string().nullable(),
@@ -177,7 +173,7 @@ export function CustomerFormContent({ customer }: CustomerFormContentProps) {
               step={1}
             />
             <p className="text-xs leading-5 text-muted-foreground">
-              Los bidones y recargas se venderán como productos por unidad. El control de envases retornables queda fuera del flujo base.
+              Cantidad habitual que se entrega en cada visita de reparto.
             </p>
           </div>
 

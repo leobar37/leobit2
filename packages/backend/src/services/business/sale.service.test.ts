@@ -256,6 +256,208 @@ describe("SaleService - Item Operations", () => {
     });
   });
 
+  describe("agua full-payment rules", () => {
+    const createTxMock = () => ({
+      execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+    });
+
+    const createService = (repository: Record<string, unknown>, paymentRepository = {}) => new SaleService(
+      repository as never,
+      paymentRepository as never,
+      { findByVendedorAndFecha: vi.fn().mockResolvedValue(null) } as never,
+      {} as never,
+      {} as never,
+      {} as never
+    );
+
+    const waterCtx = { businessId: "biz-agua", businessUserId: "user-1", businessMode: "agua" };
+    const polleriaCtx = { businessId: "biz-pollos", businessUserId: "user-1", businessMode: "polleria" };
+
+    it("rejects credit sale creation in agua mode", async () => {
+      const repository = {
+        create: vi.fn(),
+      };
+      const service = createService(repository);
+
+      await expect(
+        service.createSale(waterCtx as never, {
+          saleType: "credito",
+          customerId: "cust-1",
+          totalAmount: 100,
+          amountPaid: 0,
+          items: [
+            {
+              productId: "prod-1",
+              productName: "Bidón",
+              variantId: "var-1",
+              variantName: "20L",
+              quantity: 1,
+              unitPrice: 100,
+              subtotal: 100,
+            },
+          ],
+        })
+      ).rejects.toThrow(ValidationError);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects partial paymentMode a_cuenta in agua mode", async () => {
+      const repository = {
+        findById: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "draft",
+          type: "instant_sale",
+          saleType: "contado",
+          paymentMode: "pago_total",
+          totalAmount: "100.00",
+          amountPaid: "100.00",
+          customerId: "cust-1",
+        }),
+        update: vi.fn(),
+      };
+      const service = createService(repository);
+
+      await expect(
+        service.updateSale(waterCtx as never, "sale-1", {
+          saleType: "credito",
+          paymentMode: "a_cuenta",
+          amountPaid: 30,
+        })
+      ).rejects.toThrow(ValidationError);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects paymentMode debe_todo in agua mode", async () => {
+      const repository = {
+        findById: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "draft",
+          type: "instant_sale",
+          totalAmount: "100.00",
+          amountPaid: "0.00",
+          balanceDue: "100.00",
+          saleType: "credito",
+          paymentMode: "debe_todo",
+          customerId: "cust-1",
+        }),
+        findSaleItems: vi.fn().mockResolvedValue([{ id: "item-1", subtotal: "100.00" }]),
+      };
+      const service = createService(repository);
+
+      await expect(
+        service.confirmSale(waterCtx as never, "sale-1", undefined, {
+          paymentMode: "debe_todo",
+          amountPaid: 0,
+        })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("rejects pago_total when amountPaid does not cover total in agua mode", async () => {
+      const repository = {
+        findById: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "draft",
+          type: "instant_sale",
+          totalAmount: "100.00",
+          amountPaid: "100.00",
+          balanceDue: "0.00",
+          saleType: "contado",
+          paymentMode: "pago_total",
+          customerId: null,
+        }),
+        findSaleItems: vi.fn().mockResolvedValue([{ id: "item-1", subtotal: "100.00" }]),
+      };
+      const service = createService(repository);
+
+      await expect(
+        service.confirmSale(waterCtx as never, "sale-1", undefined, {
+          paymentMode: "pago_total",
+          amountPaid: 80,
+        })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("accepts contado pago_total with valid payment method in agua mode", async () => {
+      const tx = createTxMock();
+      transactionMock.mockImplementation(async (callback) => callback(tx as never));
+
+      const repository = {
+        findById: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "draft",
+          type: "instant_sale",
+          totalAmount: "100.00",
+          amountPaid: "100.00",
+          balanceDue: "0.00",
+          saleType: "contado",
+          paymentMode: "pago_total",
+          customerId: null,
+        }),
+        findSaleItems: vi.fn().mockResolvedValue([{ id: "item-1", subtotal: "100.00" }]),
+        update: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "active",
+          saleType: "contado",
+          paymentMode: "pago_total",
+          paymentMethod: "yape",
+          amountPaid: "100.00",
+          balanceDue: "0.00",
+        }),
+      };
+      const paymentRepository = { create: vi.fn() };
+      const service = createService(repository, paymentRepository);
+
+      const result = await service.confirmSale(waterCtx as never, "sale-1", undefined, {
+        paymentMode: "pago_total",
+        paymentMethod: "yape",
+        amountPaid: 100,
+      });
+
+      expect(result.data.status).toBe("active");
+      expect(result.data.paymentMethod).toBe("yape");
+      expect(paymentRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("preserves partial credit behavior for polleria mode", async () => {
+      const tx = createTxMock();
+      transactionMock.mockImplementation(async (callback) => callback(tx as never));
+
+      const repository = {
+        findById: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "draft",
+          type: "instant_sale",
+          totalAmount: "100.00",
+          amountPaid: "0.00",
+          balanceDue: "100.00",
+          saleType: "credito",
+          paymentMode: "debe_todo",
+          customerId: "cust-1",
+        }),
+        findSaleItems: vi.fn().mockResolvedValue([{ id: "item-1", subtotal: "100.00" }]),
+        update: vi.fn().mockResolvedValue({
+          id: "sale-1",
+          status: "active",
+          saleType: "credito",
+          paymentMode: "a_cuenta",
+          amountPaid: "30.00",
+          balanceDue: "70.00",
+          customerId: "cust-1",
+        }),
+      };
+      const paymentRepository = { create: vi.fn().mockResolvedValue(undefined) };
+      const service = createService(repository, paymentRepository);
+
+      const result = await service.confirmSale(polleriaCtx as never, "sale-1", undefined, {
+        paymentMode: "a_cuenta",
+        amountPaid: 30,
+      });
+
+      expect(result.data.saleType).toBe("credito");
+      expect(paymentRepository.create).toHaveBeenCalled();
+    });
+  });
+
   describe("confirmSale", () => {
     const createTxMock = () => ({
       execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),

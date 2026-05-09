@@ -4,6 +4,8 @@ import { db } from "../../lib/db";
 import { productVariants, variantInventory, sales, saleItems, products, type ProductVariant, type NewProductVariant, type VariantInventory, type NewVariantInventory } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export interface CreateVariantInput {
   id?: string;
   productId: string;
@@ -37,6 +39,7 @@ export class ProductVariantRepository {
   ): Promise<ProductVariant[]> {
     return db.query.productVariants.findMany({
       where: and(
+        eq(productVariants.businessId, ctx.businessId),
         eq(productVariants.productId, productId),
         filters?.includeInactive ? undefined : 
           filters?.isActive !== undefined ? eq(productVariants.isActive, filters.isActive) : 
@@ -49,11 +52,16 @@ export class ProductVariantRepository {
     });
   }
 
-  async findById(ctx: RequestContext, id: string): Promise<(ProductVariant & { inventory?: VariantInventory }) | undefined> {
-    return db.query.productVariants.findFirst({
-      where: eq(productVariants.id, id),
+  async findById(ctx: RequestContext, id: string, tx?: DbTransaction): Promise<(ProductVariant & { inventory?: VariantInventory; product?: { id: string; name: string } }) | undefined> {
+    const executor = tx ?? db;
+    return executor.query.productVariants.findFirst({
+      where: and(
+        eq(productVariants.id, id),
+        eq(productVariants.businessId, ctx.businessId)
+      ),
       with: {
         inventory: true,
+        product: true,
       },
     });
   }
@@ -62,7 +70,8 @@ export class ProductVariantRepository {
     return db.query.productVariants.findFirst({
       where: and(
         eq(productVariants.id, id),
-        eq(productVariants.productId, productId)
+        eq(productVariants.productId, productId),
+        eq(productVariants.businessId, ctx.businessId)
       ),
     });
   }
@@ -111,7 +120,10 @@ export class ProductVariantRepository {
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         updatedAt: new Date(),
       })
-      .where(eq(productVariants.id, id))
+      .where(and(
+        eq(productVariants.id, id),
+        eq(productVariants.businessId, ctx.businessId)
+      ))
       .returning();
 
     return variant;
@@ -120,14 +132,20 @@ export class ProductVariantRepository {
   async delete(ctx: RequestContext, id: string): Promise<void> {
     await db
       .delete(productVariants)
-      .where(eq(productVariants.id, id));
+      .where(and(
+        eq(productVariants.id, id),
+        eq(productVariants.businessId, ctx.businessId)
+      ));
   }
 
   async countByProduct(ctx: RequestContext, productId: string): Promise<number> {
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(productVariants)
-      .where(eq(productVariants.productId, productId));
+      .where(and(
+        eq(productVariants.productId, productId),
+        eq(productVariants.businessId, ctx.businessId)
+      ));
 
     return result[0]?.count ?? 0;
   }
@@ -135,6 +153,7 @@ export class ProductVariantRepository {
   async existsByName(ctx: RequestContext, productId: string, name: string, excludeId?: string): Promise<boolean> {
     const conditions = [
       eq(productVariants.productId, productId),
+      eq(productVariants.businessId, ctx.businessId),
       eq(productVariants.name, name),
     ];
 
@@ -157,15 +176,20 @@ export class ProductVariantRepository {
         .set({ sortOrder: i })
         .where(and(
           eq(productVariants.id, variantIds[i]),
-          eq(productVariants.productId, productId)
+          eq(productVariants.productId, productId),
+          eq(productVariants.businessId, ctx.businessId)
         ));
     }
   }
 
   // Variant Inventory operations
-  async getInventory(ctx: RequestContext, variantId: string): Promise<VariantInventory | undefined> {
-    return db.query.variantInventory.findFirst({
-      where: eq(variantInventory.variantId, variantId),
+  async getInventory(ctx: RequestContext, variantId: string, tx?: DbTransaction): Promise<VariantInventory | undefined> {
+    const executor = tx ?? db;
+    return executor.query.variantInventory.findFirst({
+      where: and(
+        eq(variantInventory.variantId, variantId),
+        eq(variantInventory.businessId, ctx.businessId)
+      ),
     });
   }
 
@@ -200,7 +224,10 @@ export class ProductVariantRepository {
         quantity,
         updatedAt: new Date(),
       })
-      .where(eq(variantInventory.variantId, variantId))
+      .where(and(
+        eq(variantInventory.variantId, variantId),
+        eq(variantInventory.businessId, ctx.businessId)
+      ))
       .returning();
 
     return inventory;
@@ -213,7 +240,7 @@ export class ProductVariantRepository {
     tx?: DbTransaction
   ): Promise<VariantInventory | undefined> {
     const dbOrTx = tx || db;
-    const current = await this.getInventory(ctx, variantId);
+    const current = await this.getInventory(ctx, variantId, tx);
     if (!current) return undefined;
 
     const currentQty = parseFloat(current.quantity);

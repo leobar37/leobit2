@@ -7,6 +7,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
+import { PERSISTED_REMOTE_QUERY_KEYS, PERSISTED_REMOTE_QUERY_PREFIX } from "~/lib/query/persisted-query-keys";
 import { useBusiness } from "~/hooks/use-business";
 import { useToastError } from "~/hooks/use-toast-error";
 import { getSaleFinancialState } from "~/hooks/use-sale-calculations";
@@ -214,8 +215,8 @@ export function useSales(filters?: SaleFilters) {
 
   return useQuery({
     queryKey: filters
-      ? queryKeys.sales.lists(filters)
-      : queryKeys.sales.all,
+      ? PERSISTED_REMOTE_QUERY_KEYS.sales.lists(filters)
+      : PERSISTED_REMOTE_QUERY_KEYS.sales.all,
     queryFn: async () => {
       const response = await api.sales.get({
         query: {
@@ -393,6 +394,11 @@ export function useCreateSale() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.sales.lists({}), exact: false });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === PERSISTED_REMOTE_QUERY_PREFIX &&
+          query.queryKey[1] === "sales",
+      });
     },
   });
 }

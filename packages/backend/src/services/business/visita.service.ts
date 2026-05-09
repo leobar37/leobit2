@@ -6,6 +6,8 @@ import type { VisitaRepository, VisitaWithCustomer, CreateVisitaData, BulkCreate
 import type { CustomerRepository } from "../repository/customer.repository";
 import type { DistribucionRepository } from "../repository/distribucion.repository";
 import type { WaterCustomerProfileRepository } from "../repository/water-customer-profile.repository";
+import type { SaleRepository } from "../repository/sale.repository";
+import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
 import {
@@ -20,6 +22,8 @@ export class VisitaService {
     private customerRepo: CustomerRepository,
     private distribucionRepo: DistribucionRepository,
     private waterCustomerProfileRepo?: WaterCustomerProfileRepository,
+    private saleRepo?: SaleRepository,
+    private productVariantRepo?: ProductVariantRepository,
   ) {}
 
   /**
@@ -174,6 +178,8 @@ export class VisitaService {
       damaged?: number;
       lost?: number;
       notes?: string | null;
+      variantId?: string;
+      paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
     }
   ) {
     if (!ctx.hasPermission("sales.write")) {
@@ -193,6 +199,24 @@ export class VisitaService {
     const stop = await waterRepo.findDeliveryStopByVisitaId(ctx, visitId);
     if (!stop) {
       throw new NotFoundError("Stop de agua");
+    }
+
+    if (stop.status !== "pendiente" || visit.saleId) {
+      const previousBalance = Math.max(
+        0,
+        stop.containersAtStart +
+          stop.deliveredContainerQuantity -
+          stop.collectedContainerQuantity -
+          stop.damagedContainerQuantity -
+          stop.lostContainerQuantity
+      );
+
+      return {
+        visita: visit,
+        waterStop: stop,
+        containersAtCustomer: previousBalance,
+        ...(visit.saleId ? { saleId: visit.saleId } : {}),
+      };
     }
 
     const delivered = Math.max(0, data.delivered ?? 0);
@@ -227,15 +251,67 @@ export class VisitaService {
         }, tx);
       }
 
+      let saleId: string | undefined;
+      if (data.status === "entregado" && delivered > 0) {
+        if (!data.variantId) {
+          throw new ValidationError("Se requiere seleccionar un producto/variante para registrar la venta");
+        }
+        const variant = await this.getProductVariantRepo().findById(ctx, data.variantId, tx);
+        if (!variant) {
+          throw new NotFoundError("Variante de producto");
+        }
+
+        const unitPrice = parseFloat(variant.price);
+        const totalAmount = parseFloat((delivered * unitPrice).toFixed(2));
+        const totalAmountStr = totalAmount.toFixed(2);
+
+        const sale = await this.getSaleRepo().create(ctx, {
+          customerId: visit.customerId,
+          distribucionId: visit.distribucionId,
+          visitaId: visit.id,
+          type: "instant_sale",
+          saleType: "contado",
+          status: "active",
+          totalAmount: totalAmountStr,
+          amountPaid: totalAmountStr,
+          balanceDue: "0.00",
+          paymentMode: "pago_total",
+          paymentMethod: data.paymentMethod ?? "efectivo",
+          items: [
+            {
+              productId: variant.productId,
+              productName: variant.product?.name ?? variant.name,
+              variantId: variant.id,
+              variantName: variant.name,
+              quantity: delivered.toString(),
+              unitPrice: variant.price,
+              subtotal: totalAmountStr,
+            },
+          ],
+        }, tx);
+
+        saleId = sale.id;
+
+        // Deduct inventory
+        const inventory = await this.getProductVariantRepo().getInventory(ctx, variant.id, tx);
+        if (inventory) {
+          const currentQty = parseFloat(inventory.quantity);
+          const newQty = Math.max(0, currentQty - delivered);
+          await this.getProductVariantRepo().updateInventory(ctx, variant.id, newQty.toFixed(2), tx);
+        }
+      }
+
       const updatedVisit = await this.visitaRepo.updateStatus(ctx, visitId, {
         status: visitStatus,
         motivoNoCompra: data.status === "entregado" ? undefined : data.notes ?? data.status,
+        ...(saleId ? { saleId } : {}),
       }, tx);
 
       return {
         visita: updatedVisit,
         waterStop: updatedStop,
         containersAtCustomer: balanceAfter,
+        ...(saleId ? { saleId } : {}),
       };
     });
   }
@@ -245,6 +321,20 @@ export class VisitaService {
       throw new Error("Water customer profile repository is not configured");
     }
     return this.waterCustomerProfileRepo;
+  }
+
+  private getSaleRepo(): SaleRepository {
+    if (!this.saleRepo) {
+      throw new Error("Sale repository is not configured");
+    }
+    return this.saleRepo;
+  }
+
+  private getProductVariantRepo(): ProductVariantRepository {
+    if (!this.productVariantRepo) {
+      throw new Error("Product variant repository is not configured");
+    }
+    return this.productVariantRepo;
   }
 
   /**

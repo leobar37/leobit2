@@ -262,9 +262,12 @@ export class DistribucionService {
       fecha: string;
       waterRouteId: string;
       notaCreacion?: string;
-    }
+    },
+    tx?: any
   ) {
-    const dbOrTx = db;
+    if (!tx) {
+      return db.transaction((innerTx) => this.generateWaterRoute(ctx, data, innerTx));
+    }
 
     if (!ctx.hasPermission("inventory.write")) {
       throw new ForbiddenError("No tiene permisos para crear rutas");
@@ -280,6 +283,18 @@ export class DistribucionService {
       throw new NotFoundError("Ruta");
     }
 
+    const existingDistribucion = await this.repository.existsForVendedorAndFecha(
+      ctx,
+      data.vendedorId,
+      data.fecha,
+      ["activo", "en_ruta"]
+    );
+    if (existingDistribucion) {
+      throw new ConflictError(
+        "Ya existe una distribución activa para este repartidor en la fecha especificada"
+      );
+    }
+
     const routeName = route.name;
     const day = this.resolveDayKey(data.fecha);
     const candidates = await this.getWaterProfileRepository().findScheduledCandidates(
@@ -293,45 +308,43 @@ export class DistribucionService {
       throw new ValidationError("No hay clientes programados para esta ruta");
     }
 
-    return dbOrTx.transaction(async (tx) => {
-      const distribucion = await this.repository.create(ctx, {
-        vendedorId: data.vendedorId,
-        puntoVenta: routeName,
-        montoRecaudado: "0",
-        notaCreacion: data.notaCreacion ?? "Ruta generada desde clientes programados de agua",
-        fecha: data.fecha,
-        estado: "activo",
+    const distribucion = await this.repository.create(ctx, {
+      vendedorId: data.vendedorId,
+      puntoVenta: routeName,
+      montoRecaudado: "0",
+      notaCreacion: data.notaCreacion ?? "Ruta generada desde clientes programados de agua",
+      fecha: data.fecha,
+      estado: "activo",
+    }, tx);
+
+    for (const profile of profiles) {
+      const visita = await this.visitaRepository.create(ctx, {
+        distribucionId: distribucion.id,
+        customerId: profile.customerId,
       }, tx);
 
-      for (const profile of profiles) {
-        const visita = await this.visitaRepository.create(ctx, {
-          distribucionId: distribucion.id,
-          customerId: profile.customerId,
-        }, tx);
+      await this.getWaterProfileRepository().createDeliveryStop(ctx, {
+        visitaId: visita.id,
+        customerProfileId: profile.id,
+        waterRouteId: data.waterRouteId,
+        scheduledDate: data.fecha,
+        expectedContainerQuantity: profile.defaultContainerQuantity,
+        containersAtStart: profile.containersAtCustomer,
+      }, tx);
 
-        await this.getWaterProfileRepository().createDeliveryStop(ctx, {
-          visitaId: visita.id,
-          customerProfileId: profile.id,
-          waterRouteId: data.waterRouteId,
-          scheduledDate: data.fecha,
-          expectedContainerQuantity: profile.defaultContainerQuantity,
-          containersAtStart: profile.containersAtCustomer,
-        }, tx);
+      await this.getWaterProfileRepository().markScheduled(
+        ctx,
+        profile.id,
+        new Date(`${data.fecha}T00:00:00`),
+        tx
+      );
+    }
 
-        await this.getWaterProfileRepository().markScheduled(
-          ctx,
-          profile.id,
-          new Date(`${data.fecha}T00:00:00`),
-          tx
-        );
-      }
-
-      return {
-        distribucionId: distribucion.id,
-        customers: profiles.map((profile) => this.toWaterRouteCustomer(profile)),
-        createdVisits: profiles.length,
-      };
-    });
+    return {
+      distribucionId: distribucion.id,
+      customers: profiles.map((profile) => this.toWaterRouteCustomer(profile)),
+      createdVisits: profiles.length,
+    };
   }
 
   private assertWaterMode(ctx: RequestContext) {

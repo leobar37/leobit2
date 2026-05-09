@@ -30,10 +30,6 @@ export default function NewCustomerPage() {
         deliveryFrequency: "weekly",
         deliveryDays: [],
         defaultContainerQuantity: 1,
-        containersAtCustomer: 0,
-        depositAmount: 0,
-        depositStatus: "none",
-        depositExceptionReason: null,
         waterRouteId: null,
         preferredRoute: null,
         deliveryInstructions: null,
@@ -53,18 +49,15 @@ export default function NewCustomerPage() {
         ...(mode === "agua" && data.waterProfile
           ? {
                 waterProfile: {
-                  ...data.waterProfile,
-                defaultContainerQuantity: Number(data.waterProfile.defaultContainerQuantity ?? 1),
-                containersAtCustomer: 0,
-                depositAmount: "0",
-                depositStatus: "none",
-                depositExceptionReason: null,
-                waterRouteId: data.waterProfile.waterRouteId || null,
-                preferredRoute: data.waterProfile.preferredRoute || null,
-                deliveryInstructions: data.waterProfile.deliveryInstructions || null,
-              },
-            }
-          : {}),
+                  deliveryFrequency: data.waterProfile.deliveryFrequency || "weekly",
+                  deliveryDays: data.waterProfile.deliveryDays ?? [],
+                  defaultContainerQuantity: Number(data.waterProfile.defaultContainerQuantity ?? 1),
+                  waterRouteId: data.waterProfile.waterRouteId || null,
+                  preferredRoute: data.waterProfile.preferredRoute || null,
+                  deliveryInstructions: data.waterProfile.deliveryInstructions || null,
+                },
+              }
+            : {}),
       };
       await createCustomer.mutateAsync(input);
       navigate("/clientes");
