@@ -12,6 +12,11 @@ import { db } from "../../lib/db";
 import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { decimalToNumber } from "@avileo/shared";
 
+export interface PaymentMutationResult {
+  data: Abono;
+  txid: number;
+}
+
 export class PaymentService {
   constructor(
     private repository: PaymentRepository,
@@ -58,7 +63,7 @@ export class PaymentService {
       referenceNumber?: string;
       relatedSaleId?: string;
     }
-  ): Promise<Abono> {
+  ): Promise<PaymentMutationResult> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para registrar abonos");
     }
@@ -166,7 +171,7 @@ export class PaymentService {
       proofImageId?: string;
       referenceNumber?: string;
     }
-  ): Promise<Abono> {
+  ): Promise<PaymentMutationResult> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar abonos");
     }
@@ -194,7 +199,7 @@ export class PaymentService {
       proofImageId?: string;
       notes?: string;
     }
-  ): Promise<Abono> {
+  ): Promise<PaymentMutationResult> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar abonos");
     }

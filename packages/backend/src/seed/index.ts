@@ -864,7 +864,7 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>,
       notes: abonoData.notes,
     });
 
-    abonos.push(created);
+    abonos.push(created.data);
   }
 
   return abonos;

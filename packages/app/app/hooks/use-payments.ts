@@ -7,7 +7,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
-import { useBusiness } from "~/hooks/use-business";
 
 export interface Abono {
   id: string;
@@ -83,7 +82,6 @@ export function usePayment(id: string | null) {
  */
 export function useCreatePayment() {
   const queryClient = useQueryClient();
-  const { data: business } = useBusiness();
 
   const mutation = useMutation({
     mutationFn: async (input: CreateAbonoInput): Promise<Abono> => {
@@ -132,10 +130,6 @@ export function useCreatePayment() {
     referenceNumber?: string;
     notes?: string;
   }): Promise<Abono> => {
-    const sellerId = business?.businessUserId;
-    if (!sellerId) {
-      throw new Error("Business seller is not available");
-    }
     return mutation.mutateAsync({
       customerId: data.customerId,
       relatedSaleId: data.relatedSaleId,

@@ -450,7 +450,7 @@ async function seedAbonos(ctx: RequestContext, customers: Array<{ id: string }>)
         paymentMethod: "efectivo",
         notes: "Primer abono",
       });
-      abonos.push(created);
+      abonos.push(created.data);
     } catch (error: any) {
       // Skip if customer has no debt (contado sale or already paid)
       if (error?.message?.includes("no tiene deuda") || error?.statusCode === 400) {

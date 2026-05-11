@@ -54,7 +54,7 @@ COPY packages/app/package.json ./packages/app/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/backend/package.json ./packages/backend/
 
-RUN bun install --production
+RUN bun install --production --no-frozen-lockfile
 
 # Install Doppler CLI
 RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg wget && \
