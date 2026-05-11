@@ -4,6 +4,7 @@
 # Stage 1: Dependencies
 FROM oven/bun:1.3.12-slim AS deps
 WORKDIR /app
+ENV NODE_ENV=development
 
 # Copiar SOLO los archivos necesarios para instalar dependencias (mejor layer caching)
 COPY package.json bun.lock ./
