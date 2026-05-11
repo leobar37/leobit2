@@ -2,7 +2,7 @@
 # Multi-stage build for production optimization
 
 # Stage 1: Dependencies
-FROM oven/bun:1.2.10-slim AS deps
+FROM oven/bun:1.3.12-slim AS deps
 WORKDIR /app
 
 # Copiar SOLO los archivos necesarios para instalar dependencias (mejor layer caching)
@@ -15,7 +15,7 @@ COPY packages/backend/package.json ./packages/backend/
 RUN bun install
 
 # Stage 2: Builder
-FROM oven/bun:1.2.10-slim AS builder
+FROM oven/bun:1.3.12-slim AS builder
 WORKDIR /app
 
 # Copiar dependencias instaladas (bun monorepo hoists all deps to root node_modules)
@@ -34,7 +34,7 @@ RUN cd packages/backend && bun run build
 RUN cd packages/backend && bunx drizzle-kit generate
 
 # Stage 3: Production
-FROM oven/bun:1.2.10-slim AS runner
+FROM oven/bun:1.3.12-slim AS runner
 WORKDIR /app
 
 # Copy package files for workspace resolution

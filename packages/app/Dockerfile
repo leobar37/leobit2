@@ -2,7 +2,7 @@
 # Multi-stage build: Bun for deps, Node.js for build, Bun for runtime
 
 # Stage 1: Dependencies (Bun - mas rapido para instalar)
-FROM oven/bun:1.2.10-slim AS deps
+FROM oven/bun:1.3.12-slim AS deps
 WORKDIR /app
 
 # Copiar SOLO los archivos necesarios para instalar dependencias (mejor layer caching)
@@ -41,7 +41,7 @@ RUN cd packages/shared && npm run build
 RUN cd packages/app && npm run build
 
 # Stage 3: Production (Bun para runtime)
-FROM oven/bun:1.2.10-slim AS runner
+FROM oven/bun:1.3.12-slim AS runner
 WORKDIR /app
 
 # Copy built application from builder
