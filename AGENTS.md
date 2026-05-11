@@ -51,6 +51,7 @@ packages/
 - **No silent duplicates**: Use one AGENTS source per package.
 - **Mobile-first baseline**: prioritize 320px–428px layouts.
 - **Offline-first mindset**: avoid breaking persistence paths; prefer existing sync-aware flows for writes/reads.
+- **Business contract**: before changing business modes, vertical-specific behavior, sales/customer/payment/report/config flows, or business-specific file organization, read `contract.md`.
 
 ## Import patterns
 
