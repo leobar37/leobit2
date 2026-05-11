@@ -25,8 +25,8 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copiar el código fuente
 COPY . .
 
-# Build shared package first (required by backend)
-RUN cd packages/shared && bun run build
+# Build shared runtime output first (required by backend)
+RUN cd packages/shared && bun build src/index.ts --format esm --outdir dist
 
 # Build backend
 RUN cd packages/backend && bun run build
