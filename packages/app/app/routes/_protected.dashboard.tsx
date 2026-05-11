@@ -272,7 +272,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-[28px] bg-white/80 p-5 shadow-[0_14px_34px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:bg-[#151821] dark:shadow-[0_22px_52px_rgba(0,0,0,0.22)]">
+      <section className="border-b border-border/70 pb-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[2rem] font-bold leading-none tracking-tight text-foreground">
@@ -283,14 +283,16 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="rounded-[18px] bg-black/[0.03] px-3 py-2 text-right dark:bg-white/[0.05]">
-            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          <div className="min-w-[74px] border-l border-border/70 pl-3 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Periodo
             </p>
-            <p className="mt-1 text-sm font-semibold text-foreground">{currentPeriodLabel}</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {currentPeriodLabel}
+            </p>
           </div>
         </div>
-      </div>
+      </section>
 
       <OnboardingChecklist
         hasProducts={hasProducts}
@@ -304,58 +306,58 @@ export default function DashboardPage() {
       <PeriodSelector value={period} onChange={setPeriod} />
 
       {/* Accesos Rápidos - Siempre visibles */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-2">
         <Link to={isWaterMode ? "/distribuciones/nueva" : "/ventas"} className="block">
-          <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
-              <ShoppingCart className="h-4.5 w-4.5 text-foreground/75" />
+          <div className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/15 px-2 py-2 transition-colors active:scale-[0.98] hover:bg-muted/30">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted/45">
+              <ShoppingCart className="h-4 w-4 text-foreground/75" />
             </div>
-            <span className="text-xs font-medium text-foreground/85">{isWaterMode ? "Ruta" : "Venta"}</span>
+            <span className="text-xs font-medium leading-4 text-foreground/85">{isWaterMode ? "Ruta" : "Venta"}</span>
           </div>
         </Link>
 
         <Link to="/clientes" className="block">
-          <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
-              <Users className="h-4.5 w-4.5 text-foreground/75" />
+          <div className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/15 px-2 py-2 transition-colors active:scale-[0.98] hover:bg-muted/30">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted/45">
+              <Users className="h-4 w-4 text-foreground/75" />
             </div>
-            <span className="text-xs font-medium text-foreground/85">Clientes</span>
+            <span className="text-xs font-medium leading-4 text-foreground/85">Clientes</span>
           </div>
         </Link>
 
         <Link to="/cobros" className="block relative">
-          <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
-              <Wallet className="h-4.5 w-4.5 text-foreground/75" />
+          <div className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/15 px-2 py-2 transition-colors active:scale-[0.98] hover:bg-muted/30">
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-md bg-muted/45">
+              <Wallet className="h-4 w-4 text-foreground/75" />
               {debtorsCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {debtorsCount > 9 ? '9+' : debtorsCount}
                 </span>
               )}
             </div>
-            <span className="text-xs font-medium text-foreground/85">Cobros</span>
+            <span className="text-xs font-medium leading-4 text-foreground/85">Cobros</span>
           </div>
         </Link>
 
         <Link to="/gastos" className="block">
-          <div className="flex flex-col items-center gap-2 rounded-[20px] bg-white/55 px-2 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.04)] transition-all active:scale-95 hover:bg-white/80 dark:bg-[#151821] dark:shadow-[0_12px_28px_rgba(0,0,0,0.2)] dark:hover:bg-[#1a1d26]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
-              <Receipt className="h-4.5 w-4.5 text-foreground/75" />
+          <div className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-muted/15 px-2 py-2 transition-colors active:scale-[0.98] hover:bg-muted/30">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted/45">
+              <Receipt className="h-4 w-4 text-foreground/75" />
             </div>
-            <span className="text-xs font-medium text-foreground/85">Gastos</span>
+            <span className="text-xs font-medium leading-4 text-foreground/85">Gastos</span>
           </div>
         </Link>
 
       </div>
 
       {/* Tabs para organizar el contenido */}
-      <Tabs defaultValue="resumen" className="w-full border-t border-border/30 pt-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 rounded-[22px] bg-black/[0.04] p-1.5 dark:bg-white/[0.05]">
-          <TabsTrigger value="resumen" className="flex min-h-[46px] items-center gap-2 rounded-[16px] text-base">
+      <Tabs defaultValue="resumen" className="w-full border-t border-border/70 pt-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 rounded-lg border border-border bg-muted/25 p-1">
+          <TabsTrigger value="resumen" className="flex min-h-[42px] items-center gap-2 rounded-md text-sm">
             <TrendingUp className="h-4 w-4" />
             Resumen
           </TabsTrigger>
-          <TabsTrigger value="distribucion" className="flex min-h-[46px] items-center gap-2 rounded-[16px] text-base">
+          <TabsTrigger value="distribucion" className="flex min-h-[42px] items-center gap-2 rounded-md text-sm">
             <Package className="h-4 w-4" />
             Distribución
           </TabsTrigger>

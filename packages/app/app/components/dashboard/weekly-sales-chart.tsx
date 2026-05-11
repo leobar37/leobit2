@@ -59,8 +59,8 @@ export function WeeklySalesChart({
       : false;
 
   return (
-    <div className="shell-card-flat rounded-[24px] bg-white/70 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-[#151821] dark:shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
-      <h3 className="text-sm font-semibold text-foreground mb-4">
+    <div className="rounded-lg border border-border/70 bg-muted/15 p-3.5">
+      <h3 className="mb-4 text-sm font-semibold text-foreground">
         {CHART_TITLES[periodType]}
       </h3>
       <div className="h-44 min-h-44 min-w-0 w-full sm:h-48">

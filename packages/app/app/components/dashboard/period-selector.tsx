@@ -118,17 +118,16 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
     <div className={cn("space-y-3", className)}>
       {/* Period Type Selector */}
       <div className="flex items-center gap-2">
-        <div className="shell-block-muted flex flex-1 rounded-[20px] p-1">
+        <div className="grid flex-1 grid-cols-4 rounded-lg border border-border bg-muted/25 p-1">
           {PERIOD_OPTIONS.map((option) => (
             <button
               key={option.value}
               onClick={() => handleTypeChange(option.value)}
               className={cn(
-                "flex-1 py-2.5 px-2 text-sm font-medium rounded-lg transition-all",
-                "min-h-[44px] touch-manipulation",
+                "min-h-[42px] rounded-md px-2 py-2 text-sm font-medium transition-colors touch-manipulation",
                 value.type === option.value
-                  ? "bg-white text-orange-600 shadow-sm dark:bg-white/[0.06] dark:text-orange-300 dark:shadow-none"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
               )}
             >
               {option.label}

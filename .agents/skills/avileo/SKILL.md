@@ -131,6 +131,7 @@ interface ConfiguracionSistema {
 - **[DATABASE.md](DATABASE.md)** - Database schema, relations, and sync patterns
 - **[MODULES.md](MODULES.md)** - Business modules, workflows, and use cases
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development phases, commands, and guidelines
+- **[SYSTEM_DESIGN.md](SYSTEM_DESIGN.md)** - Business-vertical UX decisions, water flow model, and mobile UI direction
 
 ## Important Constraints
 
@@ -156,6 +157,7 @@ interface ConfiguracionSistema {
 - `docs/technical/database.md` - Complete ER diagram
 - `docs/development/readme.md` - Development roadmap
 - `AGENTS.md` - Project conventions and commands
+- `.agents/skills/avileo/SYSTEM_DESIGN.md` - Durable system design notes for agents
 
 ### Code
 - `packages/backend/src/db/schema/` - Drizzle schema files
@@ -176,5 +178,5 @@ interface ConfiguracionSistema {
 
 ---
 
-*Last updated: February 2026*
+*Last updated: May 2026*
 *For detailed information, see linked documentation files.*

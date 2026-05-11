@@ -256,12 +256,12 @@ export default function VisitasPage() {
       </div>
 
       {groupFilterOptions.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-1 overflow-x-auto border-b border-border/70 pb-2">
           <Button
             type="button"
             size="sm"
             variant={selectedFilterGroupId === null ? "default" : "outline"}
-            className="shrink-0 rounded-full"
+            className="h-8 shrink-0 rounded-md px-3 text-xs"
             onClick={() => setSelectedFilterGroupId(null)}
           >
             Todos
@@ -272,7 +272,7 @@ export default function VisitasPage() {
               type="button"
               size="sm"
               variant={selectedFilterGroupId === group.id ? "default" : "outline"}
-              className="shrink-0 rounded-full"
+              className="h-8 shrink-0 rounded-md px-3 text-xs"
               onClick={() => setSelectedFilterGroupId(group.id)}
             >
               {group.name}
@@ -302,7 +302,7 @@ export default function VisitasPage() {
       )}
 
       {filteredVisitas.length > 0 && (
-        <div className="space-y-3">
+        <div className="border-t border-border/70">
           {filteredVisitas.map((visita) => (
             <VisitaCard
               key={visita.id}

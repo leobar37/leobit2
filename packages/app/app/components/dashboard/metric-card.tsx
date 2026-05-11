@@ -31,8 +31,8 @@ export function MetricCard({
     <div
       data-testid={dataTestId}
       className={cn(
-        "shell-card-flat rounded-[26px] border-0 bg-white/70 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-[#151821] dark:shadow-[0_18px_40px_rgba(0,0,0,0.22)]",
-        featured && "bg-white dark:bg-[#171a22]",
+        "rounded-lg border border-border/70 bg-muted/15 p-3.5",
+        featured && "bg-muted/25",
         className
       )}
     >
@@ -41,7 +41,7 @@ export function MetricCard({
           <p className={cn("font-medium text-muted-foreground", featured ? "text-sm" : "text-sm")}>
             {title}
           </p>
-          <p className={cn("mt-1 truncate font-semibold tracking-tight text-foreground", featured ? "text-[1.95rem]" : "text-[1.8rem]")}>
+          <p className={cn("mt-1 truncate font-semibold tracking-tight text-foreground", featured ? "text-[1.85rem]" : "text-[1.65rem]")}>
             {value}
           </p>
           {subtitle && (
@@ -71,7 +71,7 @@ export function MetricCard({
         </div>
         <div
           className={cn(
-            "ml-3 shrink-0 rounded-[18px] p-2.5",
+            "ml-3 shrink-0 rounded-md p-2",
             iconColor === "text-green-600" && "bg-emerald-100/80 dark:bg-emerald-500/12",
             iconColor === "text-blue-600" && "bg-blue-100/80 dark:bg-blue-500/12",
             iconColor === "text-red-600" && "bg-red-100/80 dark:bg-red-500/12",

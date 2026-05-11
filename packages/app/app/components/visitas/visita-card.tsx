@@ -50,6 +50,23 @@ function formatWaterDate(value?: string | null) {
   }).format(date);
 }
 
+function formatExpectedContainers(quantity?: number | null) {
+  const value = quantity ?? 0;
+  return `${value} ${value === 1 ? "bidón esperado" : "bidones esperados"}`;
+}
+
+function formatReason(reason?: string | null) {
+  if (!reason) return "";
+
+  const labels: Record<string, string> = {
+    no_atendido: "No atendido",
+    reprogramado: "Reprogramado",
+    no_compra: "No compró",
+  };
+
+  return labels[reason] ?? reason.replaceAll("_", " ");
+}
+
 interface VisitaCardProps {
   visita: Visita;
   onMarkAsNotPurchased: (visita: Visita) => void;
@@ -79,9 +96,7 @@ export function VisitaCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border px-4 py-3 transition-colors",
-        "border-stone-200/60 bg-card/55 hover:bg-card/75",
-        "dark:border-white/[0.08] dark:bg-white/[0.025] dark:hover:bg-white/[0.045]"
+        "border-b border-border/70 py-3.5 transition-colors hover:bg-muted/20"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -95,11 +110,11 @@ export function VisitaCard({
             </p>
           )}
           {visita.groups && visita.groups.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
               {visita.groups.map((group) => (
                 <span
                   key={group.id}
-                  className="inline-flex max-w-full items-center rounded-full border border-sky-200/60 bg-sky-50/75 px-2 py-0.5 text-[11px] font-medium leading-4 text-sky-700 dark:border-sky-400/10 dark:bg-sky-400/10 dark:text-sky-200"
+                  className="inline-flex max-w-full items-center text-xs font-medium leading-4 text-sky-600 dark:text-sky-300"
                 >
                   {group.name}
                 </span>
@@ -108,17 +123,15 @@ export function VisitaCard({
           )}
           {visita.motivoNoCompra && (
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-              Motivo: {visita.motivoNoCompra}
+              Motivo: {formatReason(visita.motivoNoCompra)}
             </p>
           )}
         </div>
 
         <div
           className={cn(
-            "flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-5",
-            config.badgeBg,
-            config.badgeText,
-            config.badgeBorder
+            "flex shrink-0 items-center gap-1.5 text-[11px] font-semibold leading-5",
+            config.badgeText
           )}
         >
           <span className={cn("h-1.5 w-1.5 rounded-full", config.dot)} />
@@ -127,8 +140,8 @@ export function VisitaCard({
       </div>
 
       {isWaterMode && visita.waterStop && (
-        <div className="mt-3 border-l-2 border-sky-500 pl-3 text-xs text-muted-foreground">
-          {visita.waterStop.expectedContainerQuantity} bidón(es) esperados
+        <div className="mt-2 border-l-2 border-sky-500 pl-3 text-xs text-muted-foreground">
+          {formatExpectedContainers(visita.waterStop.expectedContainerQuantity)}
           {visita.waterStop.scheduledDate ? ` · ${formatWaterDate(visita.waterStop.scheduledDate)}` : ""}
         </div>
       )}

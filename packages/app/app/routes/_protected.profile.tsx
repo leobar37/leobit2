@@ -34,9 +34,9 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 const themes = [
-  { id: "light" as const, name: "Claro", icon: Sun, color: "text-orange-600", bgColor: "bg-orange-100" },
-  { id: "dark" as const, name: "Oscuro", icon: Moon, color: "text-indigo-600", bgColor: "bg-indigo-100" },
-  { id: "system" as const, name: "Sistema", icon: Monitor, color: "text-green-600", bgColor: "bg-green-100" },
+  { id: "light" as const, name: "Claro", icon: Sun },
+  { id: "dark" as const, name: "Oscuro", icon: Moon },
+  { id: "system" as const, name: "Sistema", icon: Monitor },
 ];
 
 export default function ProfilePage() {
@@ -232,14 +232,14 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <section className="space-y-3 border-t border-border/60 pt-5">
           <div>
-            <h3 className="text-lg font-semibold">Tema</h3>
+            <h3 className="text-base font-semibold">Tema</h3>
             <p className="text-sm text-muted-foreground">
               Selecciona tu preferencia de tema visual
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-muted/25 p-1">
             {themes.map((theme) => {
               const Icon = theme.icon;
               const isSelected = mode === theme.id;
@@ -249,58 +249,62 @@ export default function ProfilePage() {
                   key={theme.id}
                   type="button"
                   onClick={() => setMode(theme.id)}
+                  aria-pressed={isSelected}
                   className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all",
+                    "flex h-12 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors",
                     isSelected
-                      ? "border-orange-200 bg-orange-50"
-                      : "border-gray-100 bg-gray-50/50 hover:border-gray-200"
+                      ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
                   )}
                 >
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", theme.bgColor)}>
-                    <Icon className={cn("h-5 w-5", theme.color)} />
-                  </div>
-                  <span className="text-sm font-medium">{theme.name}</span>
+                  <Icon
+                    className={cn(
+                      "h-4 w-4",
+                      isSelected ? "text-orange-500" : "text-muted-foreground"
+                    )}
+                  />
+                  <span>{theme.name}</span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-4">
+        <section className="space-y-3 border-t border-border/60 pt-5">
           <div>
-            <h3 className="text-lg font-semibold">Aplicación</h3>
+            <h3 className="text-base font-semibold">Aplicación</h3>
             <p className="text-sm text-muted-foreground">
               Instala Avileo en tu dispositivo para acceso rápido
             </p>
           </div>
           {isInstalled ? (
-            <div className="flex items-center gap-3 p-4 rounded-2xl border border-green-200 bg-green-50">
-              <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-green-500/10">
                 <Check className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-green-800">Avileo instalado</p>
-                <p className="text-xs text-green-600">La app está en tu pantalla de inicio</p>
+                <p className="text-sm font-medium">Avileo instalado</p>
+                <p className="text-xs text-muted-foreground">La app está en tu pantalla de inicio</p>
               </div>
             </div>
           ) : canInstall ? (
             <button
               type="button"
               onClick={install}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+              className="flex w-full items-center gap-3 rounded-lg border border-border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/35"
             >
-              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-orange-500/10">
                 {isIOS ? (
                   <Share2 className="h-5 w-5 text-orange-600" />
                 ) : (
                   <Download className="h-5 w-5 text-orange-600" />
                 )}
               </div>
-              <div className="text-left">
-                <p className="text-sm font-medium text-orange-800">
+              <div>
+                <p className="text-sm font-medium">
                   {isIOS ? "Agregar a pantalla de inicio" : "Instalar Avileo"}
                 </p>
-                <p className="text-xs text-orange-600">
+                <p className="text-xs text-muted-foreground">
                   {isIOS
                     ? "Toca el botón compartir y selecciona 'Agregar a pantalla de inicio'"
                     : "Agrega la app para acceso sin conexión"}
@@ -308,17 +312,17 @@ export default function ProfilePage() {
               </div>
             </button>
           ) : (
-            <div className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-gray-50">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-                <Smartphone className="h-5 w-5 text-gray-500" />
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                <Smartphone className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700">Avileo Web</p>
-                <p className="text-xs text-gray-500">Usa tu navegador para acceder a Avileo</p>
+                <p className="text-sm font-medium">Avileo Web</p>
+                <p className="text-xs text-muted-foreground">Usa tu navegador para acceder a Avileo</p>
               </div>
             </div>
           )}
-        </div>
+        </section>
       </MobilePage.Root>
 
       <CameraGalleryDrawer
