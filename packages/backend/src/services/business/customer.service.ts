@@ -55,6 +55,53 @@ export class CustomerService {
     return this.attachWaterProfile(ctx, customer);
   }
 
+  async getCustomerActivity(
+    ctx: RequestContext,
+    filters?: {
+      inactivityDays?: number;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ) {
+    if (!ctx.hasPermission("customers.read")) {
+      throw new ForbiddenError("No tiene permisos para ver clientes");
+    }
+
+    const customers = await this.getCustomers(ctx, {
+      search: filters?.search,
+      limit: filters?.limit,
+      offset: filters?.offset,
+      sortBy: "lastSaleDate",
+      sortOrder: "asc",
+    });
+    const today = new Date();
+    const inactivityDays = filters?.inactivityDays ?? 7;
+
+    return customers
+      .map((customer) => {
+        const lastOrderDate = customer.lastSaleDate ?? null;
+        const daysWithoutOrder = lastOrderDate
+          ? Math.floor((today.getTime() - new Date(lastOrderDate).getTime()) / 86_400_000)
+          : null;
+
+        return {
+          customerId: customer.id,
+          customerName: customer.name,
+          phone: customer.phone,
+          address: customer.address,
+          lastOrderDate,
+          daysWithoutOrder,
+          shouldFollowUp: daysWithoutOrder === null || daysWithoutOrder >= inactivityDays,
+          defaultContainerQuantity: customer.waterProfile?.defaultContainerQuantity ?? null,
+          waterRouteId: customer.waterProfile?.waterRouteId ?? null,
+          waterRouteName: customer.waterProfile?.waterRouteName ?? null,
+          preferredRoute: customer.waterProfile?.preferredRoute ?? null,
+        };
+      })
+      .filter((activity) => activity.shouldFollowUp);
+  }
+
   async createCustomer(
     ctx: RequestContext,
     data: {

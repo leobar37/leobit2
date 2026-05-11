@@ -12,6 +12,9 @@ const ALLOWED_VARIABLES = [
   "telefono",
   "productos",
   "total",
+  "dias_sin_pedido",
+  "ultima_entrega",
+  "bidones_habituales",
 ] as const;
 
 type AllowedVariable = (typeof ALLOWED_VARIABLES)[number];
@@ -23,6 +26,9 @@ interface TemplateVariables {
   telefono?: string;
   productos?: string;
   total?: string | number;
+  dias_sin_pedido?: string | number;
+  ultima_entrega?: string;
+  bidones_habituales?: string | number;
 }
 
 export class WhatsAppTemplateService {
@@ -209,7 +215,8 @@ export class WhatsAppTemplateService {
 
   /**
    * Render a template by replacing variables with actual values
-   * Allowed variables: {nombre_cliente}, {monto}, {fecha}, {telefono}, {productos}, {total}
+   * Allowed variables: {nombre_cliente}, {monto}, {fecha}, {telefono}, {productos}, {total},
+   * {dias_sin_pedido}, {ultima_entrega}, {bidones_habituales}
    */
   renderTemplate(
     template: WhatsAppTemplate,

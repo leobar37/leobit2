@@ -66,4 +66,17 @@ Tu pedido ha sido entregado exitosamente.
     isDefault: false,
     category: "entrega",
   },
+  {
+    name: "Recordatorio de Pedido de Agua",
+    content: `¡Hola {nombre_cliente}!
+
+Hace {dias_sin_pedido} días no registramos un pedido de agua para tu dirección.
+
+Tu último pedido fue: {ultima_entrega}
+Bidones habituales: {bidones_habituales}
+
+¿Deseas que programemos una entrega?`,
+    isDefault: false,
+    category: "entrega",
+  },
 ];

@@ -20,6 +20,9 @@ const ALLOWED_VARIABLES = [
   "telefono",
   "productos",
   "total",
+  "dias_sin_pedido",
+  "ultima_entrega",
+  "bidones_habituales",
 ] as const;
 
 type AllowedVariable = (typeof ALLOWED_VARIABLES)[number];
@@ -31,6 +34,9 @@ interface TemplateVariables {
   telefono?: string;
   productos?: string;
   total?: string | number;
+  dias_sin_pedido?: string | number;
+  ultima_entrega?: string;
+  bidones_habituales?: string | number;
 }
 
 interface SendMessageInput {

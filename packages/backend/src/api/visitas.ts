@@ -51,6 +51,8 @@ export const visitaRoutes = new Elysia({ prefix: "/visitas" })
       body: t.Object({
         distribucionId: t.String({ format: "uuid" }),
         customerId: t.String({ format: "uuid" }),
+        expectedContainerQuantity: t.Optional(t.Number({ minimum: 1 })),
+        waterRouteId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
       }),
     }
   )
@@ -66,6 +68,8 @@ export const visitaRoutes = new Elysia({ prefix: "/visitas" })
       body: t.Object({
         distribucionId: t.String({ format: "uuid" }),
         customerIds: t.Array(t.String({ format: "uuid" })),
+        expectedContainerQuantity: t.Optional(t.Number({ minimum: 1 })),
+        waterRouteId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
       }),
     }
   )

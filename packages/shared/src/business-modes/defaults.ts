@@ -36,8 +36,8 @@ export const BUSINESS_MODE_DEFAULTS: Record<string, BusinessModeFlags> = {
     useContainers: false,
     useDeposits: false,
     useSubscriptions: true,
-    useFrequency: true,
-    customCustomerFields: ["frequency", "deliveryDays", "defaultOrderQuantity"],
+    useFrequency: false,
+    customCustomerFields: ["defaultOrderQuantity"],
     defaultUnit: "unidad",
     suggestedProducts: [
       {

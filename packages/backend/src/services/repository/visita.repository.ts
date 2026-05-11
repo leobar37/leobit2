@@ -30,12 +30,17 @@ export interface CreateVisitaData {
   id?: string;
   distribucionId: string;
   customerId: string;
+  vendedorId?: string;
+  expectedContainerQuantity?: number;
+  waterRouteId?: string | null;
 }
 
 export interface BulkCreateVisitasData {
   distribucionId: string;
   customerIds: string[];
   vendedorId?: string;
+  expectedContainerQuantity?: number;
+  waterRouteId?: string | null;
 }
 
 export interface UpdateVisitaStatusData {
@@ -184,7 +189,7 @@ export class VisitaRepository {
         ...(data.id ? { id: data.id } : {}),
         distribucionId: data.distribucionId,
         customerId: data.customerId,
-        vendedorId: ctx.businessUserId,
+        vendedorId: data.vendedorId ?? ctx.businessUserId,
         businessId: ctx.businessId,
         status: "pendiente",
       })

@@ -126,7 +126,7 @@ export const servicesPlugin = new Elysia({ name: "services" })
       waterCustomerProfileRepo,
       waterRouteRepo
     );
-    const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo);
+    const saleService = new SaleService(saleRepo, paymentRepo, distribucionRepo, distribucionItemRepo, businessRepo, visitaRepo, productVariantRepo);
     const assetService = new AssetService(assetRepo);
     const fileService = new FileService(fileRepo);
     const productVariantService = new ProductVariantService(productVariantRepo);

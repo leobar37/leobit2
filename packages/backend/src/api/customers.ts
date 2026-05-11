@@ -37,6 +37,26 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
     }
   )
   .get(
+    "/activity",
+    async ({ customerService, ctx, query }) => {
+      const activity = await customerService.getCustomerActivity(ctx as RequestContext, {
+        inactivityDays: query.inactivityDays ? parseInt(query.inactivityDays) : undefined,
+        search: query.search,
+        limit: query.limit ? parseInt(query.limit) : undefined,
+        offset: query.offset ? parseInt(query.offset) : undefined,
+      });
+      return { success: true, data: activity };
+    },
+    {
+      query: t.Object({
+        inactivityDays: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+        offset: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get(
     "/:id",
     async ({ customerService, ctx, params }) => {
       const customer = await customerService.getCustomer(ctx as RequestContext, params.id);

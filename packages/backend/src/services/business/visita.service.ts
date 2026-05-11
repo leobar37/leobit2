@@ -84,7 +84,30 @@ export class VisitaService {
       throw new ValidationError("Ya existe una visita para este cliente en esta distribución");
     }
 
-    return this.visitaRepo.create(ctx, data);
+    if (ctx.businessMode !== "agua") {
+      return this.visitaRepo.create(ctx, data);
+    }
+
+    const waterRepo = this.getWaterCustomerProfileRepo();
+    return db.transaction(async (tx) => {
+      const visit = await this.visitaRepo.create(ctx, {
+        ...data,
+        vendedorId: distribucion.vendedorId,
+      }, tx);
+      const profile = await this.ensureWaterProfileForVisit(ctx, data.customerId, tx);
+      await waterRepo.createDeliveryStop(ctx, {
+        visitaId: visit.id,
+        customerProfileId: profile.id,
+        waterRouteId: data.waterRouteId ?? profile.waterRouteId ?? null,
+        scheduledDate: distribucion.fecha,
+        expectedContainerQuantity: Math.max(
+          1,
+          data.expectedContainerQuantity ?? profile.defaultContainerQuantity ?? 1
+        ),
+        containersAtStart: profile.containersAtCustomer ?? 0,
+      }, tx);
+      return visit;
+    });
   }
 
   /**
@@ -122,10 +145,42 @@ export class VisitaService {
       throw new ValidationError("Todos los clientes ya tienen visitas para esta distribución");
     }
 
-    // Create visits for new customers only
-    return this.visitaRepo.bulkCreate(ctx, {
-      distribucionId: data.distribucionId,
-      customerIds: newCustomerIds,
+    if (ctx.businessMode !== "agua") {
+      return this.visitaRepo.bulkCreate(ctx, {
+        distribucionId: data.distribucionId,
+        customerIds: newCustomerIds,
+      });
+    }
+
+    const waterRepo = this.getWaterCustomerProfileRepo();
+    return db.transaction(async (tx) => {
+      const visits = await this.visitaRepo.bulkCreate(ctx, {
+        distribucionId: data.distribucionId,
+        customerIds: newCustomerIds,
+        vendedorId: distribucion.vendedorId,
+      }, tx);
+      const profiles = await Promise.all(
+        newCustomerIds.map((customerId) => this.ensureWaterProfileForVisit(ctx, customerId, tx))
+      );
+      const profileByCustomerId = new Map(profiles.map((profile) => [profile.customerId, profile]));
+
+      for (const visit of visits) {
+        const profile = profileByCustomerId.get(visit.customerId);
+        if (!profile) continue;
+        await waterRepo.createDeliveryStop(ctx, {
+          visitaId: visit.id,
+          customerProfileId: profile.id,
+          waterRouteId: data.waterRouteId ?? profile.waterRouteId ?? null,
+          scheduledDate: distribucion.fecha,
+          expectedContainerQuantity: Math.max(
+            1,
+            data.expectedContainerQuantity ?? profile.defaultContainerQuantity ?? 1
+          ),
+          containersAtStart: profile.containersAtCustomer ?? 0,
+        }, tx);
+      }
+
+      return visits;
     });
   }
 
@@ -335,6 +390,24 @@ export class VisitaService {
       throw new Error("Product variant repository is not configured");
     }
     return this.productVariantRepo;
+  }
+
+  private async ensureWaterProfileForVisit(
+    ctx: RequestContext,
+    customerId: string,
+    tx: Parameters<Parameters<typeof db.transaction>[0]>[0]
+  ) {
+    const waterRepo = this.getWaterCustomerProfileRepo();
+    const existing = await waterRepo.findByCustomerId(ctx, customerId, tx);
+    if (existing) {
+      return existing;
+    }
+
+    return waterRepo.create(ctx, customerId, {
+      deliveryFrequency: "on_demand",
+      deliveryDays: [],
+      defaultContainerQuantity: 1,
+    }, tx);
   }
 
   /**

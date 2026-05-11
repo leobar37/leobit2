@@ -1,6 +1,16 @@
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { db } from "../../lib/db";
-import { sales, customers, abonos, saleItems, type Sale } from "../../db/schema";
+import {
+  sales,
+  customers,
+  abonos,
+  saleItems,
+  visitas,
+  waterDeliveryStops,
+  distribuciones,
+  businessUsers,
+  type Sale,
+} from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 import { NotFoundError } from "../../errors";
 import { getCalendarMonthPeriod } from "@avileo/shared";
@@ -57,6 +67,41 @@ export interface ChartData {
 }
 
 export type PeriodType = "day" | "week" | "month" | "range";
+
+export interface WaterPaymentBreakdown {
+  efectivo: number;
+  yape: number;
+  plin: number;
+  transferencia: number;
+  tarjeta: number;
+}
+
+export interface WaterRouteReportRow {
+  distribucionId: string | null;
+  routeName: string;
+  sellerId: string | null;
+  sellerLabel: string;
+  stopsTotal: number;
+  stopsPending: number;
+  stopsCompleted: number;
+  deliveredContainers: number;
+  salesCount: number;
+  totalRevenue: number;
+  paymentBreakdown: WaterPaymentBreakdown;
+}
+
+export interface WaterOperationalReport {
+  summary: {
+    soldContainers: number;
+    deliveredContainers: number;
+    stopsTotal: number;
+    stopsPending: number;
+    stopsCompleted: number;
+    totalRevenue: number;
+    paymentBreakdown: WaterPaymentBreakdown;
+  };
+  routes: WaterRouteReportRow[];
+}
 
 export class ReportService {
   async getSalesTodayStats(ctx: RequestContext): Promise<SalesTodayStats> {
@@ -399,6 +444,131 @@ export class ReportService {
     return { labels, data };
   }
 
+  async getWaterOperationalReport(
+    ctx: RequestContext,
+    options: {
+      type: PeriodType;
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<WaterOperationalReport> {
+    const { currentRange } = this.getDateRanges(options.type, options.startDate, options.endDate);
+    const startDay = this.toDateKey(currentRange.start);
+    const endDay = this.toDateKey(new Date(currentRange.end.getTime() - 1));
+
+    const validSalesWhere = and(
+      eq(sales.businessId, ctx.businessId),
+      gte(sales.saleDate, currentRange.start),
+      lte(sales.saleDate, currentRange.end),
+      sql`${sales.status} NOT IN ('cancelled', 'draft')`,
+      sql`${sales.visitaId} is not null`,
+      sql`${waterDeliveryStops.id} is not null`
+    );
+
+    const salesRows = await db
+      .select({
+        soldContainers: sql<string>`coalesce(sum(coalesce(${saleItems.quantity}, ${saleItems.orderedQuantity}, ${saleItems.deliveredQuantity}, '0')), '0')`,
+        totalRevenue: sql<string>`coalesce(sum(${saleItems.subtotal}), '0')`,
+        efectivo: sql<string>`coalesce(sum(case when ${sales.paymentMethod} = 'efectivo' then ${saleItems.subtotal} else 0 end), '0')`,
+        yape: sql<string>`coalesce(sum(case when ${sales.paymentMethod} = 'yape' then ${saleItems.subtotal} else 0 end), '0')`,
+        plin: sql<string>`coalesce(sum(case when ${sales.paymentMethod} = 'plin' then ${saleItems.subtotal} else 0 end), '0')`,
+        transferencia: sql<string>`coalesce(sum(case when ${sales.paymentMethod} = 'transferencia' then ${saleItems.subtotal} else 0 end), '0')`,
+        tarjeta: sql<string>`coalesce(sum(case when ${sales.paymentMethod} = 'tarjeta' then ${saleItems.subtotal} else 0 end), '0')`,
+      })
+      .from(sales)
+      .leftJoin(visitas, eq(visitas.id, sales.visitaId))
+      .leftJoin(waterDeliveryStops, eq(waterDeliveryStops.visitaId, visitas.id))
+      .leftJoin(saleItems, eq(saleItems.saleId, sales.id))
+      .where(validSalesWhere);
+
+    const stopRows = await db
+      .select({
+        stopsTotal: sql<number>`count(*)`,
+        stopsPending: sql<number>`count(*) filter (where ${waterDeliveryStops.status} = 'pendiente')`,
+        stopsCompleted: sql<number>`count(*) filter (where ${waterDeliveryStops.status} <> 'pendiente')`,
+        deliveredContainers: sql<number>`coalesce(sum(${waterDeliveryStops.deliveredContainerQuantity}), 0)`,
+      })
+      .from(waterDeliveryStops)
+      .where(
+        and(
+          eq(waterDeliveryStops.businessId, ctx.businessId),
+          gte(waterDeliveryStops.scheduledDate, startDay),
+          lte(waterDeliveryStops.scheduledDate, endDay)
+        )
+      );
+
+    const routeRows = await db
+      .select({
+        distribucionId: distribuciones.id,
+        routeName: distribuciones.puntoVenta,
+        sellerId: distribuciones.vendedorId,
+        sellerPoint: businessUsers.salesPoint,
+        stopsTotal: sql<number>`count(distinct ${waterDeliveryStops.id})`,
+        stopsPending: sql<number>`count(distinct ${waterDeliveryStops.id}) filter (where ${waterDeliveryStops.status} = 'pendiente')`,
+        stopsCompleted: sql<number>`count(distinct ${waterDeliveryStops.id}) filter (where ${waterDeliveryStops.status} <> 'pendiente')`,
+        deliveredContainers: sql<number>`coalesce(max(${this.routeDeliveredContainersSubquery()}), 0)`,
+        salesCount: sql<number>`count(distinct ${sales.id}) filter (where ${sales.status} NOT IN ('cancelled', 'draft'))`,
+        totalRevenue: sql<string>`coalesce(sum(case when ${sales.status} NOT IN ('cancelled', 'draft') then ${saleItems.subtotal} else 0 end), '0')`,
+        efectivo: sql<string>`coalesce(sum(case when ${sales.status} NOT IN ('cancelled', 'draft') and ${sales.paymentMethod} = 'efectivo' then ${saleItems.subtotal} else 0 end), '0')`,
+        yape: sql<string>`coalesce(sum(case when ${sales.status} NOT IN ('cancelled', 'draft') and ${sales.paymentMethod} = 'yape' then ${saleItems.subtotal} else 0 end), '0')`,
+        plin: sql<string>`coalesce(sum(case when ${sales.status} NOT IN ('cancelled', 'draft') and ${sales.paymentMethod} = 'plin' then ${saleItems.subtotal} else 0 end), '0')`,
+        transferencia: sql<string>`coalesce(sum(case when ${sales.status} NOT IN ('cancelled', 'draft') and ${sales.paymentMethod} = 'transferencia' then ${saleItems.subtotal} else 0 end), '0')`,
+        tarjeta: sql<string>`coalesce(sum(case when ${sales.status} NOT IN ('cancelled', 'draft') and ${sales.paymentMethod} = 'tarjeta' then ${saleItems.subtotal} else 0 end), '0')`,
+      })
+      .from(distribuciones)
+      .leftJoin(businessUsers, eq(businessUsers.id, distribuciones.vendedorId))
+      .leftJoin(visitas, eq(visitas.distribucionId, distribuciones.id))
+      .leftJoin(waterDeliveryStops, eq(waterDeliveryStops.visitaId, visitas.id))
+      .leftJoin(sales, eq(sales.visitaId, visitas.id))
+      .leftJoin(saleItems, eq(saleItems.saleId, sales.id))
+      .where(
+        and(
+          eq(distribuciones.businessId, ctx.businessId),
+          gte(distribuciones.fecha, startDay),
+          lte(distribuciones.fecha, endDay)
+        )
+      )
+      .groupBy(distribuciones.id, distribuciones.puntoVenta, distribuciones.vendedorId, businessUsers.salesPoint)
+      .orderBy(desc(distribuciones.fecha));
+
+    const salesSummary = salesRows[0];
+    const stops = stopRows[0];
+
+    return {
+      summary: {
+        soldContainers: this.parseNumber(salesSummary?.soldContainers),
+        deliveredContainers: Number(stops?.deliveredContainers ?? 0),
+        stopsTotal: Number(stops?.stopsTotal ?? 0),
+        stopsPending: Number(stops?.stopsPending ?? 0),
+        stopsCompleted: Number(stops?.stopsCompleted ?? 0),
+        totalRevenue: this.parseNumber(salesSummary?.totalRevenue),
+        paymentBreakdown: this.paymentBreakdownFromRow(salesSummary),
+      },
+      routes: routeRows.map((row) => ({
+        distribucionId: row.distribucionId,
+        routeName: row.routeName ?? "Ruta",
+        sellerId: row.sellerId,
+        sellerLabel: row.sellerPoint ?? "Repartidor",
+        stopsTotal: Number(row.stopsTotal ?? 0),
+        stopsPending: Number(row.stopsPending ?? 0),
+        stopsCompleted: Number(row.stopsCompleted ?? 0),
+        deliveredContainers: Number(row.deliveredContainers ?? 0),
+        salesCount: Number(row.salesCount ?? 0),
+        totalRevenue: this.parseNumber(row.totalRevenue),
+        paymentBreakdown: this.paymentBreakdownFromRow(row),
+      })),
+    };
+  }
+
+  private routeDeliveredContainersSubquery() {
+    return sql<number>`(
+      select coalesce(sum(wds.delivered_container_quantity), 0)
+      from water_delivery_stops wds
+      join visitas v on v.id = wds.visita_id
+      where v.distribucion_id = ${distribuciones.id}
+    )`;
+  }
+
   private async getSalesRangeStats(
     ctx: RequestContext,
     start: Date,
@@ -489,6 +659,30 @@ export class ReportService {
         start: new Date(today.getTime() - 24 * 60 * 60 * 1000),
         end: today,
       },
+    };
+  }
+
+  private toDateKey(date: Date): string {
+    return date.toISOString().slice(0, 10);
+  }
+
+  private parseNumber(value: string | number | null | undefined): number {
+    return typeof value === "number" ? value : parseFloat(value ?? "0");
+  }
+
+  private paymentBreakdownFromRow(row?: {
+    efectivo?: string | number | null;
+    yape?: string | number | null;
+    plin?: string | number | null;
+    transferencia?: string | number | null;
+    tarjeta?: string | number | null;
+  } | null): WaterPaymentBreakdown {
+    return {
+      efectivo: this.parseNumber(row?.efectivo),
+      yape: this.parseNumber(row?.yape),
+      plin: this.parseNumber(row?.plin),
+      transferencia: this.parseNumber(row?.transferencia),
+      tarjeta: this.parseNumber(row?.tarjeta),
     };
   }
 

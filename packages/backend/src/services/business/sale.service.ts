@@ -4,6 +4,7 @@ import type { DistribucionRepository } from "../repository/distribucion.reposito
 import type { DistribucionItemRepository } from "../repository/distribucion-item.repository";
 import type { BusinessRepository } from "../repository/business.repository";
 import type { VisitaRepository } from "../repository/visita.repository";
+import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale, SaleItem } from "../../db/schema";
@@ -21,7 +22,8 @@ export class SaleService {
     private distribucionRepository: DistribucionRepository,
     private distribucionItemRepository: DistribucionItemRepository,
     private businessRepository: BusinessRepository,
-    private visitaRepository: VisitaRepository
+    private visitaRepository: VisitaRepository,
+    private productVariantRepository?: ProductVariantRepository
   ) {}
 
   async getSales(
@@ -54,8 +56,11 @@ export class SaleService {
       visitaId?: string;
       type?: "instant_sale" | "pre_order";
       saleType: "contado" | "credito";
+      status?: "draft" | "confirmed" | "active" | "delivered" | "cancelled";
       totalAmount: number;
       amountPaid?: number;
+      paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
+      paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
       tara?: number;
       netWeight?: number;
       saleDate?: string;
@@ -114,7 +119,8 @@ export class SaleService {
       data.amountPaid ?? (data.saleType === "contado" ? totalAmount : 0);
     const amountPaid = parseFloat(normalizeAmount(amountPaidInput, 2, "amountPaid"));
 
-    this.validateWaterFullPayment(ctx, data.saleType, "pago_total", totalAmount, amountPaid);
+    const paymentMode = data.paymentMode ?? "pago_total";
+    this.validateWaterFullPayment(ctx, data.saleType, paymentMode, totalAmount, amountPaid);
 
     const balanceDue = data.saleType === "credito" ? Math.max(totalAmount - amountPaid, 0) : 0;
 
@@ -161,9 +167,12 @@ export class SaleService {
       visitaId: data.visitaId,
       type: data.type || "instant_sale",
       saleType: data.saleType,
+      status: data.status,
       totalAmount: totalAmount.toFixed(2),
       amountPaid: amountPaid.toFixed(2),
       balanceDue: balanceDue.toFixed(2),
+      paymentMode,
+      paymentMethod: data.paymentMethod,
       tara: isPreOrder ? undefined : data.tara?.toString(),
       netWeight: isPreOrder ? undefined : data.netWeight?.toString(),
       deliveryDate: isPreOrder ? data.deliveryDate : undefined,
@@ -185,6 +194,14 @@ export class SaleService {
 
     return db.transaction(async (tx) => {
       const sale = await this.repository.create(ctx, salePayload, tx);
+
+      if (ctx.businessMode === "agua" && salePayload.status === "active" && this.productVariantRepository) {
+        for (const item of items) {
+          const quantity = item.quantity ?? item.orderedQuantity ?? 0;
+          if (quantity <= 0) continue;
+          await this.productVariantRepository.adjustInventory(ctx, item.variantId, -quantity, tx);
+        }
+      }
 
       // If sale was created from a visita, update the visita status to "compro"
       if (data.visitaId) {
