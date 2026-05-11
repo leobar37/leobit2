@@ -23,16 +23,20 @@ import { VisitaCard } from "~/components/visitas/visita-card";
 import { SelectionDialog } from "~/components/visitas/selection-dialog";
 import { NoPurchaseDialog } from "~/components/visitas/no-purchase-dialog";
 import { DistributionHeader } from "~/components/visitas/distribution-header";
+import { useBusinessMode } from "~/hooks/use-business-mode";
 import { toast } from "sonner";
 import { showError } from "~/lib/errors";
 
 export default function VisitasPage() {
-  useSetLayout({ title: "Visitas" });
+  const { is } = useBusinessMode();
+  const isWaterMode = is.agua;
+  useSetLayout({ title: isWaterMode ? "Entregas" : "Visitas" });
   const navigate = useNavigate();
 
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
   const [search, setSearch] = useState("");
   const [selectedFilterGroupId, setSelectedFilterGroupId] = useState<string | null>(null);
+  const [expectedContainerQuantity, setExpectedContainerQuantity] = useState(1);
 
   const {
     selectionModal,
@@ -100,10 +104,10 @@ export default function VisitasPage() {
       await createVistaMutation.mutateAsync({
         distribucionId: distribucion.id,
         customerId: selectedCustomerId,
+        ...(isWaterMode ? { expectedContainerQuantity } : {}),
       });
       selectionModal.close();
       resetSelectionState();
-      toast.success("Visita creada");
     } catch (error) {
       console.error("Error creating visita:", error);
       toast.error("Error al crear visita");
@@ -124,14 +128,14 @@ export default function VisitasPage() {
 
     setIsCreating(true);
     try {
-      const visits = await createVisitasFromGroupMutation.mutateAsync({
+      await createVisitasFromGroupMutation.mutateAsync({
         distribucionId: distribucion.id,
         groupId: selectedGroupId,
+        ...(isWaterMode ? { expectedContainerQuantity } : {}),
       });
 
       selectionModal.close();
       resetSelectionState();
-      toast.success(`${visits.length} visitas creadas`);
     } catch (error) {
       console.error("Error creating group visitas:", error);
       toast.error("Error al crear visitas");
@@ -173,6 +177,11 @@ export default function VisitasPage() {
   async function handleGenerateSale(visita: Visita) {
     if (!visita.customer) return;
 
+    if (isWaterMode) {
+      navigate("/mi-distribucion");
+      return;
+    }
+
     try {
       const sale = await createDraftSale.mutateAsync({
         customerId: visita.customerId,
@@ -210,7 +219,9 @@ export default function VisitasPage() {
         <p className="mb-4 text-sm text-muted-foreground">
           {distribucion
             ? "Esta distribución ya fue cerrada. No se pueden registrar nuevas visitas."
-            : "Necesitas tener una distribución activa para registrar visitas"}
+            : isWaterMode
+              ? "Necesitas tener una ruta activa para registrar entregas"
+              : "Necesitas tener una distribución activa para registrar visitas"}
         </p>
         <Button
           onClick={() => navigate("/mi-distribucion")}
@@ -275,8 +286,8 @@ export default function VisitasPage() {
           <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <p className="mb-4 text-muted-foreground">
             {search || selectedFilterGroupId
-              ? "No se encontraron visitas"
-              : "No hay visitas registradas"}
+              ? isWaterMode ? "No se encontraron entregas" : "No se encontraron visitas"
+              : isWaterMode ? "No hay entregas registradas" : "No hay visitas registradas"}
           </p>
           {!search && !selectedFilterGroupId && distribucion && (
             <Button
@@ -284,7 +295,7 @@ export default function VisitasPage() {
               className="bg-orange-500 hover:bg-orange-600"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Agregar visita
+              {isWaterMode ? "Agregar entrega" : "Agregar visita"}
             </Button>
           )}
         </div>
@@ -298,6 +309,7 @@ export default function VisitasPage() {
               visita={visita}
               onMarkAsNotPurchased={handleMarkAsNotPurchasedClick}
               onGenerateSale={handleGenerateSale}
+              isWaterMode={isWaterMode}
             />
           ))}
         </div>
@@ -307,6 +319,7 @@ export default function VisitasPage() {
         <MobileShell.FloatingAction>
           <Button
             size="icon"
+            aria-label={isWaterMode ? "Agregar entrega" : "Agregar visita"}
             className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
             onClick={() => selectionModal.open()}
           >
@@ -327,6 +340,9 @@ export default function VisitasPage() {
         selectedGroupId={selectedGroupId}
         onGroupSelect={setSelectedGroupId}
         isCreating={isCreating}
+        isWaterMode={isWaterMode}
+        expectedContainerQuantity={expectedContainerQuantity}
+        onExpectedContainerQuantityChange={setExpectedContainerQuantity}
         onCreateSingle={handleCreateSingleVisita}
         onCreateGroup={handleCreateGroupVisitas}
       />

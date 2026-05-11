@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router";
-import { Search, Wallet, User, AlertCircle, ChevronRight, Phone, CalendarDays, SlidersHorizontal } from "lucide-react";
+import { Search, Wallet, AlertCircle, ChevronRight, Phone, CalendarDays, SlidersHorizontal, Droplets, CheckCircle2, ArrowDownUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,16 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useAccountsReceivable, useTotalAccountsReceivable } from "~/hooks/use-accounts-receivable";
+import { usePaginatedCustomers, type Customer } from "~/hooks/use-customers";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { useBusinessMode } from "~/hooks/use-business-mode";
 import { useCocheraDebts } from "~/hooks/use-cochera-debts";
+import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
 import { cn, formatCurrency } from "~/lib/utils";
 import { formatDate } from "~/lib/formatting";
 import { getDebtLevel } from "~/lib/debt";
-import type { AccountsReceivableItem } from "~/hooks/use-accounts-receivable";
 
 type DebtFilter = "all" | "high" | "medium" | "low";
 type SortBy = "amount-desc" | "amount-asc" | "date-desc" | "date-asc";
+type WaterSortBy = "date-desc" | "amount-desc";
 
 const filterOptions: { key: DebtFilter; label: string }[] = [
   { key: "all", label: "Todos" },
@@ -215,6 +217,180 @@ function CocheraCobrosPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function WaterCustomerBalanceRow({ customer }: { customer: Customer }) {
+  const navigate = useNavigate();
+  const debt = customer.totalDebt ?? 0;
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(`/cobros/nuevo?clienteId=${customer.id}`)}
+      className="w-full border-b shell-divider py-4 text-left transition-colors hover:bg-muted/30"
+      data-testid={`water-balance-row-${customer.id}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-semibold text-foreground">
+            {customer.name}
+          </p>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <Phone className="h-3.5 w-3.5" />
+              <span className="truncate">{customer.phone || "Sin teléfono"}</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5" />
+              {customer.lastSaleDate ? formatDate(new Date(customer.lastSaleDate)) : "Sin actividad"}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Excepción por regularizar desde entrega o venta rápida.
+          </p>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <p className="text-lg font-semibold text-destructive">
+            S/ {formatCurrency(debt)}
+          </p>
+          <p className="text-xs text-muted-foreground">saldo pendiente</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function WaterCobrosPage() {
+  useSetLayout({ title: "Saldos pendientes", showBackButton: true, backHref: "/dashboard" });
+
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<WaterSortBy>("date-desc");
+  const [quickSaleOpen, setQuickSaleOpen] = useState(false);
+
+  const { data: customersPage, isLoading } = usePaginatedCustomers({
+    search: search || undefined,
+    limit: 100,
+    offset: 0,
+    sortBy: "name",
+    sortOrder: "asc",
+  });
+
+  const rawBalances = (customersPage?.items ?? []).filter((customer) => (customer.totalDebt ?? 0) > 0);
+
+  const balances = useMemo(() => {
+    return [...rawBalances].sort((a, b) => {
+      if (sortBy === "amount-desc") {
+        return (b.totalDebt ?? 0) - (a.totalDebt ?? 0);
+      }
+
+      const bDate = b.lastSaleDate ? new Date(b.lastSaleDate).getTime() : 0;
+      const aDate = a.lastSaleDate ? new Date(a.lastSaleDate).getTime() : 0;
+      return bDate - aDate;
+    });
+  }, [rawBalances, sortBy]);
+
+  const totalDebt = balances.reduce((sum, customer) => sum + (customer.totalDebt ?? 0), 0);
+  const lastActivity = balances[0]?.lastSaleDate ? formatDate(new Date(balances[0].lastSaleDate)) : "Sin actividad";
+
+  return (
+    <div className="space-y-4">
+      <section className="border-b shell-divider pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-sky-500" />
+              <h1 className="text-2xl font-bold tracking-tight">Saldos pendientes</h1>
+            </div>
+            <p className="mt-1 max-w-[28rem] text-sm text-muted-foreground">
+              Excepciones de agua por regularizar. El flujo normal se cobra al completar la entrega.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground">Pendiente</p>
+            <p className="text-xl font-semibold text-foreground">S/ {formatCurrency(totalDebt)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Clientes</p>
+            <p className="text-xl font-semibold text-foreground">{balances.length}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Última act.</p>
+            <p className="truncate text-sm font-medium text-foreground">{lastActivity}</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar cliente o teléfono..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="shell-search-field pl-10 pr-4"
+        />
+      </div>
+
+      {balances.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {balances.length} {balances.length === 1 ? "saldo pendiente" : "saldos pendientes"}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={() => setSortBy((current) => current === "date-desc" ? "amount-desc" : "date-desc")}
+          >
+            <ArrowDownUp className="h-4 w-4" />
+            {sortBy === "date-desc" ? "Más reciente" : "Mayor saldo"}
+          </Button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="py-8 text-center text-muted-foreground">
+          Cargando saldos...
+        </div>
+      ) : balances.length === 0 ? (
+        <div className="py-12 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
+            <CheckCircle2 className="h-7 w-7" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground">
+            No hay saldos pendientes
+          </h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            Las entregas de agua se cobran al completar la entrega.
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <Button variant="outline" className="h-11 rounded-lg" asChild>
+              <Link to="/visitas">Ver entregas</Link>
+            </Button>
+            <Button
+              type="button"
+              className="h-11 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
+              onClick={() => setQuickSaleOpen(true)}
+            >
+              Nueva venta rápida
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="border-t shell-divider">
+          {balances.map((customer) => (
+            <WaterCustomerBalanceRow key={customer.id} customer={customer} />
+          ))}
+        </div>
+      )}
+
+      <CreateSaleTypeSheet open={quickSaleOpen} onOpenChange={setQuickSaleOpen} />
     </div>
   );
 }
@@ -438,6 +614,10 @@ export default function CobrosPage() {
 
   if (is.cochera) {
     return <CocheraCobrosPage />;
+  }
+
+  if (is.agua) {
+    return <WaterCobrosPage />;
   }
 
   return <PolleriaCobrosPage />;

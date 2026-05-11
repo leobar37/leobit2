@@ -106,6 +106,20 @@ export interface CustomerTagSummary {
   updatedAt: Date;
 }
 
+export interface CustomerActivity {
+  customerId: string;
+  customerName: string;
+  phone: string | null;
+  address: string | null;
+  lastOrderDate: string | null;
+  daysWithoutOrder: number | null;
+  shouldFollowUp: boolean;
+  defaultContainerQuantity: number | null;
+  waterRouteId: string | null;
+  waterRouteName: string | null;
+  preferredRoute: string | null;
+}
+
 /**
  * Get all customers for the current business
  */
@@ -147,6 +161,28 @@ export function usePaginatedCustomers(query: CustomerPageQuery) {
       });
       const data = extractData<Customer[]>(response);
       return { items: data, total: data.length };
+    },
+  });
+}
+
+export function useCustomerActivity(filters?: {
+  inactivityDays?: number;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return useQuery<CustomerActivity[]>({
+    queryKey: ["customers", "activity", filters],
+    queryFn: async () => {
+      const response = await api.customers.activity.get({
+        query: {
+          inactivityDays: filters?.inactivityDays?.toString(),
+          search: filters?.search,
+          limit: filters?.limit?.toString(),
+          offset: filters?.offset?.toString(),
+        },
+      });
+      return extractData<CustomerActivity[]>(response);
     },
   });
 }

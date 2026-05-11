@@ -16,6 +16,8 @@ import { useCreateDraftSale } from "~/hooks/use-sales";
 import { useNavigate } from "react-router";
 import { cn } from "~/lib/utils";
 import { addDays, formatDisplayDate, isSameDay } from "~/lib/date-utils";
+import { useBusinessMode } from "~/hooks/use-business-mode";
+import { WaterQuickSaleSheet } from "./water-quick-sale-sheet";
 
 interface CreateSaleTypeSheetProps {
   open: boolean;
@@ -24,6 +26,18 @@ interface CreateSaleTypeSheetProps {
 }
 
 export function CreateSaleTypeSheet({ open, onOpenChange, customerId }: CreateSaleTypeSheetProps) {
+  const { mode: businessMode } = useBusinessMode();
+
+  if (businessMode === "agua") {
+    return (
+      <WaterQuickSaleSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        customerId={customerId}
+      />
+    );
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent

@@ -211,11 +211,11 @@
   }
 
   .shell-search-field {
-    height: 3rem;
-    border-radius: 20px;
+    height: 2.75rem;
+    border-radius: 10px;
     background: var(--surface-highlight);
     border: 1px solid var(--border-color-strong);
-    box-shadow: var(--highlight-top-soft), var(--shadow-sm);
+    box-shadow: var(--highlight-top-soft);
     color: hsl(var(--foreground));
   }
 

@@ -43,6 +43,41 @@ export interface ChartData {
   data: number[];
 }
 
+export interface WaterPaymentBreakdown {
+  efectivo: number;
+  yape: number;
+  plin: number;
+  transferencia: number;
+  tarjeta: number;
+}
+
+export interface WaterRouteReportRow {
+  distribucionId: string | null;
+  routeName: string;
+  sellerId: string | null;
+  sellerLabel: string;
+  stopsTotal: number;
+  stopsPending: number;
+  stopsCompleted: number;
+  deliveredContainers: number;
+  salesCount: number;
+  totalRevenue: number;
+  paymentBreakdown: WaterPaymentBreakdown;
+}
+
+export interface WaterOperationalReport {
+  summary: {
+    soldContainers: number;
+    deliveredContainers: number;
+    stopsTotal: number;
+    stopsPending: number;
+    stopsCompleted: number;
+    totalRevenue: number;
+    paymentBreakdown: WaterPaymentBreakdown;
+  };
+  routes: WaterRouteReportRow[];
+}
+
 /**
  * Sales stats - API query
  */
@@ -96,6 +131,28 @@ export function useSalesChart(period: PeriodParams) {
       return extractData(response) as ChartData;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+}
+
+export function useWaterOperationalReport(
+  period: PeriodParams,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: queryKeys.dashboard.water(period),
+    queryFn: async () => {
+      const params: Record<string, string> = { type: period.type };
+      if (period.startDate) params.startDate = period.startDate;
+      if (period.endDate) params.endDate = period.endDate;
+
+      const response = await api.reports["water-operational"].get({
+        query: params,
+      });
+      return extractData(response) as WaterOperationalReport;
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: 1000 * 60 * 2,
     retry: 1,
   });
 }

@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme";
+import { ThemeToggle } from "~/components/theme";
 
 export function Navigation() {
   return (

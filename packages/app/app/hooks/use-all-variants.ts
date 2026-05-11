@@ -44,8 +44,8 @@ export function useAllVariants() {
         }>
       >(productsResponse);
 
-      // Fetch variants for each product in parallel
-      const activeProducts = products.filter((p) => p.isActive && p.hasVariants);
+      // Simple products also have a default variant, so fetch variants for every active product.
+      const activeProducts = products.filter((p) => p.isActive);
       const variantsResults = await Promise.all(
         activeProducts.map(async (product) => {
           const response = await api.products({ id: product.id }).variants.get({

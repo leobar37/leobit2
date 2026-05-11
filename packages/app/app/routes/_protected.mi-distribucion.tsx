@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router";
-import { Package, TrendingUp, AlertCircle, ShoppingBag, Settings, Lock, CheckCircle2, Receipt } from "lucide-react";
+import { Package, TrendingUp, AlertCircle, ShoppingBag, Settings, Lock, CheckCircle2, Receipt, Route, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -141,6 +141,88 @@ const [CierreConfirmDialog, useCierreConfirmDialog] = createModal<CierreConfirmD
   { type: "drawer" }
 );
 
+const paymentMethodLabels: Record<string, string> = {
+  efectivo: "Efectivo",
+  yape: "Yape",
+  plin: "Plin",
+  transferencia: "Transferencia",
+  tarjeta: "Tarjeta",
+  saldo: "Saldo",
+  sin_metodo: "Sin método",
+};
+
+const waterStopStatusLabels: Record<string, string> = {
+  pendiente: "Pendiente",
+  entregado: "Entregado",
+  no_atendido: "No atendió",
+  reprogramado: "Reprogramado",
+};
+
+function formatWaterStopStatus(status?: string | null) {
+  return waterStopStatusLabels[status ?? "pendiente"] ?? status ?? "Pendiente";
+}
+
+function WaterRouteSummary({
+  routeName,
+  estado,
+  metrics,
+  totalAmount,
+}: {
+  routeName: string;
+  estado: string;
+  metrics: {
+    deliveredContainers: number;
+    pendingStops: number;
+    completedStops: number;
+    totalStops: number;
+  };
+  totalAmount: number;
+}) {
+  const statusLabel = estado === "cerrado" ? "Cerrada" : estado === "en_ruta" ? "En ruta" : "Activa";
+
+  return (
+    <section className="border-b border-border/60 pb-4 dark:border-white/[0.07]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-medium text-sky-600 dark:text-sky-300">
+            <Route className="h-4 w-4" />
+            Ruta de hoy
+          </div>
+          <h2 className="mt-1 truncate text-xl font-semibold text-foreground">{routeName}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Stock descontado desde el inventario del negocio.
+          </p>
+        </div>
+        <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <span className={estado === "cerrado" ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-sky-500"} />
+          {statusLabel}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
+        <div>
+          <p className="text-xs text-muted-foreground">Paradas</p>
+          <p className="font-semibold text-foreground">
+            {metrics.completedStops}/{metrics.totalStops}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Pendientes</p>
+          <p className="font-semibold text-foreground">{metrics.pendingStops}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Bidones vendidos</p>
+          <p className="font-semibold text-foreground">{metrics.deliveredContainers}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Recaudado</p>
+          <p className="font-semibold text-foreground">S/ {formatCurrency(totalAmount)}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function MiDistribucionPage() {
   const navigate = useNavigate();
   const { data: distribucion, isLoading, error } = useMiDistribucion();
@@ -151,7 +233,7 @@ export default function MiDistribucionPage() {
   const cierreConfirm = useCierreConfirmDialog();
   const isWaterMode = business?.businessMode === "agua";
   const { data: waterVisits = [] } = useVisitas(isWaterMode ? distribucion?.id : undefined);
-  const { data: allVariants = [] } = useAllVariants();
+  const { data: allVariants = [], isLoading: isLoadingVariants, isError: hasVariantsError } = useAllVariants();
   const [waterCompletionDrafts, setWaterCompletionDrafts] = useState<Record<string, {
     delivered: number;
     collected: number;
@@ -204,6 +286,32 @@ export default function MiDistribucionPage() {
       .reduce((sum, s) => sum + parseFloat(s.totalAmount || "0"), 0);
     return { contado, credito, total: contado + credito };
   }, [distribucionSales]);
+
+  const waterRouteMetrics = useMemo(() => {
+    const stops = waterVisits.map((visit) => visit.waterStop).filter(Boolean);
+    const deliveredContainers = stops.reduce(
+      (sum, stop) => sum + (stop?.deliveredContainerQuantity ?? 0),
+      0
+    );
+    const pendingStops = stops.filter((stop) => stop?.status === "pendiente").length;
+    const completedStops = stops.length - pendingStops;
+    const validSales = (distribucionSales ?? []).filter(
+      (sale) => sale.status === "active" || sale.status === "confirmed" || sale.status === "delivered"
+    );
+    const byPaymentMethod = validSales.reduce<Record<string, number>>((acc, sale) => {
+      const key = sale.paymentMethod ?? "sin_metodo";
+      acc[key] = (acc[key] ?? 0) + parseFloat(sale.totalAmount || "0");
+      return acc;
+    }, {});
+
+    return {
+      deliveredContainers,
+      pendingStops,
+      completedStops,
+      totalStops: stops.length,
+      byPaymentMethod,
+    };
+  }, [waterVisits, distribucionSales]);
 
   // Expenses for this distribution
   const totalExpenses = useMemo(() => {
@@ -277,10 +385,11 @@ export default function MiDistribucionPage() {
     visitId: string,
     patch: Partial<{ delivered: number; collected: number; damaged: number; lost: number; notes: string; variantId: string; paymentMethod: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta" }>
   ) => {
+    const expected = waterVisits.find((visit) => visit.id === visitId)?.waterStop?.expectedContainerQuantity ?? 0;
     setWaterCompletionDrafts((drafts) => ({
       ...drafts,
       [visitId]: {
-        delivered: drafts[visitId]?.delivered ?? 0,
+        delivered: drafts[visitId]?.delivered ?? expected,
         collected: drafts[visitId]?.collected ?? 0,
         damaged: drafts[visitId]?.damaged ?? 0,
         lost: drafts[visitId]?.lost ?? 0,
@@ -325,9 +434,13 @@ export default function MiDistribucionPage() {
       <Card className="border rounded-xl">
         <CardContent className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-lg font-semibold mb-2">Modo Libre</h2>
+          <h2 className="text-lg font-semibold mb-2">
+            {isWaterMode ? "Ruta no configurada" : "Modo Libre"}
+          </h2>
           <p className="text-muted-foreground">
-            Tu negocio no utiliza control de distribución. Puedes registrar ventas sin asignación de kilos.
+            {isWaterMode
+              ? "Activa el control de rutas para organizar entregas y registrar bidones vendidos."
+              : "Tu negocio no utiliza control de distribución. Puedes registrar ventas sin asignación de kilos."}
           </p>
         </CardContent>
       </Card>
@@ -358,7 +471,9 @@ export default function MiDistribucionPage() {
             </Link>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Contacta a tu administrador para que te asigne kilos.
+              {isWaterMode
+                ? "Contacta a tu administrador para que te asigne una ruta."
+                : "Contacta a tu administrador para que te asigne kilos."}
             </p>
           )}
         </CardContent>
@@ -371,18 +486,27 @@ export default function MiDistribucionPage() {
   return (
     <>
       <div className="space-y-4 pb-52">
-        <InventoryCard
-          puntoVenta={distribucionWithItems.puntoVenta}
-          modo={"libre" as const}
-          estado={distribucionWithItems.estado as "activo" | "cerrado" | "en_ruta"}
-          cantidadItems={distribucionWithItems.items?.length || 0}
-        />
+        {isWaterMode ? (
+          <WaterRouteSummary
+            routeName={distribucionWithItems.puntoVenta}
+            estado={distribucionWithItems.estado}
+            metrics={waterRouteMetrics}
+            totalAmount={salesBreakdown.total}
+          />
+        ) : (
+          <InventoryCard
+            puntoVenta={distribucionWithItems.puntoVenta}
+            modo={"libre" as const}
+            estado={distribucionWithItems.estado as "activo" | "cerrado" | "en_ruta"}
+            cantidadItems={distribucionWithItems.items?.length || 0}
+          />
+        )}
 
         {isWaterMode && (
           <Card className="border rounded-xl">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <Package className="h-4 w-4" />
+                <Droplets className="h-4 w-4" />
                 Entregas de agua
               </CardTitle>
             </CardHeader>
@@ -406,38 +530,45 @@ export default function MiDistribucionPage() {
                     damaged: 0,
                     lost: 0,
                     notes: "",
+                    variantId: "",
+                    paymentMethod: "efectivo" as const,
                   };
                   const completed = stop?.status && stop.status !== "pendiente";
+                  const missingProduct = !draft.variantId;
                   return (
-                    <div key={visit.id} className="rounded-2xl border bg-card p-4">
+                    <div
+                      key={visit.id}
+                      data-testid="water-delivery-stop"
+                      className="border-b border-border/60 py-4 last:border-b-0 dark:border-white/[0.07]"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-semibold">{visit.customer?.name ?? "Cliente"}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-base font-semibold leading-5">{visit.customer?.name ?? "Cliente"}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
                             {visit.customer?.address || "Sin dirección registrada"}
                           </p>
                         </div>
-                        <Badge variant={completed ? "default" : "secondary"}>
-                          {completed ? stop?.status : "pendiente"}
-                        </Badge>
+                        <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                          <span className={completed ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-amber-500"} />
+                          {formatWaterStopStatus(stop?.status)}
+                        </span>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <div className="rounded-xl bg-sky-50 p-3 text-sky-900 dark:bg-sky-500/10 dark:text-sky-100">
-                          <p className="text-xs opacity-75">Bidones esperados</p>
-                          <p className="text-lg font-bold">{expected}</p>
-                        </div>
-                        <div className="rounded-xl bg-slate-50 p-3 text-slate-900 dark:bg-white/5 dark:text-slate-100">
-                          <p className="text-xs opacity-75">Venta</p>
-                          <p className="text-lg font-bold">Unidad</p>
-                        </div>
+                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                        <span className="text-muted-foreground">
+                          Esperados: <strong className="font-semibold text-foreground">{expected}</strong>
+                        </span>
+                        <span className="text-muted-foreground">
+                          Venta: <strong className="font-semibold text-foreground">Unidad</strong>
+                        </span>
                       </div>
 
                       {!completed && (
-                        <div className="mt-3 space-y-3">
+                        <div className="mt-4 space-y-3">
                           <label className="space-y-1 text-xs text-muted-foreground">
                             Bidones entregados
                             <input
+                              data-testid={`water-delivered-input-${visit.id}`}
                               type="number"
                               min={0}
                               value={draft.delivered}
@@ -446,7 +577,7 @@ export default function MiDistribucionPage() {
                                   delivered: Math.max(0, Number(event.target.value) || 0),
                                 })
                               }
-                              className="shell-field h-11 w-full rounded-xl px-3 text-sm"
+                              className="shell-field h-11 w-full rounded-lg px-3 text-sm"
                             />
                           </label>
                           <div className="space-y-1">
@@ -454,9 +585,10 @@ export default function MiDistribucionPage() {
                             <Select
                               value={draft.variantId}
                               onValueChange={(value) => handleWaterDraftChange(visit.id, { variantId: value })}
+                              disabled={isLoadingVariants || allVariants.length === 0}
                             >
-                              <SelectTrigger className="h-11 rounded-xl text-sm">
-                                <SelectValue placeholder="Seleccionar producto..." />
+                              <SelectTrigger data-testid={`water-product-select-${visit.id}`} className="h-11 rounded-lg text-sm">
+                                <SelectValue placeholder={isLoadingVariants ? "Cargando productos..." : "Seleccionar producto..."} />
                               </SelectTrigger>
                               <SelectContent>
                                 {allVariants.map((variant) => (
@@ -466,6 +598,18 @@ export default function MiDistribucionPage() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            {(hasVariantsError || (!isLoadingVariants && allVariants.length === 0)) && (
+                              <div className="mt-2 border-l-2 border-amber-500 pl-3 text-xs text-muted-foreground">
+                                <p className="font-medium text-foreground">No hay bidones configurados para vender.</p>
+                                {isAdmin ? (
+                                  <Link to="/productos" className="mt-1 inline-block text-sky-600 hover:underline dark:text-sky-300">
+                                    Ir a productos
+                                  </Link>
+                                ) : (
+                                  <p className="mt-1">Pide al administrador configurar el producto de agua.</p>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground">Método de pago</Label>
@@ -477,8 +621,8 @@ export default function MiDistribucionPage() {
                                 })
                               }
                             >
-                              <SelectTrigger className="h-11 rounded-xl text-sm">
-                                <SelectValue />
+                              <SelectTrigger data-testid={`water-payment-select-${visit.id}`} className="h-11 rounded-lg text-sm">
+                                <SelectValue placeholder="Efectivo" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="efectivo">Efectivo</SelectItem>
@@ -493,32 +637,40 @@ export default function MiDistribucionPage() {
                             value={draft.notes}
                             onChange={(event) => handleWaterDraftChange(visit.id, { notes: event.target.value })}
                             placeholder="Nota de entrega..."
-                            className="min-h-[76px] rounded-xl"
+                            className="min-h-[76px] rounded-lg"
                           />
+                          {missingProduct && (
+                            <p className="text-xs text-muted-foreground">
+                              Selecciona un producto para registrar la venta.
+                            </p>
+                          )}
                           <div className="grid grid-cols-3 gap-2">
                             <Button
+                              data-testid={`water-delivery-complete-${visit.id}`}
                               type="button"
                               onClick={() => handleCompleteWaterStop(visit.id, "entregado", expected)}
                               disabled={completeWaterDelivery.isPending || !isOnline || !draft.variantId}
-                              className="rounded-xl bg-sky-600 hover:bg-sky-700"
+                              className="rounded-lg bg-sky-600 hover:bg-sky-700"
                             >
                               Entregado
                             </Button>
                             <Button
+                              data-testid={`water-delivery-no-atendido-${visit.id}`}
                               type="button"
                               variant="outline"
                               onClick={() => handleCompleteWaterStop(visit.id, "no_atendido", expected)}
                               disabled={completeWaterDelivery.isPending || !isOnline}
-                              className="rounded-xl"
+                              className="rounded-lg"
                             >
                               No atendió
                             </Button>
                             <Button
+                              data-testid={`water-delivery-reprogramar-${visit.id}`}
                               type="button"
                               variant="outline"
                               onClick={() => handleCompleteWaterStop(visit.id, "reprogramado", expected)}
                               disabled={completeWaterDelivery.isPending || !isOnline}
-                              className="rounded-xl"
+                              className="rounded-lg"
                             >
                               Reprogramar
                             </Button>
@@ -617,7 +769,23 @@ export default function MiDistribucionPage() {
             </div>
 
             {/* Contado / Crédito breakdown - only show if there are sales */}
-            {salesBreakdown.total > 0 && (
+            {isWaterMode && salesBreakdown.total > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Recaudación por método
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(waterRouteMetrics.byPaymentMethod).map(([method, amount]) => (
+                    <div key={method} className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl text-center">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">
+                        {paymentMethodLabels[method] ?? method}
+                      </p>
+                      <p className="font-bold text-blue-700 dark:text-blue-300">S/ {formatCurrency(amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : salesBreakdown.total > 0 && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl text-center">
                   <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Contado</p>
@@ -626,6 +794,29 @@ export default function MiDistribucionPage() {
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl text-center">
                   <p className="text-xs text-amber-600 dark:text-amber-400 mb-1">Crédito</p>
                   <p className="font-bold text-amber-700 dark:text-amber-300">S/ {formatCurrency(salesBreakdown.credito)}</p>
+                </div>
+              </div>
+            )}
+
+            {isWaterMode && (
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-sky-50 p-3 text-center dark:bg-sky-950/40">
+                  <p className="text-xs text-sky-600 dark:text-sky-400">Bidones</p>
+                  <p className="text-lg font-bold text-sky-700 dark:text-sky-300">
+                    {waterRouteMetrics.deliveredContainers}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-emerald-50 p-3 text-center dark:bg-emerald-950/40">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Completadas</p>
+                  <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                    {waterRouteMetrics.completedStops}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-amber-50 p-3 text-center dark:bg-amber-950/40">
+                  <p className="text-xs text-amber-600 dark:text-amber-400">Pendientes</p>
+                  <p className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                    {waterRouteMetrics.pendingStops}
+                  </p>
                 </div>
               </div>
             )}
@@ -673,7 +864,7 @@ export default function MiDistribucionPage() {
             <Button
               onClick={() => navigate(`/gastos/nuevo?distribucion=${distribucion?.id}`)}
               variant="outline"
-              className="h-14 w-full rounded-2xl border-amber-200 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-900 dark:text-amber-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
+              className="h-12 w-full rounded-lg border-border/70 text-muted-foreground hover:text-foreground"
             >
               <Receipt className="mr-2 h-5 w-5" />
               Registrar Gasto
@@ -683,7 +874,7 @@ export default function MiDistribucionPage() {
               onClick={handleOpenCierreConfirm}
               disabled={!isOnline}
               variant="outline"
-              className="h-14 w-full rounded-2xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+              className="h-12 w-full rounded-lg border-border/70 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-300 dark:hover:bg-red-950/30"
             >
               <Lock className="mr-2 h-5 w-5" />
               {!isOnline ? "Sin conexión" : "Cerrar Distribución"}

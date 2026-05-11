@@ -1,4 +1,4 @@
-import { User, Phone, MapPin, CreditCard, Check, Users, CalendarDays, Banknote, Droplets } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, Check, CalendarDays, Banknote, Droplets } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "~/lib/utils";
 import { formatCurrency } from "~/lib/utils";
@@ -82,11 +82,11 @@ export function CustomerCard({
   return (
     <div
       className={cn(
-        "rounded-[24px] border px-4 py-4 transition-colors",
+        "border-b px-1 py-3 transition-colors last:border-b-0",
         selectable || onNavigate ? "cursor-pointer" : "",
         selected
-          ? "border-orange-300 bg-orange-50/90 shadow-[0_6px_18px_rgba(249,115,22,0.12)] dark:border-orange-500/40 dark:bg-orange-500/20 dark:shadow-[0_10px_30px_rgba(249,115,22,0.15)]"
-          : "shell-card-flat border-stone-200/85 hover:border-stone-300/90 hover:bg-white/90 dark:border-white/10 dark:hover:border-white/15 dark:hover:bg-white/[0.08]"
+          ? "border-orange-300 bg-orange-50/70 dark:border-orange-500/35 dark:bg-orange-500/12"
+          : "border-border/60 hover:bg-muted/35 dark:border-white/[0.07] dark:hover:bg-white/[0.04]"
       )}
       onClick={handleCardClick}
     >
@@ -96,38 +96,67 @@ export function CustomerCard({
             <button
               type="button"
               onClick={handleSelectClick}
-              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+              className={`mt-0.5 flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded border transition-colors ${
                 selected
-                  ? "bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)]"
-                  : "bg-orange-100 text-orange-600 dark:bg-orange-500/25 dark:text-orange-300"
+                  ? "border-orange-500 bg-orange-500 text-white"
+                  : "border-border bg-transparent text-muted-foreground hover:border-orange-400 dark:border-white/15"
               }`}
+              aria-label={selected ? "Quitar selección" : "Seleccionar cliente"}
             >
               {selected ? (
-                <Check className="h-5 w-5" />
+                <Check className="h-3.5 w-3.5" />
               ) : (
-                <User className="h-5 w-5" />
+                <span className="h-3.5 w-3.5" />
               )}
             </button>
           ) : (
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-500/25 dark:text-orange-300">
-              <User className="h-5 w-5" />
+            <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded border border-border/70 text-muted-foreground dark:border-white/15">
+              <User className="h-3.5 w-3.5" />
             </div>
           )}
 
           <div className="flex-1 min-w-0">
-            <h3 className={cn("font-semibold truncate", selected ? "text-orange-950 dark:text-orange-100" : "text-foreground")}>
-              {customer.name}
-            </h3>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className={cn("truncate text-[0.95rem] font-semibold leading-5", selected ? "text-orange-950 dark:text-orange-100" : "text-foreground")}>
+                  {customer.name}
+                </h3>
+
+                <div className={cn(
+                  "mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs",
+                  selected ? "text-orange-700/80 dark:text-orange-200/80" : "text-muted-foreground"
+                )}>
+                  {customer.lastSaleDate && (
+                    <span className="inline-flex min-w-0 items-center gap-1">
+                      <CalendarDays className="h-3 w-3" />
+                      <span className="truncate">{formatRecentDateTime(new Date(customer.lastSaleDate))}</span>
+                    </span>
+                  )}
+                  {customer.phone && (
+                    <span className="inline-flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {customer.phone}
+                    </span>
+                  )}
+                  {customer.address && (
+                    <span className="inline-flex min-w-0 items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      <span className="max-w-[13rem] truncate">{customer.address}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Tags */}
             {showTags && customerTags && customerTags.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-0.5">
+              <div className="mt-1.5 flex flex-wrap gap-1">
                 {customerTags.slice(0, 3).map((ct) => (
                   <TagBadge
                     key={ct.tagId}
                     tag={{ id: ct.tagId, name: ct.tagName, color: ct.tagColor }}
                     size="xs"
-                    className={selected ? "ring-1 ring-white/60" : ""}
+                    className={cn("rounded border px-1.5 shadow-none", selected ? "ring-1 ring-white/60" : "")}
                   />
                 ))}
                 {customerTags.length > 3 && (
@@ -145,11 +174,10 @@ export function CustomerCard({
                     key={group.id}
                     variant="outline"
                     className={cn(
-                      "h-5 rounded-full border-orange-200 bg-orange-50 px-1.5 text-[10px] font-medium text-orange-700 shadow-none dark:border-orange-400/30 dark:bg-orange-500/25 dark:text-orange-200",
-                      selected && "border-orange-300 bg-white text-orange-800 dark:border-orange-400/40 dark:bg-orange-500/30 dark:text-orange-100"
+                      "h-5 rounded border-border bg-transparent px-1.5 text-[10px] font-medium text-muted-foreground shadow-none dark:border-white/12",
+                      selected && "border-orange-300 text-orange-800 dark:border-orange-400/40 dark:text-orange-100"
                     )}
                   >
-                    <Users className="mr-1 h-3 w-3" />
                     {group.name}
                   </Badge>
                 ))}
@@ -162,12 +190,12 @@ export function CustomerCard({
             )}
 
             {showDebt && (customer.totalDebt ?? 0) > 0 && (
-              <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="mt-1 flex items-center gap-1.5">
                 <Badge
                   variant="outline"
                   className={cn(
-                    "h-5 rounded-full border-red-200 bg-red-50 px-1.5 text-[10px] font-medium text-red-600 shadow-none dark:border-red-400/30 dark:bg-red-500/25 dark:text-red-200",
-                    selected && "border-red-300 bg-white text-red-700 dark:border-red-400/40 dark:bg-red-500/30 dark:text-red-100"
+                    "h-5 rounded border-red-300 bg-transparent px-1.5 text-[10px] font-medium text-red-600 shadow-none dark:border-red-400/40 dark:text-red-200",
+                    selected && "border-red-300 text-red-700 dark:border-red-400/40 dark:text-red-100"
                   )}
                 >
                   <Banknote className="mr-1 h-3 w-3" />
@@ -176,21 +204,11 @@ export function CustomerCard({
               </div>
             )}
 
-            {customer.lastSaleDate && (
-              <div className={cn(
-                "mt-1 flex items-center gap-1.5 text-xs",
-                selected ? "text-orange-700/80 dark:text-orange-200/80" : "text-muted-foreground/80"
-              )}>
-                <CalendarDays className="h-3 w-3" />
-                <span>Última compra: {formatRecentDateTime(new Date(customer.lastSaleDate))}</span>
-              </div>
-            )}
-
             {waterProfile && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Badge
                   variant="outline"
-                  className="h-6 rounded-full border-sky-200 bg-sky-50 px-2 text-[11px] font-medium text-sky-700 shadow-none dark:border-sky-400/30 dark:bg-sky-500/20 dark:text-sky-200"
+                  className="h-5 rounded border-sky-400/40 bg-transparent px-1.5 text-[10px] font-medium text-sky-700 shadow-none dark:text-sky-200"
                 >
                   <Droplets className="mr-1 h-3 w-3" />
                   {waterProfile.defaultContainerQuantity} bidones
@@ -198,7 +216,7 @@ export function CustomerCard({
                 {(waterProfile.waterRouteName || waterProfile.preferredRoute) && (
                   <Badge
                     variant="outline"
-                    className="h-6 rounded-full border-slate-200 bg-slate-50 px-2 text-[11px] font-medium text-slate-700 shadow-none dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+                    className="h-5 rounded border-border bg-transparent px-1.5 text-[10px] font-medium text-muted-foreground shadow-none dark:border-white/12"
                   >
                     {waterProfile.waterRouteName || waterProfile.preferredRoute}
                   </Badge>

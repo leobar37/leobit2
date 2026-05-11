@@ -114,8 +114,11 @@ export interface CreateSaleInput {
   visitaId?: string;
   type?: SaleType;
   saleType?: SalePaymentType;
+  status?: SaleStatus;
   totalAmount: number;
   amountPaid?: number;
+  paymentMode?: "pago_total" | "a_cuenta" | "debe_todo";
+  paymentMethod?: "efectivo" | "yape" | "plin" | "transferencia" | "tarjeta";
   tara?: number;
   netWeight?: number;
   deliveryDate?: string;
@@ -371,8 +374,11 @@ export function useCreateSale() {
         visitaId: sale.visitaId,
         type: sale.type,
         saleType: sale.saleType ?? "contado",
+        status: sale.status,
         totalAmount: sale.totalAmount,
         amountPaid: sale.amountPaid ?? 0,
+        paymentMode: sale.paymentMode,
+        paymentMethod: sale.paymentMethod,
         tara: sale.tara,
         netWeight: sale.netWeight,
         deliveryDate: sale.deliveryDate,
@@ -394,6 +400,8 @@ export function useCreateSale() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sales.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.sales.lists({}), exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      queryClient.invalidateQueries({ queryKey: ["variants"] });
       queryClient.invalidateQueries({
         predicate: (query) =>
           query.queryKey[0] === PERSISTED_REMOTE_QUERY_PREFIX &&

@@ -1,4 +1,4 @@
-import { X, ShoppingCart } from "lucide-react";
+import { X, ShoppingCart, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "~/lib/utils";
 import type { Visita } from "~/hooks/use-visitas";
@@ -39,18 +39,42 @@ const statusLabels: Record<VisitaStatus, string> = {
   no_compra: "No compró",
 };
 
+function formatWaterDate(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
 interface VisitaCardProps {
   visita: Visita;
   onMarkAsNotPurchased: (visita: Visita) => void;
   onGenerateSale: (visita: Visita) => void;
+  isWaterMode?: boolean;
 }
 
 export function VisitaCard({
   visita,
   onMarkAsNotPurchased,
   onGenerateSale,
+  isWaterMode = false,
 }: VisitaCardProps) {
   const config = statusConfig[visita.status];
+  const waterStatusLabel =
+    visita.waterStop?.status === "entregado"
+      ? "Entregado"
+      : visita.waterStop?.status === "no_atendido"
+        ? "No atendió"
+        : visita.waterStop?.status === "reprogramado"
+          ? "Reprogramado"
+          : undefined;
+  const label = isWaterMode
+    ? waterStatusLabel ?? (visita.status === "pendiente" ? "Pendiente" : statusLabels[visita.status])
+    : statusLabels[visita.status];
 
   return (
     <div
@@ -98,29 +122,42 @@ export function VisitaCard({
           )}
         >
           <span className={cn("h-1.5 w-1.5 rounded-full", config.dot)} />
-          {statusLabels[visita.status]}
+          {label}
         </div>
       </div>
 
+      {isWaterMode && visita.waterStop && (
+        <div className="mt-3 border-l-2 border-sky-500 pl-3 text-xs text-muted-foreground">
+          {visita.waterStop.expectedContainerQuantity} bidón(es) esperados
+          {visita.waterStop.scheduledDate ? ` · ${formatWaterDate(visita.waterStop.scheduledDate)}` : ""}
+        </div>
+      )}
+
       {visita.status === "pendiente" && (
         <div className="mt-3 flex gap-2 border-t border-border/40 pt-2.5 dark:border-white/[0.07]">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 flex-1 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-400/10"
-            onClick={() => onMarkAsNotPurchased(visita)}
-          >
-            <X className="mr-1.5 h-3.5 w-3.5" />
-            No compró
-          </Button>
+          {!isWaterMode && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 flex-1 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-400/10"
+              onClick={() => onMarkAsNotPurchased(visita)}
+            >
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              No compró
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
             className="h-8 flex-1 rounded-lg text-xs font-medium text-orange-700 hover:bg-orange-50 dark:text-orange-200 dark:hover:bg-orange-400/10"
             onClick={() => onGenerateSale(visita)}
           >
-            <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
-            Generar venta
+            {isWaterMode ? (
+              <Truck className="mr-1.5 h-3.5 w-3.5" />
+            ) : (
+              <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            {isWaterMode ? "Entregar" : "Generar venta"}
           </Button>
         </div>
       )}

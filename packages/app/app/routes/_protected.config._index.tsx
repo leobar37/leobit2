@@ -20,6 +20,7 @@ import {
   ImageIcon,
   ReceiptText,
   CarFront,
+  MapPinned,
 } from "lucide-react";
 import {
   MinimalCardTitle,
@@ -134,6 +135,15 @@ const puntosVentaConfigItem: ConfigItem = {
   iconBg: "bg-orange-100",
 };
 
+const waterRoutesConfigItem: ConfigItem = {
+  icon: MapPinned,
+  title: "Rutas de Agua",
+  description: "Gestiona rutas formales para clientes y entregas",
+  href: "/config/water-routes",
+  color: "text-sky-600",
+  iconBg: "bg-sky-100",
+};
+
 const proveedoresConfigItem: ConfigItem = {
   icon: Building2,
   title: "Proveedores",
@@ -193,6 +203,7 @@ export default function ConfigIndexPage() {
 
   const isAdmin = business?.role === "ADMIN_NEGOCIO";
   const isCocheraMode = business?.businessMode === "cochera";
+  const isWaterMode = business?.businessMode === "agua";
 
   const configItems = isAdmin
     ? [
@@ -203,6 +214,7 @@ export default function ConfigIndexPage() {
         ...(isCocheraMode ? [] : [gastosConfigItem]),
         ...(isCocheraMode ? [] : [stockAlertsConfigItem]),
         ...(isCocheraMode ? [] : [activosConfigItem]),
+        ...(isWaterMode ? [waterRoutesConfigItem] : []),
         ...(isCocheraMode ? [] : [puntosVentaConfigItem]),
         ...(isCocheraMode ? [] : [proveedoresConfigItem]),
         ...(isCocheraMode ? [] : [gruposConfigItem]),

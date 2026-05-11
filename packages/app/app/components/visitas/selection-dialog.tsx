@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import type { SelectionMode } from "~/hooks/use-visita-dialogs";
 
 interface Customer {
@@ -41,6 +42,9 @@ interface SelectionDialogProps {
   selectedGroupId: string;
   onGroupSelect: (id: string) => void;
   isCreating: boolean;
+  isWaterMode?: boolean;
+  expectedContainerQuantity?: number;
+  onExpectedContainerQuantityChange?: (quantity: number) => void;
   onCreateSingle: () => void;
   onCreateGroup: () => void;
 }
@@ -57,16 +61,26 @@ export function SelectionDialog({
   selectedGroupId,
   onGroupSelect,
   isCreating,
+  isWaterMode = false,
+  expectedContainerQuantity = 1,
+  onExpectedContainerQuantityChange,
   onCreateSingle,
   onCreateGroup,
 }: SelectionDialogProps) {
+  const title = isWaterMode ? "Agregar entrega" : "Agregar Visita";
+  const description = isWaterMode
+    ? "Selecciona a quién atender y cuántos bidones espera recibir."
+    : "Selecciona un cliente individual o un grupo";
+  const singleButtonLabel = isWaterMode ? "Crear entrega" : "Crear visita";
+  const groupButtonLabel = isWaterMode ? "Crear entregas para todo el grupo" : "Crear visitas para todo el grupo";
+
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
       <DrawerContent className="px-4 pb-4 max-h-[85vh]">
         <DrawerHeader>
-          <DrawerTitle>Agregar Visita</DrawerTitle>
+          <DrawerTitle>{title}</DrawerTitle>
           <DrawerDescription>
-            Selecciona un cliente individual o un grupo
+            {description}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -96,6 +110,26 @@ export function SelectionDialog({
             Grupo
           </Button>
         </div>
+
+        {isWaterMode && (
+          <div className="space-y-2 rounded-2xl border border-sky-200/70 bg-sky-50/70 p-3 dark:border-sky-400/20 dark:bg-sky-400/10">
+            <label className="text-sm font-medium text-muted-foreground">
+              Bidones esperados
+            </label>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              value={expectedContainerQuantity}
+              onChange={(event) =>
+                onExpectedContainerQuantityChange?.(
+                  Math.max(1, Number(event.target.value || 1))
+                )
+              }
+              className="h-11 rounded-xl"
+            />
+          </div>
+        )}
 
         {selectionMode === "individual" && (
           <div className="space-y-4">
@@ -128,7 +162,7 @@ export function SelectionDialog({
                 {isCreating && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Crear visita
+                {singleButtonLabel}
               </Button>
             </DrawerFooter>
           </div>
@@ -164,7 +198,7 @@ export function SelectionDialog({
                 {isCreating && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Crear visitas para todo el grupo
+                {groupButtonLabel}
               </Button>
             </DrawerFooter>
           </div>

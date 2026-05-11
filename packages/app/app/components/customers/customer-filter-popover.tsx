@@ -64,7 +64,7 @@ export function CustomerFilterPopover({
         <Button
           type="button"
           variant="outline"
-          className="shell-field h-12 w-full min-w-0 justify-between rounded-xl px-3 text-left shadow-none dark:hover:bg-white/[0.08]"
+          className="shell-field h-11 w-full min-w-0 justify-between rounded-lg px-3 text-left shadow-none dark:hover:bg-white/[0.08]"
         >
           <div className="flex min-w-0 items-center gap-2">
             <Filter className="h-4 w-4 shrink-0" />
@@ -77,7 +77,7 @@ export function CustomerFilterPopover({
       </PopoverTrigger>
 
       <PopoverContent
-        className="shell-card-flat w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-stone-200/80 p-4 dark:border-white/10 dark:bg-[#171922]"
+        className="shell-card-flat w-[min(24rem,calc(100vw-2rem))] rounded-xl border-stone-200/80 p-4 dark:border-white/10 dark:bg-[#171922]"
         align="end"
       >
         <div className="space-y-5">
@@ -169,7 +169,7 @@ export function CustomerFilterPopover({
                       type="button"
                       onClick={() => toggleGroup(group.id)}
                       className={cn(
-                        "w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors",
+                        "w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors",
                         isSelected
                           ? "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/20 dark:text-orange-100"
                           : "border-stone-200/80 bg-white hover:bg-stone-50 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"

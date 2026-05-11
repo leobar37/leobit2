@@ -53,6 +53,8 @@ export interface Visita {
 export interface CreateVisitaInput {
   distribucionId: string;
   customerId: string;
+  expectedContainerQuantity?: number;
+  waterRouteId?: string | null;
   status?: "pendiente" | "compro" | "no_compra";
   motivoNoCompra?: string | null;
   saleId?: string | null;
@@ -153,6 +155,7 @@ export function useCompleteWaterDelivery() {
       queryClient.invalidateQueries({ queryKey: ["visitas"] });
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({
         predicate: (query) =>
           query.queryKey[0] === PERSISTED_REMOTE_QUERY_PREFIX &&
@@ -202,6 +205,8 @@ export function useCreateVisita() {
       const postResponse = await api.visitas.post({
         distribucionId: input.distribucionId,
         customerId: input.customerId,
+        expectedContainerQuantity: input.expectedContainerQuantity,
+        waterRouteId: input.waterRouteId ?? undefined,
       });
       const created = extractData<BackendVisita>(postResponse);
       const getResponse = await api.visitas({ id: created.id }).get();
@@ -215,7 +220,11 @@ export function useCreateVisita() {
       queryClient.invalidateQueries({
         queryKey: PERSISTED_REMOTE_QUERY_KEYS.visitas.byDistribucion(variables.distribucionId),
       });
-      toast.success("Visita creada correctamente");
+      toast.success(
+        variables.expectedContainerQuantity !== undefined
+          ? "Entrega creada correctamente"
+          : "Visita creada correctamente"
+      );
     },
   });
 }
@@ -226,8 +235,8 @@ export function useCreateVisita() {
 export function useCreateVisitasFromGroup() {
   const queryClient = useQueryClient();
 
-  return useMutation<Visita[], Error, { distribucionId: string; groupId: string }>({
-    mutationFn: async ({ distribucionId, groupId }) => {
+  return useMutation<Visita[], Error, { distribucionId: string; groupId: string; expectedContainerQuantity?: number; waterRouteId?: string | null }>({
+    mutationFn: async ({ distribucionId, groupId, expectedContainerQuantity, waterRouteId }) => {
       // Fetch group members from the backend
       const groupResponse = await api.groups({ id: groupId }).get();
       const group = extractData<{
@@ -252,6 +261,8 @@ export function useCreateVisitasFromGroup() {
       const bulkResponse = await api.visitas.bulk.post({
         distribucionId,
         customerIds,
+        expectedContainerQuantity,
+        waterRouteId: waterRouteId ?? undefined,
       });
       const result = extractData<{ visits: BackendVisita[]; count: number }>(bulkResponse);
       return result.visits.map((v) => mapVisita(v));
@@ -263,7 +274,11 @@ export function useCreateVisitasFromGroup() {
       queryClient.invalidateQueries({
         queryKey: PERSISTED_REMOTE_QUERY_KEYS.visitas.byDistribucion(variables.distribucionId),
       });
-      toast.success("Visitas creadas correctamente");
+      toast.success(
+        variables.expectedContainerQuantity !== undefined
+          ? "Entregas creadas correctamente"
+          : "Visitas creadas correctamente"
+      );
     },
   });
 }

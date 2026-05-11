@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
-import { ThemeToggle } from "@/components/theme";
+import { ThemeToggle } from "~/components/theme";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -52,6 +52,10 @@ const defaultMenuItems: MenuItem[] = [
   { icon: Calendar, label: "Visitas", href: "/visitas" },
   { icon: Menu, label: "Más", href: "/config" },
 ];
+
+const aguaMenuItems: MenuItem[] = defaultMenuItems.map((item) =>
+  item.href === "/visitas" ? { ...item, label: "Entregas" } : item
+);
 
 const cocheraMenuItems: MenuItem[] = [
   { icon: Home, label: "Inicio", href: "/dashboard", active: (pathname) => pathname === "/dashboard" },
@@ -213,7 +217,7 @@ interface AppLayoutProps {
 }
 
 function AppLayoutHeaderControls({ children }: { children: ReactNode }) {
-  return <div className="flex items-center gap-2 shrink-0">{children}</div>;
+  return <div className="flex items-center gap-1.5 shrink-0">{children}</div>;
 }
 
 function AppLayoutHeaderControl({ children }: { children: ReactNode }) {
@@ -251,7 +255,11 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
   const pendingPathname = navigation.location?.pathname;
   const isNavigating = navigation.state !== "idle" && Boolean(pendingPathname);
   const menuItems =
-    business?.businessMode === "cochera" ? cocheraMenuItems : defaultMenuItems;
+    business?.businessMode === "cochera"
+      ? cocheraMenuItems
+      : business?.businessMode === "agua"
+        ? aguaMenuItems
+        : defaultMenuItems;
 
   const {
     title = "Avileo",
@@ -268,15 +276,15 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
         to="/dashboard"
         className="flex items-center gap-3 hover:opacity-80 transition-opacity"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 shadow-sm">
-          <span className="text-white font-bold text-lg">A</span>
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500 shadow-sm">
+          <span className="text-base font-semibold text-white">A</span>
         </div>
-        <span className="truncate font-bold text-lg tracking-tight text-foreground">
+        <span className="truncate text-base font-semibold text-foreground">
           Avileo
         </span>
       </Link>
     ) : (
-      <h1 className="truncate font-bold text-lg tracking-tight">{title}</h1>
+      <h1 className="truncate text-base font-semibold">{title}</h1>
     );
 
   const headerControls = (
@@ -293,7 +301,7 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
           <SheetTrigger
             type="button"
             aria-label="Abrir perfil"
-            className="inline-flex items-center justify-center h-9 w-9 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent"
+            className="shell-toolbar-button inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
           >
             <User className="h-5 w-5" />
           </SheetTrigger>
@@ -374,7 +382,7 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
           <MobileSlot name="header:left" priority={-10}>
             <Link
               to={backHref}
-              className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
+              className="-ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg shell-toolbar-button text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5 pointer-events-none" />
             </Link>
@@ -394,8 +402,11 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
         {showBottomNav ? <MobileShell.Footer /> : null}
 
         {showBottomNav ? (
-          <nav data-testid="mobile-bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 border-t shell-surface px-3 sm:px-4 py-2.5">
-            <div className="flex items-center justify-around max-w-md mx-auto">
+          <nav
+            data-testid="mobile-bottom-nav"
+            className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/70 bg-background/95 px-2 py-1.5 shadow-none backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 sm:px-3"
+          >
+            <div className="mx-auto flex max-w-md items-center justify-around">
               {menuItems.map((item) => {
                 const isActive = item.active
                   ? item.active(location.pathname)
@@ -412,17 +423,23 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
                     to={item.href}
                     aria-current={isActive ? "page" : undefined}
                     aria-busy={isPending || undefined}
-                    className={`shell-nav-item flex flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-colors ${
+                    className={`relative flex flex-1 flex-col items-center gap-1 rounded-lg px-1.5 pb-1.5 pt-2 text-[11px] font-medium transition-colors ${
                       isHighlighted
-                        ? "shell-nav-active text-orange-700"
-                        : "text-muted-foreground"
+                        ? "text-orange-500 dark:text-orange-300"
+                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                     } ${isPending ? "scale-[0.98] opacity-90" : ""}`}
                   >
+                    {isHighlighted ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-0.5 h-0.5 w-5 rounded-full bg-orange-500/80 dark:bg-orange-300/80"
+                      />
+                    ) : null}
                     <item.icon
-                      className={`h-5 w-5 ${isHighlighted ? "text-orange-600" : "text-muted-foreground"}`}
+                      className={`h-5 w-5 ${isHighlighted ? "text-orange-500 dark:text-orange-300" : "text-muted-foreground"}`}
                     />
                     <span
-                      className={`text-xs ${isHighlighted ? "font-semibold text-orange-700" : "text-muted-foreground"}`}
+                      className={isHighlighted ? "text-orange-600 dark:text-orange-300" : "text-muted-foreground"}
                     >
                       {item.label}
                     </span>

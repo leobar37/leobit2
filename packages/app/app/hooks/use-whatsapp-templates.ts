@@ -169,6 +169,9 @@ export const TEMPLATE_VARIABLES = [
   { key: "telefono", label: "Teléfono", example: "+51 999 888 777" },
   { key: "productos", label: "Productos", example: "1 Pollo entero, 2 kg de alitas" },
   { key: "total", label: "Total", example: "S/ 150.00" },
+  { key: "dias_sin_pedido", label: "Días sin pedido", example: "12" },
+  { key: "ultima_entrega", label: "Última entrega", example: "03/05/2026" },
+  { key: "bidones_habituales", label: "Bidones habituales", example: "2" },
 ] as const;
 
 export function previewTemplate(

@@ -36,3 +36,24 @@ export function useCreateWaterRoute() {
     },
   });
 }
+
+export function useUpdateWaterRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      name?: string;
+      zone?: string | null;
+      description?: string | null;
+      isActive?: boolean;
+    }) => {
+      const { id, ...body } = input;
+      const response = await api["water-routes"]({ id }).put(body);
+      return extractData<WaterRoute>(response);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["water-routes"] });
+    },
+  });
+}

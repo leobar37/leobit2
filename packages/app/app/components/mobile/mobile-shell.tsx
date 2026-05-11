@@ -118,28 +118,28 @@ function MobileShellHeader({
       data-testid="mobile-shell-header"
       data-mobile-shell-header=""
       className={cn(
-        "sticky top-0 z-50 shrink-0 border-b shell-surface",
+        "sticky top-0 z-50 shrink-0 border-b border-border/70 bg-background/95 shadow-none backdrop-blur-xl supports-[backdrop-filter]:bg-background/85",
         className
       )}
       {...props}
     >
-      <div className="flex items-center h-16 px-3 sm:px-4">
+      <div className="flex h-[60px] items-center px-3 sm:px-4">
         {children ?? (
           <>
-            <div className="flex min-w-0 items-center gap-3 flex-1">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <MobileSlotHost
                 name="header:left"
-                className="flex items-center gap-2"
+                className="flex items-center gap-1.5"
               />
               <MobileSlotHost
                 name="header:center"
                 className="flex min-w-0 items-center flex-1"
               />
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex shrink-0 items-center gap-1.5">
               <MobileSlotHost
                 name="header:right"
-                className="flex items-center gap-2"
+                className="flex items-center gap-1.5"
               />
             </div>
           </>

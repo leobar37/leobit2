@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate } from "react-router";
 import { formatNumber } from "~/lib/utils";
-import { User, AlertCircle, Check, Wallet } from "lucide-react";
+import { User, AlertCircle, Check, Wallet, Droplets } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { useCustomer } from "~/hooks/use-customers";
+import { useCustomer, usePaginatedCustomers } from "~/hooks/use-customers";
 import { useSale } from "~/hooks/use-sales";
 import { useCreatePayment, useUpdatePayment } from "~/hooks/use-payments";
 import { useCustomerBalance } from "~/hooks/use-customer-balance";
@@ -22,6 +22,7 @@ import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { fileField } from "~/lib/forms/media-field-resolvers";
 import { PaymentShareDrawer } from "~/components/payments/payment-share-drawer";
 import { PaymentCapture } from "~/components/payments/payment-capture";
+import { PaymentMethodSelector } from "~/components/payments/payment-method-selector";
 import { useUploadFile } from "~/hooks/use-files";
 import type { PaymentMethod } from "~/components/payments/payment-capture";
 
@@ -38,6 +39,14 @@ const cocheraPaymentSchema = paymentSchema.extend({
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
 type CocheraPaymentFormData = z.infer<typeof cocheraPaymentSchema>;
+
+const waterPaymentMethods: PaymentMethod[] = [
+  "efectivo",
+  "yape",
+  "plin",
+  "transferencia",
+  "tarjeta",
+];
 
 function QuickAmountButton({
   amount,
@@ -616,6 +625,232 @@ function NuevoCobroPolleriaPage() {
   );
 }
 
+function NuevoCobroWaterPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const customerId = searchParams.get("clienteId");
+
+  const { data: customer } = useCustomer(customerId || "");
+  const { data: customersPage } = usePaginatedCustomers({
+    limit: 100,
+    offset: 0,
+    sortBy: "name",
+    sortOrder: "asc",
+  });
+  const { data: customerBalance } = useCustomerBalance(customerId);
+  const createPayment = useCreatePayment();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const customerFromList = customersPage?.items.find((item) => item.id === customerId) ?? null;
+  const waterCustomer = customer ?? customerFromList;
+  const currentDebt = customerBalance?.balanceDue || customerFromList?.totalDebt || 0;
+
+  const wrapperForm = useWrapperForm<PaymentFormData>({
+    resolver: zodResolver(paymentSchema),
+    mode: "onChange",
+    defaultValues: {
+      amount: "",
+      paymentMethod: "efectivo",
+      referenceNumber: "",
+      notes: "",
+      proofImageId: undefined,
+    },
+  });
+
+  const {
+    register,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting, isValid },
+  } = wrapperForm;
+
+  const amount = watch("amount");
+  const paymentMethod = watch("paymentMethod");
+  const referenceNumber = watch("referenceNumber");
+  const parsedAmount = parseAmount(amount);
+  const remainingDebt = calculateBalanceDue(currentDebt, parsedAmount);
+
+  useEffect(() => {
+    if (customerId && currentDebt > 0 && !amount) {
+      setValue("amount", formatCurrency(currentDebt), {
+        shouldValidate: true,
+      });
+    }
+  }, [customerId, currentDebt, amount, setValue]);
+
+  const onSubmit = async (data: PaymentFormData) => {
+    if (!customerId) return;
+
+    try {
+      setSubmitError(null);
+      await createPayment({
+        customerId,
+        amount: data.amount,
+        paymentMethod: data.paymentMethod,
+        referenceNumber: data.referenceNumber || undefined,
+        notes: "Regularización de saldo pendiente de agua",
+      });
+      toast.success("Saldo regularizado correctamente");
+      navigate("/cobros");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo registrar el pago. Intenta nuevamente.";
+      setSubmitError(message);
+    }
+  };
+
+  if (!customerId) {
+    return (
+      <div className="py-8 text-center">
+        <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
+        <p>No se especificó un cliente con saldo pendiente</p>
+        <Button className="mt-4" onClick={() => navigate("/cobros")}>
+          Ver saldos
+        </Button>
+      </div>
+    );
+  }
+
+  if (!waterCustomer) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        Cargando cliente...
+      </div>
+    );
+  }
+
+  return (
+    <FormPage
+      title="Registrar pago"
+      backHref="/cobros"
+      toolbar={
+        <Button
+          type="submit"
+          form="water-cobro-form"
+          disabled={isSubmitting || !isValid || !parsedAmount || parsedAmount <= 0 || currentDebt === 0}
+          data-testid="save-water-exception-payment-button"
+          className="h-12 w-full rounded-lg bg-orange-500 text-base font-semibold shadow-sm hover:bg-orange-600 disabled:bg-orange-300 disabled:text-white disabled:opacity-100"
+        >
+          {isSubmitting ? (
+            "Registrando..."
+          ) : (
+            <>
+              <Check className="mr-2 h-5 w-5" />
+              Confirmar pago
+            </>
+          )}
+        </Button>
+      }
+    >
+      <WrapperFormProvider form={wrapperForm}>
+        <form id="water-cobro-form" onSubmit={wrapperForm.handleResolvedSubmit(onSubmit)} className="space-y-4">
+          <section className="border-b shell-divider pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500">
+                <Droplets className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-foreground">{waterCustomer.name}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {waterCustomer.phone || "Sin teléfono"}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Este pago regulariza una excepción. Las entregas de agua deben cobrarse al completarlas.
+            </p>
+          </section>
+
+          <section className="grid grid-cols-2 gap-3 border-b shell-divider pb-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Saldo pendiente</p>
+              <p className="text-2xl font-semibold text-destructive">S/ {formatCurrency(currentDebt)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Quedaría</p>
+              <p className={remainingDebt > 0 ? "text-2xl font-semibold text-destructive" : "text-2xl font-semibold text-emerald-600 dark:text-emerald-400"}>
+                S/ {formatCurrency(Math.max(remainingDebt, 0))}
+              </p>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="water-amount" className="text-base font-semibold text-foreground">
+                Monto a pagar
+              </Label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-muted-foreground">
+                  S/
+                </span>
+                <NumericInput
+                  id="water-amount"
+                  data-testid="water-exception-amount-input"
+                  decimals={2}
+                  min="0.01"
+                  max={currentDebt}
+                  className="shell-field h-14 rounded-lg pl-10 pr-4 text-2xl font-bold tracking-[-0.04em] shadow-none focus-visible:ring-1 focus-visible:ring-orange-200"
+                  {...register("amount")}
+                />
+              </div>
+              {errors.amount && (
+                <p className="text-sm text-destructive">{errors.amount.message}</p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setValue("amount", formatCurrency(currentDebt), { shouldValidate: true })}
+                className="h-10 rounded-lg bg-orange-500 px-4 text-sm font-semibold text-white shadow-none hover:bg-orange-600"
+              >
+                Liquidar saldo
+              </Button>
+              {[5, 10, 20].map((amt) => (
+                <QuickAmountButton
+                  key={amt}
+                  amount={amt}
+                  disabled={amt > currentDebt}
+                  onClick={() => setValue("amount", formatNumber(Math.min(amt, currentDebt)), { shouldValidate: true })}
+                />
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-base font-semibold text-foreground">
+                Método de pago
+              </Label>
+              <PaymentMethodSelector
+                methods={waterPaymentMethods}
+                selectedMethod={paymentMethod as PaymentMethod}
+                onSelect={(method) => setValue("paymentMethod", method, { shouldValidate: true })}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="water-reference">Referencia (opcional)</Label>
+              <input
+                id="water-reference"
+                placeholder="Código de operación"
+                className="shell-field flex h-11 w-full rounded-lg px-4 text-sm shadow-none placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-200"
+                value={referenceNumber || ""}
+                onChange={(event) => setValue("referenceNumber", event.target.value)}
+              />
+            </div>
+          </section>
+
+          {submitError && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {submitError}
+            </p>
+          )}
+        </form>
+      </WrapperFormProvider>
+    </FormPage>
+  );
+}
+
 export default function NuevoCobroPage() {
   const [searchParams] = useSearchParams();
   const { is } = useBusinessMode();
@@ -627,6 +862,10 @@ export default function NuevoCobroPage() {
 
   if (is.cochera) {
     return <NuevoCobroCocheraMissingPage />;
+  }
+
+  if (is.agua) {
+    return <NuevoCobroWaterPage />;
   }
 
   return <NuevoCobroPolleriaPage />;

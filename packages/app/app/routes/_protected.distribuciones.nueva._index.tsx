@@ -19,7 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useBusinessMode } from "~/hooks/use-business-mode";
-import { useCreateWaterRoute, useWaterRoutes } from "~/hooks/use-water-routes";
+import { WaterRouteSelector } from "~/components/water/water-route-selector";
+import { useAuth } from "~/hooks/use-auth";
+import { useTeam } from "~/hooks/use-team";
+import { useBusiness } from "~/hooks/use-business";
 
 export default function NuevaDistribucionPage() {
   const navigate = useNavigate();
@@ -32,13 +35,13 @@ export default function NuevaDistribucionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [waterVendedor, setWaterVendedor] = useState<VendedorOption | null>(null);
   const [waterRouteId, setWaterRouteId] = useState("");
-  const [newWaterRouteName, setNewWaterRouteName] = useState("");
   const [previewKey, setPreviewKey] = useState("");
   const isOnline = true;
   const { toast } = useToast();
   const { mode } = useBusinessMode();
-  const { data: waterRoutes = [] } = useWaterRoutes();
-  const createWaterRoute = useCreateWaterRoute();
+  const { user } = useAuth();
+  const { data: business } = useBusiness();
+  const { data: team = [] } = useTeam();
 
   const fechaFromUrl = searchParams.get("fecha");
   const selectedDate = fechaFromUrl || getToday();
@@ -68,6 +71,18 @@ export default function NuevaDistribucionPage() {
   const waterIsLoading = isSubmitting || previewWaterRoute.isPending || generateWaterRoute.isPending;
   const currentPreviewKey = `${selectedDate}:${waterRouteId}:${waterVendedor?.id ?? ""}`;
   const previewIsCurrent = previewKey === currentPreviewKey;
+  const currentMember =
+    team.find((member) => member.userId === user?.id && member.isActive) ??
+    (business?.businessUserId && user
+      ? {
+          id: business.businessUserId,
+          name: user.name || user.email || "Yo",
+          role: business.role,
+          userId: user.id,
+          isActive: business.isActive,
+        }
+      : null);
+  const canAssignToSelf = currentMember?.role === "VENDEDOR" || currentMember?.role === "ADMIN_NEGOCIO";
 
   const handlePreviewWaterRoute = async () => {
     try {
@@ -105,11 +120,14 @@ export default function NuevaDistribucionPage() {
     }
   };
 
-  const handleCreateRoute = async () => {
-    if (!newWaterRouteName.trim()) return;
-    const route = await createWaterRoute.mutateAsync({ name: newWaterRouteName.trim() });
-    setWaterRouteId(route.id);
-    setNewWaterRouteName("");
+  const handleAssignToSelf = () => {
+    if (!canAssignToSelf || !currentMember) return;
+    setWaterVendedor({
+      id: currentMember.id,
+      name: currentMember.name,
+      role: currentMember.role,
+      userId: currentMember.userId,
+    });
     setPreviewKey("");
   };
 
@@ -120,6 +138,7 @@ export default function NuevaDistribucionPage() {
       icon={isWaterMode ? Route : Package}
       toolbar={
         <Button
+          data-testid={isWaterMode ? "water-route-create-button" : undefined}
           onClick={() => {
             if (isWaterMode) {
               void handleGenerateWaterRoute();
@@ -138,7 +157,7 @@ export default function NuevaDistribucionPage() {
               ? waterIsLoading || !waterVendedor || !waterRouteId || !previewIsCurrent || waterRoutePreview.length === 0 || !isOnline
               : isLoading || !isOnline
           }
-          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+          className="h-12 w-full rounded-lg bg-orange-500 text-base font-semibold hover:bg-orange-600 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
         >
           {(isWaterMode ? waterIsLoading : isLoading) ? (
             <>
@@ -168,64 +187,57 @@ export default function NuevaDistribucionPage() {
         </Alert>
       )}
       {isWaterMode ? (
-        <div className="space-y-4">
-          <div className="rounded-[24px] border border-sky-200/80 bg-sky-50/70 p-4 dark:border-sky-400/20 dark:bg-sky-400/10">
+        <div className="space-y-5">
+          <section className="space-y-4 border-b border-border/60 pb-5 dark:border-white/[0.07]">
+            <div className="border-l-2 border-sky-500/70 py-2 pl-3 text-sm text-muted-foreground">
+              Primero elige la ruta formal. Luego asigna quién hará la distribución de hoy.
+            </div>
+
             <div className="space-y-2">
-              <Label>Repartidor *</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-sm font-medium">Repartidor *</Label>
+                {canAssignToSelf && !waterVendedor && (
+                  <button
+                    type="button"
+                    onClick={handleAssignToSelf}
+                    className="text-xs font-medium text-orange-600 hover:text-orange-700 dark:text-orange-300"
+                  >
+                    Asignarme a mí
+                  </button>
+                )}
+              </div>
               <VendedorSelect
                 value={waterVendedor?.id || null}
                 selectedVendedor={waterVendedor}
                 onChange={setWaterVendedor}
+                placeholder="Seleccionar repartidor"
                 required
                 helperText="Seleccione quién hará la ruta"
+                compact
               />
             </div>
 
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="water-route">Ruta *</Label>
-                <span className="text-xs text-muted-foreground">Formal</span>
-              </div>
-              <select
-                id="water-route"
-                value={waterRouteId}
-                onChange={(event) => {
-                  setWaterRouteId(event.target.value);
-                  setPreviewKey("");
-                }}
-                className="shell-field h-12 w-full rounded-[20px] px-4 text-sm"
-              >
-                <option value="">Selecciona una ruta</option>
-                {waterRoutes.map((route) => (
-                  <option key={route.id} value={route.id}>
-                    {route.name}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-2 flex gap-2">
-                <input
-                  value={newWaterRouteName}
-                  onChange={(event) => setNewWaterRouteName(event.target.value)}
-                  placeholder="Nueva ruta..."
-                  className="shell-field h-11 min-w-0 flex-1 rounded-[18px] px-3 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={handleCreateRoute}
-                  disabled={!newWaterRouteName.trim() || createWaterRoute.isPending}
-                  className="h-11 rounded-[18px] bg-sky-600 px-3 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  Crear
-                </button>
-              </div>
-            </div>
+            <WaterRouteSelector
+              value={waterRouteId || null}
+              onChange={(route) => {
+                setWaterRouteId(route?.id ?? "");
+                setPreviewKey("");
+              }}
+              label="Ruta"
+              helperText="Ruta recurrente"
+              placeholder="Selecciona una ruta"
+              allowEmpty={false}
+              required
+            />
+            <input data-testid="water-route-select" type="hidden" value={waterRouteId} readOnly />
 
             <Button
+              data-testid="water-route-preview-button"
               type="button"
               variant="outline"
               onClick={handlePreviewWaterRoute}
               disabled={previewWaterRoute.isPending || !waterRouteId}
-              className="mt-4 h-12 w-full rounded-xl"
+              className="h-11 w-full justify-center rounded-lg border-border/70 text-sm font-medium"
             >
               {previewWaterRoute.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -234,22 +246,26 @@ export default function NuevaDistribucionPage() {
               )}
               Ver clientes programados
             </Button>
-          </div>
+          </section>
 
-          <div className="space-y-3">
+          <section className="space-y-3">
             {previewWaterRoute.data ? (
               !previewIsCurrent ? (
-                <div className="shell-card-flat rounded-[24px] p-4 text-center text-sm text-amber-700 dark:text-amber-200">
+                <div className="border-l-2 border-amber-500 py-2 pl-3 text-sm text-amber-700 dark:text-amber-200">
                   La ruta cambió. Vuelve a previsualizar antes de crear.
                 </div>
               ) :
               waterRoutePreview.length === 0 ? (
-                <div className="shell-card-flat rounded-[24px] p-4 text-center text-sm text-muted-foreground">
+                <div className="border-l-2 border-border py-2 pl-3 text-sm text-muted-foreground">
                   No hay clientes programados para esta fecha y ruta.
                 </div>
               ) : (
                 waterRoutePreview.map((customer) => (
-                  <div key={customer.customerId} className="shell-card-flat rounded-[24px] p-4">
+                  <div
+                    key={customer.customerId}
+                    data-testid="water-route-preview-customer"
+                    className="border-b border-border/60 py-3 last:border-b-0 dark:border-white/[0.07]"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold">{customer.customerName}</p>
@@ -257,25 +273,25 @@ export default function NuevaDistribucionPage() {
                           {customer.address || "Sin dirección registrada"}
                         </p>
                         {customer.deliveryInstructions && (
-                          <p className="mt-2 rounded-2xl bg-sky-50 p-2 text-xs text-sky-800 dark:bg-sky-500/10 dark:text-sky-100">
+                          <p className="mt-2 border-l-2 border-sky-500/70 pl-2 text-xs text-muted-foreground">
                             {customer.deliveryInstructions}
                           </p>
                         )}
                       </div>
-                      <div className="shrink-0 rounded-2xl bg-sky-100 px-3 py-2 text-center text-sky-800 dark:bg-sky-500/20 dark:text-sky-100">
-                        <p className="text-lg font-bold">{customer.defaultContainerQuantity}</p>
-                        <p className="text-[11px]">bidones</p>
+                      <div className="shrink-0 text-right">
+                        <p className="text-lg font-semibold">{customer.defaultContainerQuantity}</p>
+                        <p className="text-[11px] text-muted-foreground">bidones</p>
                       </div>
                     </div>
                   </div>
                 ))
               )
             ) : (
-              <div className="shell-card-flat rounded-[24px] p-4 text-sm text-muted-foreground">
+              <div className="border-l-2 border-sky-500/70 py-2 pl-3 text-sm text-muted-foreground">
                 Previsualiza la ruta para cargar los clientes recurrentes de agua programados para hoy.
               </div>
             )}
-          </div>
+          </section>
         </div>
       ) : (
         <CreateDistribucionForm

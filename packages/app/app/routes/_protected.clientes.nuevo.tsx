@@ -27,7 +27,7 @@ export default function NewCustomerPage() {
       address: null,
       notes: null,
       waterProfile: {
-        deliveryFrequency: "weekly",
+        deliveryFrequency: "on_demand",
         deliveryDays: [],
         defaultContainerQuantity: 1,
         waterRouteId: null,
@@ -49,8 +49,8 @@ export default function NewCustomerPage() {
         ...(mode === "agua" && data.waterProfile
           ? {
                 waterProfile: {
-                  deliveryFrequency: data.waterProfile.deliveryFrequency || "weekly",
-                  deliveryDays: data.waterProfile.deliveryDays ?? [],
+                  deliveryFrequency: "on_demand",
+                  deliveryDays: [],
                   defaultContainerQuantity: Number(data.waterProfile.defaultContainerQuantity ?? 1),
                   waterRouteId: data.waterProfile.waterRouteId || null,
                   preferredRoute: data.waterProfile.preferredRoute || null,

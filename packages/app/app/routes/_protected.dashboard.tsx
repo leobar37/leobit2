@@ -34,6 +34,7 @@ import {
   useSalesStats,
   useDebtorsSummary,
   useSalesChart,
+  useWaterOperationalReport,
 } from "~/hooks/use-dashboard";
 import { formatCurrency, formatKilos } from "~/lib/utils";
 import { getToday } from "~/lib/date-utils";
@@ -78,6 +79,9 @@ export default function DashboardPage() {
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
   const isWaterMode = business?.businessMode === "agua";
   const isCocheraMode = business?.businessMode === "cochera";
+  const { data: waterReport, isLoading: isLoadingWaterReport } = useWaterOperationalReport(period, {
+    enabled: isWaterMode,
+  });
 
   const { data: cocheraDashboard, isLoading: isLoadingCocheraDashboard } = useCocheraDashboard({
     enabled: isCocheraMode,
@@ -362,35 +366,65 @@ export default function DashboardPage() {
           {/* Métricas del Dashboard */}
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
+              dataTestId={isWaterMode ? "water-dashboard-revenue" : undefined}
               title={period.type === "day" ? "Movimiento Hoy" : period.type === "week" ? "Movimiento Semana" : period.type === "month" ? "Movimiento Mes" : "Movimiento"}
-              value={isLoadingSales ? "S/ -" : `S/ ${formatCurrency(salesStats?.current.amount ?? 0)}`}
-              change={salesStats?.change.amount}
+              value={
+                isWaterMode
+                  ? isLoadingWaterReport
+                    ? "S/ -"
+                    : `S/ ${formatCurrency(waterReport?.summary.totalRevenue ?? 0)}`
+                  : isLoadingSales
+                    ? "S/ -"
+                    : `S/ ${formatCurrency(salesStats?.current.amount ?? 0)}`
+              }
+              change={isWaterMode ? undefined : salesStats?.change.amount}
               icon={FileText}
               iconColor="text-orange-600"
             />
             <MetricCard
+              dataTestId={isWaterMode ? "water-dashboard-containers" : undefined}
               title={isWaterMode ? "Bidones" : "Kilos"}
-              value={isLoadingSales
-                ? "-"
-                : isWaterMode
-                  ? String(Math.round(salesStats?.current.kilos ?? 0))
-                  : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`}
-              change={salesStats?.change.kilos}
+              value={
+                isWaterMode
+                  ? isLoadingWaterReport
+                    ? "-"
+                    : String(Math.round(waterReport?.summary.soldContainers ?? 0))
+                  : isLoadingSales
+                    ? "-"
+                    : `${formatKilos(salesStats?.current.kilos ?? 0)} kg`
+              }
+              change={isWaterMode ? undefined : salesStats?.change.kilos}
               icon={isWaterMode ? Droplets : Weight}
               iconColor="text-blue-600"
             />
             <MetricCard
-              title={isWaterMode ? "Cobranza pendiente" : "Deudores"}
-              value={isLoadingDebtors ? "-" : String(debtorsCount)}
-              subtitle="clientes con deuda"
-              icon={Users}
-              iconColor="text-red-600"
+              dataTestId={isWaterMode ? "water-dashboard-stops-completed" : undefined}
+              title={isWaterMode ? "Paradas completadas" : "Deudores"}
+              value={
+                isWaterMode
+                  ? isLoadingWaterReport
+                    ? "-"
+                    : `${waterReport?.summary.stopsCompleted ?? 0}/${waterReport?.summary.stopsTotal ?? 0}`
+                  : isLoadingDebtors
+                    ? "-"
+                    : String(debtorsCount)
+              }
+              subtitle={isWaterMode ? "ruta operativa" : "clientes con deuda"}
+              icon={isWaterMode ? Route : Users}
+              iconColor={isWaterMode ? "text-sky-600" : "text-red-600"}
             />
             <MetricCard
-              title="Gastos Hoy"
-              value={`S/ ${formatCurrency(totalExpensesToday)}`}
-              icon={Receipt}
-              iconColor="text-amber-600"
+              dataTestId={isWaterMode ? "water-dashboard-stops-pending" : undefined}
+              title={isWaterMode ? "Pendientes" : "Gastos Hoy"}
+              value={
+                isWaterMode
+                  ? isLoadingWaterReport
+                    ? "-"
+                    : String(waterReport?.summary.stopsPending ?? 0)
+                  : `S/ ${formatCurrency(totalExpensesToday)}`
+              }
+              icon={isWaterMode ? Clock : Receipt}
+              iconColor={isWaterMode ? "text-amber-600" : "text-amber-600"}
             />
           </div>
 
@@ -408,12 +442,34 @@ export default function DashboardPage() {
         <TabsContent value="distribucion" className="space-y-4 mt-4">
           {usarDistribucion && !isLoadingDistribucion && tieneDistribucion && (
             <Link to="/mi-distribucion" className="block">
-              <InventoryCard
-                puntoVenta={isWaterMode ? `Ruta ${distribucion.puntoVenta}` : distribucion.puntoVenta}
-                modo={"libre" as const}
-                estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
-                cantidadItems={0}
-              />
+              {isWaterMode ? (
+                <div className="border-b border-border/60 pb-4 dark:border-white/[0.07]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 text-sm font-medium text-sky-600 dark:text-sky-300">
+                        <Route className="h-4 w-4" />
+                        Ruta de hoy
+                      </div>
+                      <p className="mt-1 truncate text-lg font-semibold text-foreground">
+                        {distribucion.puntoVenta}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {waterReport?.summary.stopsPending ?? 0} pendientes
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">
+                      S/ {formatCurrency(waterReport?.summary.totalRevenue ?? 0)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <InventoryCard
+                  puntoVenta={distribucion.puntoVenta}
+                  modo={"libre" as const}
+                  estado={distribucion.estado as "activo" | "cerrado" | "en_ruta"}
+                  cantidadItems={0}
+                />
+              )}
             </Link>
           )}
 

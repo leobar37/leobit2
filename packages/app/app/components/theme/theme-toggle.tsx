@@ -28,7 +28,7 @@ export function ThemeToggle() {
       data-testid="theme-toggle"
       aria-label="Cambiar tema"
       title={`Tema: ${THEME_LABELS[mode]}. Siguiente: ${THEME_LABELS[nextMode]}`}
-      className="shell-toolbar-button rounded-2xl text-muted-foreground hover:text-foreground"
+      className="h-9 w-9 rounded-lg shell-toolbar-button text-muted-foreground hover:text-foreground"
       onClick={cycleMode}
     >
       <Icon className="h-5 w-5" />

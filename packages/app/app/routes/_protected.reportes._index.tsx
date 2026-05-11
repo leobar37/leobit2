@@ -4,9 +4,11 @@ import {
   AlertTriangle,
   BarChart3,
   CarFront,
+  Droplets,
   Download,
   FileText,
   ReceiptText,
+  Route,
   ShoppingBasket,
   Wallet,
 } from "lucide-react";
@@ -17,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MobilePage, MobileSlot } from "~/components/mobile";
 import { useBusinessMode } from "~/hooks/use-business-mode";
 import { useCocheraReport, useExportCocheraReport } from "~/hooks/use-cochera-reports";
+import { useWaterOperationalReport } from "~/hooks/use-dashboard";
 import { useSubscriptionStatus } from "~/hooks/use-subscription-status";
 import { formatCurrency } from "~/lib/utils";
 
@@ -46,6 +49,20 @@ const reportLinks = [
     icon: ShoppingBasket,
   },
 ];
+
+const waterPeriodOptions = [
+  { value: "day", label: "Hoy" },
+  { value: "week", label: "Esta semana" },
+  { value: "month", label: "Este mes" },
+] as const;
+
+const paymentMethodLabels: Record<string, string> = {
+  efectivo: "Efectivo",
+  yape: "Yape",
+  plin: "Plin",
+  transferencia: "Transferencia",
+  tarjeta: "Tarjeta",
+};
 
 function formatDateTime(value: string | null): string {
   if (!value) return "—";
@@ -280,6 +297,156 @@ function CocheraReportsContent() {
   );
 }
 
+function WaterReportsContent() {
+  const [period, setPeriod] = useState<"day" | "week" | "month">("day");
+  const report = useWaterOperationalReport({ type: period }, { enabled: true });
+  const summary = report.data?.summary;
+  const paymentRows = summary
+    ? Object.entries(summary.paymentBreakdown).filter(([, amount]) => amount > 0)
+    : [];
+
+  return (
+    <MobilePage.Root maxWidth="lg" className="space-y-4">
+      <div className="rounded-[28px] bg-white/80 p-5 shadow-[0_14px_34px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:bg-[#151821]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-sky-600" />
+              <h1 className="text-2xl font-bold tracking-tight">Reportes de agua</h1>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Bidones, paradas y recaudación por ruta/repartidor.
+            </p>
+          </div>
+          <Badge variant="shell">Operativo</Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {waterPeriodOptions.map((option) => (
+          <Button
+            key={option.value}
+            type="button"
+            size="sm"
+            variant={period === option.value ? "default" : "outline"}
+            className="rounded-2xl"
+            onClick={() => setPeriod(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+
+      {report.isLoading ? (
+        <Card className="border-0 bg-white/75 dark:bg-[#151821]">
+          <CardContent className="p-6 text-center text-sm text-muted-foreground">Cargando reporte...</CardContent>
+        </Card>
+      ) : report.isError ? (
+        <Card className="border-0 bg-white/75 dark:bg-[#151821]">
+          <CardContent className="p-6 text-center text-sm text-red-600">No se pudo cargar el reporte.</CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Bidones vendidos</p>
+                <p className="mt-1 text-2xl font-bold">{summary?.soldContainers ?? 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Bidones entregados</p>
+                <p className="mt-1 text-2xl font-bold">{summary?.deliveredContainers ?? 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Paradas</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {summary?.stopsCompleted ?? 0}/{summary?.stopsTotal ?? 0}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Pendientes</p>
+                <p className="mt-1 text-2xl font-bold">{summary?.stopsPending ?? 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Recaudación</p>
+                <p className="mt-1 text-2xl font-bold">S/ {formatCurrency(summary?.totalRevenue)}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+            <CardContent className="p-4">
+              <h2 className="font-semibold">Desglose de recaudación</h2>
+              {paymentRows.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">Sin recaudación registrada.</p>
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {paymentRows.map(([method, amount]) => (
+                    <div key={method} className="rounded-2xl bg-sky-50 p-3 dark:bg-sky-500/10">
+                      <p className="text-xs text-sky-700 dark:text-sky-200">
+                        {paymentMethodLabels[method] ?? method}
+                      </p>
+                      <p className="font-bold">S/ {formatCurrency(amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="space-y-3">
+            {(report.data?.routes ?? []).length === 0 ? (
+              <Card className="border-0 bg-white/75 dark:bg-[#151821]">
+                <CardContent className="p-6 text-center">
+                  <Route className="mx-auto h-10 w-10 text-muted-foreground/60" />
+                  <p className="mt-3 font-medium">Sin rutas en el periodo</p>
+                  <p className="text-sm text-muted-foreground">Aún no hay paradas ni entregas registradas.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              report.data?.routes.map((row) => (
+                <Card key={row.distribucionId ?? row.routeName} className="border-0 bg-white/75 shadow-sm dark:bg-[#151821]">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">{row.routeName}</p>
+                        <p className="text-xs text-muted-foreground">{row.sellerLabel}</p>
+                      </div>
+                      <p className="font-bold">S/ {formatCurrency(row.totalRevenue)}</p>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
+                      <div className="rounded-xl bg-sky-50 p-2 dark:bg-sky-500/10">
+                        <p className="text-xs text-muted-foreground">Bidones</p>
+                        <p className="font-bold">{row.deliveredContainers}</p>
+                      </div>
+                      <div className="rounded-xl bg-emerald-50 p-2 dark:bg-emerald-500/10">
+                        <p className="text-xs text-muted-foreground">Completadas</p>
+                        <p className="font-bold">{row.stopsCompleted}</p>
+                      </div>
+                      <div className="rounded-xl bg-amber-50 p-2 dark:bg-amber-500/10">
+                        <p className="text-xs text-muted-foreground">Pendientes</p>
+                        <p className="font-bold">{row.stopsPending}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </MobilePage.Root>
+  );
+}
+
 export default function ReportesIndexPage() {
   const { is } = useBusinessMode();
 
@@ -292,7 +459,7 @@ export default function ReportesIndexPage() {
         <FileText className="h-5 w-5 text-muted-foreground" />
       </MobileSlot>
 
-      {is.cochera ? <CocheraReportsContent /> : <ReportsMenu />}
+      {is.cochera ? <CocheraReportsContent /> : is.agua ? <WaterReportsContent /> : <ReportsMenu />}
     </>
   );
 }

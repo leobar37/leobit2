@@ -18,7 +18,7 @@ import { Toaster } from "sonner";
 import { Provider as JotaiProvider } from "jotai";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Button } from "@/components/ui/button";
-import { ThemeProvider, themeScript } from "@/components/theme";
+import { ThemeProvider, themeScript } from "~/components/theme";
 import { createQueryPersister } from "~/lib/query/persister";
 import { queryClient } from "~/lib/query/client";
 import { getStoredBusinessId } from "~/lib/session-storage";

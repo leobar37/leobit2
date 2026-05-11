@@ -173,7 +173,7 @@ export default function CustomersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 rounded-xl border-stone-200/80 text-muted-foreground hover:bg-stone-50 dark:border-white/10 dark:hover:bg-white/[0.08]"
+                  className="h-11 gap-1.5 rounded-lg border-stone-200/80 text-muted-foreground hover:bg-stone-50 dark:border-white/10 dark:hover:bg-white/[0.08]"
                 >
                   <ArrowUpDown className="h-4 w-4" />
                   <span className="hidden sm:inline">{activeSortLabel}</span>
@@ -222,14 +222,14 @@ export default function CustomersPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-1">
             {customers.length > 0 && (
-              <div className="shell-card-soft flex items-center justify-between rounded-xl p-3 px-4">
+              <div className="flex items-center justify-between border-b border-border/60 px-1 pb-3 dark:border-white/[0.07]">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                   <button
                     type="button"
                     onClick={toggleSelectAll}
-                    className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+                    className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
                       selectedCustomerIds.size === customers.length
                         ? "border-orange-500 bg-orange-500"
                         : "border-stone-300 hover:border-orange-400 dark:border-white/15"
@@ -251,7 +251,7 @@ export default function CustomersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/[0.16]"
+                        className="h-9 gap-1.5 rounded-lg border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/[0.16]"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                         Acciones
@@ -320,7 +320,7 @@ export default function CustomersPage() {
       <MobileShell.FloatingAction>
         <Button
           size="icon"
-          className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+          className="h-12 w-12 rounded-xl bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.2)] hover:bg-orange-600"
           onClick={() => navigate("/clientes/nuevo")}
         >
           <Plus className="h-6 w-6" />
