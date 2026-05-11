@@ -10,6 +10,16 @@ export class LoginPage {
     await this.page.waitForLoadState("domcontentloaded");
   }
 
+  async resetSession() {
+    await this.page.context().clearCookies();
+    await this.page.goto("/login");
+    await this.page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    await this.page.waitForLoadState("domcontentloaded");
+  }
+
   /**
    * Login using pre-filled dev credentials (in development mode)
    * Just clicks the login button since fields are pre-filled
