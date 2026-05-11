@@ -29,8 +29,8 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_BUILD_ID=${VITE_BUILD_ID}
 ENV NODE_ENV=production
 
-# Copiar node_modules desde deps (bun monorepo hoists all deps to root node_modules)
-COPY --from=deps /app/node_modules ./node_modules
+# Copiar dependencias instaladas y enlaces de workspaces
+COPY --from=deps /app ./
 
 # Copiar el codigo fuente
 COPY . .
