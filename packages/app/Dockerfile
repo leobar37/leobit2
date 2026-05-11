@@ -45,17 +45,12 @@ RUN cd packages/app && npm run build
 FROM oven/bun:1.3.12-slim AS runner
 WORKDIR /app
 
+# Copy installed dependencies and workspace metadata
+COPY --from=deps /app ./
+
 # Copy built application from builder
 COPY --from=builder /app/packages/app/build ./packages/app/build
 COPY --from=builder /app/packages/app/server.js ./packages/app/server.js
-
-# Install production dependencies only
-COPY package.json bun.lock ./
-COPY packages/app/package.json ./packages/app/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/backend/package.json ./packages/backend/
-
-RUN bun install --production --no-frozen-lockfile
 
 # Install Doppler CLI
 RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg wget && \

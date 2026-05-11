@@ -19,8 +19,8 @@ RUN bun install
 FROM oven/bun:1.3.12-slim AS builder
 WORKDIR /app
 
-# Copiar dependencias instaladas (bun monorepo hoists all deps to root node_modules)
-COPY --from=deps /app/node_modules ./node_modules
+# Copiar dependencias instaladas y enlaces de workspaces
+COPY --from=deps /app ./
 
 # Copiar el código fuente
 COPY . .
@@ -38,13 +38,8 @@ RUN cd packages/backend && bunx drizzle-kit generate
 FROM oven/bun:1.3.12-slim AS runner
 WORKDIR /app
 
-# Copy package files for workspace resolution
-COPY package.json bun.lock ./
-COPY packages/backend/package.json ./packages/backend/
-COPY packages/shared/package.json ./packages/shared/
-
-# Copy node_modules from deps stage (bun monorepo hoists all deps to root node_modules)
-COPY --from=deps /app/node_modules ./node_modules
+# Copy installed dependencies and workspace metadata
+COPY --from=deps /app ./
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
