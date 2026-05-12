@@ -86,8 +86,8 @@ function vehicleTypeLabel(type: CocheraReportRow["vehicleType"]): string {
     auto: "Auto",
     moto: "Moto",
     camioneta: "Camioneta",
-    taxi: "Taxi",
-    otro: "Otro",
+    mototaxi: "Mototaxi",
+    motolineal: "Motolineal",
   };
   return labels[type] ?? type;
 }

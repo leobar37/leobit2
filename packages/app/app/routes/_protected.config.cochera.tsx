@@ -1,7 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Loader2, CarFront } from "lucide-react";
-import { MobileShell } from "~/components/mobile/mobile-shell";
 import { MobileSlot } from "~/components/mobile/mobile-slots";
 import { MobilePage } from "~/components/mobile/mobile-page";
 import {
@@ -36,6 +35,26 @@ export default function CocheraConfigPage() {
     enabled: canManageCocheraConfig,
   });
   const updateMutation = useUpdateCocheraSettings();
+  const backButton = useMemo(
+    () => (
+      <Link
+        to="/config"
+        className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Link>
+    ),
+    []
+  );
+  const headerTitle = useMemo(
+    () => (
+      <div className="flex min-w-0 items-center gap-2 flex-1">
+        <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
+        <h1 className="font-bold text-lg truncate">Configuración de Cochera</h1>
+      </div>
+    ),
+    []
+  );
 
   const handleSubmit = useCallback(
     async (data: CocheraSettingsFormData) => {
@@ -46,7 +65,13 @@ export default function CocheraConfigPage() {
         dailyRate: data.dailyRate ?? null,
         graceMinutes: data.graceMinutes,
         totalSpaces: data.totalSpaces,
+        hourlyBillingEnabled: data.hourlyBillingEnabled,
+        hourlyBaseRate: data.hourlyBaseRate,
+        hourlyBaseHours: data.hourlyBaseHours,
+        extraHourRate: data.extraHourRate,
+        defaultPaymentTiming: data.defaultPaymentTiming,
         acceptedPaymentMethods: data.acceptedPaymentMethods,
+        vehicleTypes: data.vehicleTypes,
       });
     },
     [updateMutation]
@@ -54,75 +79,52 @@ export default function CocheraConfigPage() {
 
   if (isLoadingBusiness || (canManageCocheraConfig && isLoading)) {
     return (
-      <MobileShell.Root variant="protected">
-        <MobileShell.Content>
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-          </div>
-        </MobileShell.Content>
-      </MobileShell.Root>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
     );
   }
 
   if (!isCocheraMode) {
     return (
-      <MobileShell.Root variant="protected">
-        <MobileShell.BackButton>
-          <Link
-            to="/config"
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </MobileShell.BackButton>
-
-        <MobileSlot name="header:center" priority={10}>
-          <div className="flex min-w-0 items-center gap-2 flex-1">
-            <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
-            <h1 className="font-bold text-lg truncate">Configuración de Cochera</h1>
-          </div>
+      <>
+        <MobileSlot name="header:left" priority={10}>
+          {backButton}
         </MobileSlot>
 
-        <MobileShell.Content>
-          <MobilePage.Root maxWidth="md">
-            <div data-testid="cochera-config-restricted" className="text-center space-y-4 py-12">
-              <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
-                <CarFront className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Modo no disponible</h2>
-                <p className="text-sm text-muted-foreground">
-                  Esta configuración solo está disponible para negocios tipo cochera.
-                </p>
-              </div>
+        <MobileSlot name="header:center" priority={10}>
+          {headerTitle}
+        </MobileSlot>
+
+        <MobilePage.Root maxWidth="md">
+          <div data-testid="cochera-config-restricted" className="text-center space-y-4 py-12">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
+              <CarFront className="h-8 w-8 text-muted-foreground" />
             </div>
-          </MobilePage.Root>
-        </MobileShell.Content>
-      </MobileShell.Root>
+            <div>
+              <h2 className="text-lg font-semibold">Modo no disponible</h2>
+              <p className="text-sm text-muted-foreground">
+                Esta configuración solo está disponible para negocios tipo cochera.
+              </p>
+            </div>
+          </div>
+        </MobilePage.Root>
+      </>
     );
   }
 
   if (!isAdmin) {
     return (
-      <MobileShell.Root variant="protected">
-        <MobileShell.BackButton>
-          <Link
-            to="/config"
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </MobileShell.BackButton>
-
-        <MobileSlot name="header:center" priority={10}>
-          <div className="flex min-w-0 items-center gap-2 flex-1">
-            <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
-            <h1 className="font-bold text-lg truncate">Configuración de Cochera</h1>
-          </div>
+      <>
+        <MobileSlot name="header:left" priority={10}>
+          {backButton}
         </MobileSlot>
 
-        <MobileShell.Content>
-          <MobilePage.Root maxWidth="md">
+        <MobileSlot name="header:center" priority={10}>
+          {headerTitle}
+        </MobileSlot>
+
+        <MobilePage.Root maxWidth="md">
             <div data-testid="cochera-config-restricted" className="text-center space-y-4 py-12">
               <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-amber-600" />
@@ -134,33 +136,23 @@ export default function CocheraConfigPage() {
                 </p>
               </div>
             </div>
-          </MobilePage.Root>
-        </MobileShell.Content>
-      </MobileShell.Root>
+        </MobilePage.Root>
+      </>
     );
   }
 
   if (error) {
     return (
-      <MobileShell.Root variant="protected">
-        <MobileShell.BackButton>
-          <Link
-            to="/config"
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </MobileShell.BackButton>
-
-        <MobileSlot name="header:center" priority={10}>
-          <div className="flex min-w-0 items-center gap-2 flex-1">
-            <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
-            <h1 className="font-bold text-lg truncate">Configuración de Cochera</h1>
-          </div>
+      <>
+        <MobileSlot name="header:left" priority={10}>
+          {backButton}
         </MobileSlot>
 
-        <MobileShell.Content>
-          <MobilePage.Root maxWidth="md">
+        <MobileSlot name="header:center" priority={10}>
+          {headerTitle}
+        </MobileSlot>
+
+        <MobilePage.Root maxWidth="md">
             <div className="text-center space-y-4 py-12">
               <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-red-600" />
@@ -172,9 +164,8 @@ export default function CocheraConfigPage() {
                 </p>
               </div>
             </div>
-          </MobilePage.Root>
-        </MobileShell.Content>
-      </MobileShell.Root>
+        </MobilePage.Root>
+      </>
     );
   }
 
@@ -186,31 +177,34 @@ export default function CocheraConfigPage() {
         dailyRate: decimalStringOrNull(settings.dailyRate),
         graceMinutes: String(settings.graceMinutes) as unknown as number,
         totalSpaces: String(settings.totalSpaces) as unknown as number,
+        hourlyBillingEnabled: settings.hourlyBillingEnabled,
+        hourlyBaseRate: decimalStringOrZero(settings.hourlyBaseRate),
+        hourlyBaseHours: String(settings.hourlyBaseHours) as unknown as number,
+        extraHourRate: decimalStringOrZero(settings.extraHourRate),
+        defaultPaymentTiming: settings.defaultPaymentTiming,
         acceptedPaymentMethods: settings.acceptedPaymentMethods,
+        vehicleTypes: settings.vehicleTypes,
       }
     : undefined;
 
   return (
-    <MobileShell.Root variant="protected">
-      <MobileShell.BackButton>
-        <Link
-          to="/config"
-          className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-      </MobileShell.BackButton>
-
-      <MobileSlot name="header:center" priority={10}>
-        <div className="flex min-w-0 items-center gap-2 flex-1">
-          <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
-          <h1 className="font-bold text-lg truncate">Configuración de Cochera</h1>
-        </div>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        {backButton}
       </MobileSlot>
 
-      <MobileShell.Content>
-        <MobilePage.Root maxWidth="md">
-          <div className="space-y-6">
+      <MobileSlot name="header:center" priority={10}>
+        {headerTitle}
+      </MobileSlot>
+
+      <MobilePage.Root maxWidth="md">
+          <div
+            className="space-y-6"
+            style={{
+              paddingBottom:
+                "calc(var(--shell-bottom-nav-height, 0px) + var(--shell-safe-area-bottom, env(safe-area-inset-bottom)) + 5.5rem)",
+            }}
+          >
             <div className="text-center space-y-4">
               <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-orange-600" />
@@ -231,8 +225,7 @@ export default function CocheraConfigPage() {
               />
             </div>
           </div>
-        </MobilePage.Root>
-      </MobileShell.Content>
-    </MobileShell.Root>
+      </MobilePage.Root>
+    </>
   );
 }

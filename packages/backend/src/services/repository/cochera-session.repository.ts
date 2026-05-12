@@ -155,6 +155,7 @@ export class CocheraSessionRepository {
     ctx: RequestContext,
     options: {
       search?: string;
+      customerId?: string;
       limit?: number;
       offset?: number;
     } = {}
@@ -164,6 +165,10 @@ export class CocheraSessionRepository {
       eq(cocheraSessions.status, "fuera"),
       gt(cocheraSessions.balanceDue, "0"),
     ];
+
+    if (options.customerId) {
+      conditions.push(eq(cocheraSessions.responsibleCustomerId, options.customerId));
+    }
 
     if (options.search?.trim()) {
       const pattern = `%${options.search.trim().toUpperCase()}%`;

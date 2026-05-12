@@ -1,5 +1,7 @@
 import { CocheraSessionRepository } from "../repository/cochera-session.repository";
 import { CocheraSettingsRepository } from "../repository/cochera-settings.repository";
+import { CustomerRepository } from "../repository/customer.repository";
+import { CocheraCustomerVehicleRepository } from "../repository/cochera-customer-vehicle.repository";
 import { SubscriptionService } from "./subscription.service";
 import {
   NotFoundError,
@@ -10,6 +12,11 @@ import {
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
 import { z } from "zod";
+import {
+  calculateCocheraBilling,
+  createCocheraPricingSnapshot,
+  type CocheraPricingSnapshot,
+} from "@avileo/shared";
 
 type PaymentMode = "pago_total" | "a_cuenta" | "debe_todo";
 type CocheraPaymentMethod = "efectivo" | "yape" | "plin";
@@ -21,6 +28,8 @@ const checkoutSchema = z.object({
     message: "Método de pago inválido",
   }).optional(),
   responsibleCustomerId: z.string().uuid().nullable().optional(),
+  customerVehicleId: z.string().uuid().nullable().optional(),
+  shouldCreateCustomerVehicle: z.boolean().optional().default(false),
   responsibleName: z.string().trim().max(160).nullable().optional(),
   responsiblePhone: z.string().trim().max(40).nullable().optional(),
   notes: z.string().trim().max(500).nullable().optional(),
@@ -32,6 +41,8 @@ export type CocheraCheckoutInput = {
   amountPaid?: number;
   paymentMethod?: CocheraPaymentMethod;
   responsibleCustomerId?: string | null;
+  customerVehicleId?: string | null;
+  shouldCreateCustomerVehicle?: boolean;
   responsibleName?: string | null;
   responsiblePhone?: string | null;
   notes?: string | null;
@@ -47,6 +58,12 @@ export interface CocheraCheckoutResult {
   checkoutAt: Date;
   durationMinutes: number;
   billableHours: number;
+  baseHours: number;
+  extraHours: number;
+  baseAmount: string;
+  extraAmount: string;
+  entryAmountPaid: string;
+  remainingAmount: string;
   hourlyRate: string;
   discountAmount: string;
   totalAmount: string;
@@ -54,6 +71,8 @@ export interface CocheraCheckoutResult {
   balanceDue: string;
   paymentMode: PaymentMode;
   paymentMethod: string | null;
+  responsibleCustomerId: string | null;
+  customerVehicleId: string | null;
   responsibleName: string | null;
   responsiblePhone: string | null;
   checkoutBy: string | null;
@@ -71,7 +90,9 @@ export class CocheraCheckoutService {
   constructor(
     private sessionRepo: CocheraSessionRepository,
     private settingsRepo: CocheraSettingsRepository,
-    private subscriptionService: SubscriptionService
+    private subscriptionService: SubscriptionService,
+    private customerRepo: CustomerRepository,
+    private customerVehicleRepo: CocheraCustomerVehicleRepository
   ) {}
 
   private ensureCocheraMode(ctx: RequestContext): void {
@@ -93,6 +114,7 @@ export class CocheraCheckoutService {
     responsibleName: string | null;
     responsiblePhone: string | null;
     responsibleCustomerId: string | null;
+    customerVehicleId: string | null;
     settlementNotes: string | null;
   } {
     const paymentMode = input.paymentMode;
@@ -113,12 +135,13 @@ export class CocheraCheckoutService {
         responsibleName: null,
         responsiblePhone: null,
         responsibleCustomerId: null,
+        customerVehicleId: null,
         settlementNotes,
       };
     }
 
-    if (!responsibleName) {
-      throw new ValidationError("Ingresa el responsable de la deuda");
+    if (!input.responsibleCustomerId) {
+      throw new ValidationError("Selecciona el cliente responsable de la deuda");
     }
 
     if (paymentMode === "debe_todo") {
@@ -129,7 +152,8 @@ export class CocheraCheckoutService {
         paymentMethod: null,
         responsibleName,
         responsiblePhone,
-        responsibleCustomerId: input.responsibleCustomerId ?? null,
+        responsibleCustomerId: input.responsibleCustomerId,
+        customerVehicleId: input.customerVehicleId ?? null,
         settlementNotes,
       };
     }
@@ -155,7 +179,8 @@ export class CocheraCheckoutService {
       paymentMethod: input.paymentMethod,
       responsibleName,
       responsiblePhone,
-      responsibleCustomerId: input.responsibleCustomerId ?? null,
+      responsibleCustomerId: input.responsibleCustomerId,
+      customerVehicleId: input.customerVehicleId ?? null,
       settlementNotes,
     };
   }
@@ -167,32 +192,42 @@ export class CocheraCheckoutService {
   calculateCheckout(
     entryAt: Date,
     checkoutAt: Date,
-    hourlyRate: string,
-    graceMinutes: number,
+    pricing: CocheraPricingSnapshot,
+    entryAmountPaid: string | number | null = 0,
     discount: number = 0
   ): {
     durationMinutes: number;
     billableMinutes: number;
     billableHours: number;
+    baseHours: number;
+    extraHours: number;
+    baseAmount: string;
+    extraAmount: string;
+    entryAmountPaid: string;
+    remainingAmount: string;
     discountAmount: string;
     totalAmount: string;
   } {
-    const durationMs = checkoutAt.getTime() - entryAt.getTime();
-    const durationMinutes = Math.max(0, Math.floor(durationMs / 1000 / 60));
-
-    const billableMinutes = Math.max(0, durationMinutes - graceMinutes);
-    const billableHours = Math.ceil(billableMinutes / 60);
-
-    const rate = Number(hourlyRate);
-    const rawAmount = billableHours * rate - discount;
-    const totalAmount = Math.max(0, rawAmount);
+    const calculation = calculateCocheraBilling({
+      entryAt,
+      checkoutAt,
+      pricing,
+      entryAmountPaid,
+      discount,
+    });
 
     return {
-      durationMinutes,
-      billableMinutes,
-      billableHours,
-      discountAmount: String(discount.toFixed(2)),
-      totalAmount: String(totalAmount.toFixed(2)),
+      durationMinutes: calculation.durationMinutes,
+      billableMinutes: calculation.billableMinutes,
+      billableHours: calculation.billableHours,
+      baseHours: calculation.baseHours,
+      extraHours: calculation.extraHours,
+      baseAmount: toMoney(calculation.baseAmount),
+      extraAmount: toMoney(calculation.extraAmount),
+      entryAmountPaid: toMoney(calculation.entryAmountPaid),
+      remainingAmount: toMoney(calculation.remainingAmount),
+      discountAmount: toMoney(calculation.discountAmount),
+      totalAmount: toMoney(calculation.totalAmount),
     };
   }
 
@@ -230,18 +265,51 @@ export class CocheraCheckoutService {
       throw new ValidationError("Método de pago no aceptado");
     }
 
+    const selectedCustomer = parsed.data.responsibleCustomerId
+      ? await this.customerRepo.findById(ctx, parsed.data.responsibleCustomerId)
+      : null;
+
+    if (parsed.data.paymentMode !== "pago_total" && !selectedCustomer) {
+      throw new ValidationError("Selecciona un cliente válido para la deuda");
+    }
+
+    let selectedVehicleId = parsed.data.customerVehicleId ?? null;
+    if (selectedVehicleId && selectedCustomer) {
+      const vehicle = await this.customerVehicleRepo.findById(ctx, selectedVehicleId);
+      if (!vehicle || vehicle.customerId !== selectedCustomer.id) {
+        throw new ValidationError("El vehículo no pertenece al cliente seleccionado");
+      }
+    }
+
+    if (!selectedVehicleId && selectedCustomer) {
+      const existingVehicle = await this.customerVehicleRepo.findActiveByPlate(ctx, session.plate);
+      if (existingVehicle) {
+        if (existingVehicle.customerId !== selectedCustomer.id) {
+          throw new ValidationError("La placa ya está asociada a otro cliente");
+        }
+        selectedVehicleId = existingVehicle.id;
+      }
+    }
+
+    if (selectedCustomer) {
+      parsed.data.responsibleName = selectedCustomer.name;
+      parsed.data.responsiblePhone = selectedCustomer.phone;
+      parsed.data.customerVehicleId = selectedVehicleId;
+    }
+
     const checkoutAt = new Date();
 
+    const pricing = session.pricingSnapshot ?? createCocheraPricingSnapshot(settings);
     const calculation = this.calculateCheckout(
       new Date(session.entryAt),
       checkoutAt,
-      settings.hourlyRate,
-      settings.graceMinutes,
+      pricing,
+      session.entryAmountPaid,
       parsed.data.discount
     );
 
     const settlement = this.calculateSettlement(
-      parseMoney(calculation.totalAmount),
+      parseMoney(calculation.remainingAmount),
       parsed.data
     );
 
@@ -249,6 +317,27 @@ export class CocheraCheckoutService {
       // Check limit and record usage atomically within the same transaction
       // to prevent race conditions on the Gratis plan counter.
       await this.subscriptionService.checkAndRecordUsage(ctx, tx);
+
+      let customerVehicleId = settlement.customerVehicleId;
+      if (
+        selectedCustomer &&
+        !customerVehicleId &&
+        parsed.data.shouldCreateCustomerVehicle
+      ) {
+        const vehicle = await this.customerVehicleRepo.create(
+          ctx,
+          {
+            customerId: selectedCustomer.id,
+            plate: session.plate,
+            vehicleType: session.vehicleType,
+            alias: null,
+            notes: null,
+            active: true,
+          },
+          tx
+        );
+        customerVehicleId = vehicle.id;
+      }
 
       const updated = await this.sessionRepo.update(
         ctx,
@@ -260,11 +349,12 @@ export class CocheraCheckoutService {
           checkoutBy: ctx.businessUserId,
           totalAmount: calculation.totalAmount,
           discountAmount: calculation.discountAmount,
-          amountPaid: settlement.amountPaid,
+          amountPaid: toMoney(parseMoney(calculation.entryAmountPaid) + parseMoney(settlement.amountPaid)),
           balanceDue: settlement.balanceDue,
           paymentMode: settlement.paymentMode,
           paymentMethod: settlement.paymentMethod,
           responsibleCustomerId: settlement.responsibleCustomerId,
+          customerVehicleId,
           responsibleName: settlement.responsibleName,
           responsiblePhone: settlement.responsiblePhone,
           settlementNotes: settlement.settlementNotes,
@@ -284,13 +374,21 @@ export class CocheraCheckoutService {
       checkoutAt: new Date(result.checkoutAt!),
       durationMinutes: calculation.durationMinutes,
       billableHours: calculation.billableHours,
-      hourlyRate: settings.hourlyRate,
+      baseHours: calculation.baseHours,
+      extraHours: calculation.extraHours,
+      baseAmount: calculation.baseAmount,
+      extraAmount: calculation.extraAmount,
+      entryAmountPaid: calculation.entryAmountPaid,
+      remainingAmount: calculation.remainingAmount,
+      hourlyRate: pricing.hourlyBillingEnabled ? pricing.extraHourRate : pricing.hourlyRate,
       discountAmount: calculation.discountAmount,
       totalAmount: calculation.totalAmount,
       amountPaid: result.amountPaid ?? settlement.amountPaid,
       balanceDue: result.balanceDue ?? settlement.balanceDue,
       paymentMode: (result.paymentMode ?? settlement.paymentMode) as PaymentMode,
       paymentMethod: result.paymentMethod ?? null,
+      responsibleCustomerId: result.responsibleCustomerId ?? null,
+      customerVehicleId: result.customerVehicleId ?? null,
       responsibleName: result.responsibleName ?? null,
       responsiblePhone: result.responsiblePhone ?? null,
       checkoutBy: result.checkoutBy ?? null,

@@ -33,8 +33,25 @@ export const cocheraSettingsRoutes = new Elysia({ prefix: "/cochera/settings" })
         dailyRate: t.Optional(t.Nullable(t.Number({ minimum: 0 }))),
         graceMinutes: t.Integer({ minimum: 0, maximum: 120 }),
         totalSpaces: t.Integer({ minimum: 0 }),
+        hourlyBillingEnabled: t.Optional(t.Boolean()),
+        hourlyBaseRate: t.Optional(t.Number({ minimum: 0 })),
+        hourlyBaseHours: t.Optional(t.Integer({ minimum: 1 })),
+        extraHourRate: t.Optional(t.Number({ minimum: 0 })),
+        defaultPaymentTiming: t.Optional(t.Union([
+          t.Literal("entry"),
+          t.Literal("exit"),
+        ])),
         acceptedPaymentMethods: t.Array(
           t.Union([t.Literal("efectivo"), t.Literal("yape"), t.Literal("plin")]),
+          { minItems: 1 }
+        ),
+        vehicleTypes: t.Array(
+          t.Object({
+            id: t.String({ minLength: 2, maxLength: 30 }),
+            label: t.String({ minLength: 2, maxLength: 40 }),
+            enabled: t.Boolean(),
+            isDefault: t.Optional(t.Boolean()),
+          }),
           { minItems: 1 }
         ),
       }),

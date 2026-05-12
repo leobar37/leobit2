@@ -193,6 +193,15 @@ const cocheraConfigItem: ConfigItem = {
   iconBg: "bg-emerald-100",
 };
 
+const cocheraClientsItem: ConfigItem = {
+  icon: Users,
+  title: "Clientes de Cochera",
+  description: "Clientes, vehículos y saldos pendientes",
+  href: "/clientes",
+  color: "text-orange-600",
+  iconBg: "bg-orange-100",
+};
+
 export default function ConfigIndexPage() {
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -206,7 +215,7 @@ export default function ConfigIndexPage() {
         baseConfigItems[0],
         baseConfigItems[1],
         teamConfigItem,
-        ...(isCocheraMode ? [cocheraConfigItem] : [distribucionesConfigItem, comprasConfigItem]),
+        ...(isCocheraMode ? [cocheraClientsItem, cocheraConfigItem] : [distribucionesConfigItem, comprasConfigItem]),
         ...(isCocheraMode ? [] : [gastosConfigItem]),
         ...(isCocheraMode ? [] : [stockAlertsConfigItem]),
         ...(isCocheraMode ? [] : [activosConfigItem]),

@@ -160,6 +160,7 @@ function CocheraCobrosPage() {
   const [search, setSearch] = useState("");
   const { data, isLoading } = useCocheraDebts({ search });
   const debts = data?.items ?? [];
+  const customerGroups = data?.customers ?? [];
   const totalDebt = data?.summary.totalDebt ?? "0";
 
   return (
@@ -175,14 +176,14 @@ function CocheraCobrosPage() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground mt-2">
-          {debts.length} {debts.length === 1 ? "vehículo" : "vehículos"} con deuda
+          {customerGroups.length} {customerGroups.length === 1 ? "cliente" : "clientes"} con deuda
         </p>
       </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar placa, responsable o teléfono..."
+          placeholder="Buscar cliente, teléfono o placa..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="shell-search-field pl-10 pr-4"
@@ -212,8 +213,55 @@ function CocheraCobrosPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {debts.map((debt) => (
-            <CocheraDebtCard key={debt.id} debt={debt} />
+          {customerGroups.map((group) => (
+            <Card key={group.customerId} className="shell-card-flat w-full rounded-2xl border-0">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-lg font-bold">{group.customerName}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {group.customerPhone || "Sin teléfono"} · {group.pendingSessions} pendientes
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-lg font-bold text-destructive">
+                      S/ {formatCurrency(group.totalDebt)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">por cobrar</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  {group.vehicles.map((vehicle) => (
+                    <div key={`${group.customerId}-${vehicle.plate}`} className="rounded-xl bg-muted/50 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold tracking-wide">{vehicle.plate}</p>
+                          <p className="text-xs capitalize text-muted-foreground">{vehicle.vehicleType}</p>
+                        </div>
+                        <p className="font-semibold text-destructive">
+                          S/ {formatCurrency(vehicle.balanceDue)}
+                        </p>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {vehicle.sessions.map((session) => (
+                          <Link
+                            key={session.id}
+                            to={`/cobros/nuevo?cocheraSessionId=${session.id}`}
+                            className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-background"
+                          >
+                            <span>
+                              {session.checkoutAt ? `Salida: ${formatDate(new Date(session.checkoutAt))}` : "Sin salida"}
+                            </span>
+                            <span className="font-medium">Cobrar</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

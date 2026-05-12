@@ -19,19 +19,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useBusinessMode } from "~/hooks/use-business-mode";
 import { cn } from "~/lib/utils";
-import type { CocheraSession, CocheraVehicleType } from "@avileo/shared";
+import {
+  calculateCocheraBilling,
+  createCocheraPricingSnapshot,
+  type CocheraSession,
+  type CocheraSettings,
+  type CocheraVehicleType,
+} from "@avileo/shared";
 
 type VehicleFilter = "todos" | CocheraVehicleType | "long-stay" | "notes";
 type SortMode = "longest" | "recent" | "plate";
-
-const FILTER_OPTIONS: Array<{ id: VehicleFilter; label: string }> = [
-  { id: "todos", label: "Todos" },
-  { id: "auto", label: "Autos" },
-  { id: "moto", label: "Motos" },
-  { id: "camioneta", label: "Camionetas" },
-  { id: "long-stay", label: "Más de 1h" },
-  { id: "notes", label: "Con notas" },
-];
 
 const SORT_OPTIONS: Array<{ id: SortMode; label: string }> = [
   { id: "longest", label: "Mayor tiempo" },
@@ -47,18 +44,20 @@ function getElapsedMinutes(session: CocheraSession, now: Date): number {
 function getEstimatedAmount(
   session: CocheraSession,
   now: Date,
-  settings?: { graceMinutes: number; hourlyRate: string } | null
-): number | null {
+  settings?: CocheraSettings | null
+): { amount: number; isExtra: boolean } | null {
   if (!settings) return null;
 
-  const rate = Number(settings.hourlyRate) || 0;
-  if (rate <= 0) return null;
+  const pricing = session.pricingSnapshot ?? createCocheraPricingSnapshot(settings);
+  const calculation = calculateCocheraBilling({
+    entryAt: session.entryAt,
+    checkoutAt: now,
+    pricing,
+    entryAmountPaid: session.entryAmountPaid,
+  });
 
-  const billableMinutes = Math.max(
-    0,
-    getElapsedMinutes(session, now) - (settings.graceMinutes ?? 0)
-  );
-  return Math.ceil(billableMinutes / 60) * rate;
+  if (calculation.totalAmount <= 0) return null;
+  return { amount: calculation.remainingAmount, isExtra: calculation.isExtra };
 }
 
 export default function CocheraIndexPage() {
@@ -118,6 +117,17 @@ export default function CocheraIndexPage() {
   }, [sessions, search, filter, sortMode, now]);
 
   const hasActiveFilters = search.trim().length > 0 || filter !== "todos";
+  const filterOptions = useMemo(
+    () => [
+      { id: "todos" as const, label: "Todos" },
+      ...(settings?.vehicleTypes ?? [])
+        .filter((type) => type.enabled)
+        .map((type) => ({ id: type.id as VehicleFilter, label: type.label })),
+      { id: "long-stay" as const, label: "Más de 1h" },
+      { id: "notes" as const, label: "Con notas" },
+    ],
+    [settings?.vehicleTypes]
+  );
   const activeSortLabel =
     SORT_OPTIONS.find((option) => option.id === sortMode)?.label ??
     "Mayor tiempo";
@@ -209,7 +219,7 @@ export default function CocheraIndexPage() {
             </div>
 
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-              {FILTER_OPTIONS.map((option) => (
+              {filterOptions.map((option) => (
                 <button
                   key={option.id}
                   type="button"

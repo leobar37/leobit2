@@ -65,10 +65,12 @@ import { SubscriptionService } from "../services/business/subscription.service";
 import { CocheraSettingsRepository } from "../services/repository/cochera-settings.repository";
 import { CocheraSettingsService } from "../services/business/cochera-settings.service";
 import { CocheraSessionRepository } from "../services/repository/cochera-session.repository";
+import { CocheraCustomerVehicleRepository } from "../services/repository/cochera-customer-vehicle.repository";
 import { CocheraSessionService } from "../services/business/cochera-session.service";
 import { CocheraCheckoutService } from "../services/business/cochera-checkout.service";
 import { CocheraReportService } from "../services/business/cochera-report.service";
 import { CocheraDebtService } from "../services/business/cochera-debt.service";
+import { CocheraCustomerService } from "../services/business/cochera-customer.service";
 import { initializeStateMachines } from "../services/transitions";
 
 export const servicesPlugin = new Elysia({ name: "services" })
@@ -158,14 +160,22 @@ export const servicesPlugin = new Elysia({ name: "services" })
     const cocheraSettingsRepo = new CocheraSettingsRepository();
     const cocheraSettingsService = new CocheraSettingsService(cocheraSettingsRepo);
     const cocheraSessionRepo = new CocheraSessionRepository();
-    const cocheraSessionService = new CocheraSessionService(cocheraSessionRepo);
+    const cocheraCustomerVehicleRepo = new CocheraCustomerVehicleRepository();
+    const cocheraSessionService = new CocheraSessionService(cocheraSessionRepo, cocheraSettingsRepo);
     const cocheraCheckoutService = new CocheraCheckoutService(
       cocheraSessionRepo,
       cocheraSettingsRepo,
-      subscriptionService
+      subscriptionService,
+      customerRepo,
+      cocheraCustomerVehicleRepo
     );
     const cocheraReportService = new CocheraReportService(subscriptionService);
     const cocheraDebtService = new CocheraDebtService(cocheraSessionRepo, cocheraSettingsRepo);
+    const cocheraCustomerService = new CocheraCustomerService(
+      customerRepo,
+      cocheraCustomerVehicleRepo,
+      cocheraSessionRepo
+    );
 
     return {
       businessRepo,
@@ -231,9 +241,11 @@ export const servicesPlugin = new Elysia({ name: "services" })
       cocheraSettingsRepo,
       cocheraSettingsService,
       cocheraSessionRepo,
+      cocheraCustomerVehicleRepo,
       cocheraSessionService,
       cocheraCheckoutService,
       cocheraReportService,
       cocheraDebtService,
+      cocheraCustomerService,
     };
   });

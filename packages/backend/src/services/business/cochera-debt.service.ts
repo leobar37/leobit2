@@ -56,6 +56,8 @@ export class CocheraDebtService {
         amountPaid: session.amountPaid ?? "0.00",
         balanceDue: session.balanceDue ?? "0.00",
         paymentMode: session.paymentMode as never,
+        responsibleCustomerId: session.responsibleCustomerId,
+        customerVehicleId: session.customerVehicleId,
         responsibleName: session.responsibleName,
         responsiblePhone: session.responsiblePhone,
         notes: session.notes,
@@ -65,6 +67,83 @@ export class CocheraDebtService {
         totalDebt: toMoney(totalDebt),
         totalSessions: sessions.length,
       },
+      customers: Array.from(
+        sessions.reduce((map, session) => {
+          const customerId = session.responsibleCustomerId ?? `legacy-${session.id}`;
+          const group = map.get(customerId) ?? {
+            customerId,
+            customerName: session.responsibleName ?? "Sin responsable",
+            customerPhone: session.responsiblePhone ?? null,
+            totalDebt: 0,
+            pendingSessions: 0,
+            vehicles: new Map<string, {
+              plate: string;
+              vehicleType: string;
+              balanceDue: number;
+              sessions: typeof sessions;
+            }>(),
+          };
+
+          const vehicleKey = session.customerVehicleId ?? session.plate;
+          const vehicle = group.vehicles.get(vehicleKey) ?? {
+            plate: session.plate,
+            vehicleType: session.vehicleType,
+            balanceDue: 0,
+            sessions: [],
+          };
+
+          const balance = money(session.balanceDue);
+          group.totalDebt += balance;
+          group.pendingSessions += 1;
+          vehicle.balanceDue += balance;
+          vehicle.sessions.push(session);
+          group.vehicles.set(vehicleKey, vehicle);
+          map.set(customerId, group);
+          return map;
+        }, new Map<string, {
+          customerId: string;
+          customerName: string;
+          customerPhone: string | null;
+          totalDebt: number;
+          pendingSessions: number;
+          vehicles: Map<string, {
+            plate: string;
+            vehicleType: string;
+            balanceDue: number;
+            sessions: typeof sessions;
+          }>;
+        }>())
+          .values()
+      ).map((group) => ({
+        customerId: group.customerId,
+        customerName: group.customerName,
+        customerPhone: group.customerPhone,
+        totalDebt: toMoney(group.totalDebt),
+        pendingSessions: group.pendingSessions,
+        vehicles: Array.from(group.vehicles.values()).map((vehicle) => ({
+          plate: vehicle.plate,
+          vehicleType: vehicle.vehicleType as never,
+          balanceDue: toMoney(vehicle.balanceDue),
+          sessions: vehicle.sessions.map((session) => ({
+            id: session.id,
+            plate: session.plate,
+            vehicleType: session.vehicleType as never,
+            entryAt: new Date(session.entryAt).toISOString(),
+            exitAt: session.exitAt ? new Date(session.exitAt).toISOString() : null,
+            checkoutAt: session.checkoutAt ? new Date(session.checkoutAt).toISOString() : null,
+            totalAmount: session.totalAmount ?? "0.00",
+            amountPaid: session.amountPaid ?? "0.00",
+            balanceDue: session.balanceDue ?? "0.00",
+            paymentMode: session.paymentMode as never,
+            responsibleCustomerId: session.responsibleCustomerId,
+            customerVehicleId: session.customerVehicleId,
+            responsibleName: session.responsibleName,
+            responsiblePhone: session.responsiblePhone,
+            notes: session.notes,
+            settlementNotes: session.settlementNotes,
+          })),
+        })),
+      })),
     };
   }
 

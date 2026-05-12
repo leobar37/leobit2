@@ -1,23 +1,27 @@
 import { CocheraSessionRepository } from "../repository/cochera-session.repository";
+import { CocheraSettingsRepository } from "../repository/cochera-settings.repository";
 import { ValidationError, ConflictError, NotFoundError, ForbiddenError } from "../../errors";
 import type { RequestContext } from "../../context/request-context";
 import type { CocheraSession, NewCocheraSession } from "../../db/schema";
 import { z } from "zod";
-
-const vehicleTypes = ["auto", "moto", "camioneta"] as const;
+import { createCocheraPricingSnapshot } from "@avileo/shared";
 
 const createSchema = z.object({
   plate: z.string().min(1, "La placa es requerida").max(20, "Placa muy larga"),
-  vehicleType: z.enum(vehicleTypes, {
-    message: "Tipo de vehículo inválido",
-  }),
+  vehicleType: z.string().trim().min(2, "Tipo de vehículo inválido").max(30, "Tipo de vehículo inválido"),
   notes: z.string().max(500, "Nota muy larga").optional(),
+  paymentTiming: z.enum(["entry", "exit"]).optional(),
+  entryAmountPaid: z.number().min(0).optional().default(0),
+  entryPaymentMethod: z.enum(["efectivo", "yape", "plin"]).optional(),
 });
 
-export type CreateCocheraSessionInput = z.infer<typeof createSchema>;
+export type CreateCocheraSessionInput = z.input<typeof createSchema>;
 
 export class CocheraSessionService {
-  constructor(private repo: CocheraSessionRepository) {}
+  constructor(
+    private repo: CocheraSessionRepository,
+    private settingsRepo: CocheraSettingsRepository
+  ) {}
 
   private ensureCocheraMode(ctx: RequestContext): void {
     if (ctx.businessMode !== "cochera") {
@@ -60,6 +64,29 @@ export class CocheraSessionService {
     }
 
     const normalizedPlate = result.data.plate.trim().toUpperCase();
+    const normalizedVehicleType = result.data.vehicleType.trim().toLowerCase();
+    const settings = await this.settingsRepo.getOrCreate(ctx);
+    const vehicleType = settings.vehicleTypes.find(
+      (type) => type.id === normalizedVehicleType && type.enabled
+    );
+
+    if (!vehicleType) {
+      throw new ValidationError("Tipo de vehículo inválido");
+    }
+
+    const paymentTiming = settings.hourlyBillingEnabled
+      ? result.data.paymentTiming ?? settings.defaultPaymentTiming
+      : null;
+    const entryAmountPaid = settings.hourlyBillingEnabled ? result.data.entryAmountPaid ?? 0 : 0;
+    if (entryAmountPaid > 0 && !result.data.entryPaymentMethod) {
+      throw new ValidationError("Selecciona un método de pago para el cobro de entrada");
+    }
+    if (
+      result.data.entryPaymentMethod &&
+      !settings.acceptedPaymentMethods.includes(result.data.entryPaymentMethod)
+    ) {
+      throw new ValidationError("Método de pago no aceptado");
+    }
 
     // Prevent duplicate active plate per business
     const existing = await this.repo.findActiveByPlate(ctx, normalizedPlate);
@@ -71,10 +98,15 @@ export class CocheraSessionService {
 
     const data: Omit<NewCocheraSession, "businessId"> = {
       plate: normalizedPlate,
-      vehicleType: result.data.vehicleType,
+      vehicleType: normalizedVehicleType,
       status: "dentro",
       notes: result.data.notes,
       entryAt: new Date(),
+      paymentTiming,
+      entryAmountPaid: entryAmountPaid.toFixed(2),
+      entryPaymentMethod: entryAmountPaid > 0 ? result.data.entryPaymentMethod : null,
+      entryPaymentAt: entryAmountPaid > 0 ? new Date() : null,
+      pricingSnapshot: createCocheraPricingSnapshot(settings),
     };
 
     return this.repo.create(ctx, data);

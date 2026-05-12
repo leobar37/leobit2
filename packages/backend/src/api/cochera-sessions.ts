@@ -39,12 +39,15 @@ export const cocheraSessionRoutes = new Elysia({ prefix: "/cochera/sessions" })
     {
       body: t.Object({
         plate: t.String({ minLength: 1, maxLength: 20 }),
-        vehicleType: t.Union([
-          t.Literal("auto"),
-          t.Literal("moto"),
-          t.Literal("camioneta"),
-        ]),
+        vehicleType: t.String({ minLength: 2, maxLength: 30 }),
         notes: t.Optional(t.String({ maxLength: 500 })),
+        paymentTiming: t.Optional(t.Union([t.Literal("entry"), t.Literal("exit")])),
+        entryAmountPaid: t.Optional(t.Number({ minimum: 0 })),
+        entryPaymentMethod: t.Optional(t.Union([
+          t.Literal("efectivo"),
+          t.Literal("yape"),
+          t.Literal("plin"),
+        ])),
       }),
     }
   )
@@ -96,6 +99,8 @@ export const cocheraSessionRoutes = new Elysia({ prefix: "/cochera/sessions" })
           t.Literal("plin"),
         ])),
         responsibleCustomerId: t.Optional(t.Nullable(t.String())),
+        customerVehicleId: t.Optional(t.Nullable(t.String())),
+        shouldCreateCustomerVehicle: t.Optional(t.Boolean()),
         responsibleName: t.Optional(t.Nullable(t.String({ maxLength: 160 }))),
         responsiblePhone: t.Optional(t.Nullable(t.String({ maxLength: 40 }))),
         notes: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),

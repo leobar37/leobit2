@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Plus, Search, User, Tags, Check, Users, MoreHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownZA, CalendarDays, Banknote } from "lucide-react";
+import { Plus, Search, User, Tags, Check, Users, MoreHorizontal, ArrowUpDown, ArrowUpAZ, ArrowDownZA, CalendarDays, Banknote, CarFront, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ import { useCustomerFilters } from "~/hooks/use-customer-filters";
 import { useCustomerSort } from "~/hooks/use-customer-sort";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { MobileShell } from "~/components/mobile";
-import { cn } from "~/lib/utils";
+import { cn, formatCurrency } from "~/lib/utils";
 import { BulkCustomerTagsModal, useBulkCustomerTagsModal } from "~/components/customers/bulk-tag-assignment-drawer";
 import {
   BulkGroupAssignmentDrawer,
@@ -26,6 +26,9 @@ import {
 import { CustomerFilterPopover } from "~/components/customers/customer-filter-popover";
 import { CustomerCard } from "~/components/customers/customer-card";
 import { QuickTagModal, useQuickTagModal } from "~/components/tags";
+import { AppDrawer } from "~/components/ui/app-drawer";
+import { useBusinessMode } from "~/hooks/use-business-mode";
+import { useCocheraCustomers, useCreateCocheraCustomer } from "~/hooks/use-cochera-customers";
 
 interface SortOption {
   label: string;
@@ -44,7 +47,145 @@ const SORT_OPTIONS: SortOption[] = [
   { label: "Última compra", sortBy: "lastSaleDate", sortOrder: "desc", icon: <CalendarDays className="h-4 w-4" /> },
 ];
 
-export default function CustomersPage() {
+function CocheraCustomersPage() {
+  const [search, setSearch] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [plate, setPlate] = useState("");
+  const { data, isLoading } = useCocheraCustomers({ search });
+  const createCustomer = useCreateCocheraCustomer();
+
+  useSetLayout({ title: "Clientes" });
+
+  const handleCreate = async () => {
+    if (!name.trim()) return;
+    await createCustomer.mutateAsync({
+      name: name.trim(),
+      phone: phone.trim() || null,
+      vehicles: plate.trim()
+        ? [{ plate: plate.trim(), vehicleType: "auto" }]
+        : [],
+    });
+    setName("");
+    setPhone("");
+    setPlate("");
+    setDrawerOpen(false);
+  };
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="shell-card-soft border-l-4 border-orange-500 py-3 pl-4 pr-3">
+          <p className="text-sm text-muted-foreground">Clientes de cochera</p>
+          <p className="text-3xl font-bold text-foreground">
+            {data?.summary.totalCustomers ?? 0}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data?.summary.totalVehicles ?? 0} vehículos · S/ {formatCurrency(data?.summary.totalDebt ?? "0")} por cobrar
+          </p>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar cliente, teléfono o placa..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="shell-search-field pl-10 pr-4"
+          />
+        </div>
+
+        {isLoading ? (
+          <div className="py-8 text-center text-muted-foreground">Cargando clientes...</div>
+        ) : !data?.items.length ? (
+          <div className="py-12 text-center">
+            <User className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <p className="font-semibold">Aún no hay clientes de cochera</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Crea clientes desde aquí o durante el cobro sin salir del flujo.
+            </p>
+            <Button className="mt-4 rounded-xl" onClick={() => setDrawerOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo cliente
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {data.items.map((customer) => (
+              <div key={customer.id} className="shell-card-flat rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-bold">{customer.name}</p>
+                    <p className="text-sm text-muted-foreground">{customer.phone || "Sin teléfono"}</p>
+                  </div>
+                  <div className="rounded-full bg-orange-500/10 px-3 py-1 text-sm font-semibold text-orange-700 dark:text-orange-200">
+                    {customer.vehicleCount} veh.
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {customer.vehicles.slice(0, 4).map((vehicle) => (
+                    <span
+                      key={vehicle.id}
+                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium"
+                    >
+                      <CarFront className="h-3.5 w-3.5" />
+                      {vehicle.plate}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl bg-muted/60 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Pendientes</p>
+                    <p className="font-semibold">{customer.pendingSessions}</p>
+                  </div>
+                  <div className="rounded-xl bg-red-500/10 px-3 py-2 text-red-700 dark:text-red-300">
+                    <p className="text-xs opacity-80">Por cobrar</p>
+                    <p className="font-semibold">S/ {formatCurrency(customer.activeDebt)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <MobileShell.FloatingAction>
+        <Button
+          size="icon"
+          className="h-12 w-12 rounded-xl bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.2)] hover:bg-orange-600"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </MobileShell.FloatingAction>
+
+      <AppDrawer open={drawerOpen} onOpenChange={setDrawerOpen} size="large">
+        <AppDrawer.Header
+          title="Nuevo cliente"
+          icon={<User className="h-5 w-5" />}
+          onClose={() => setDrawerOpen(false)}
+        />
+        <AppDrawer.Body className="space-y-3">
+          <Input placeholder="Nombre completo" value={name} onChange={(event) => setName(event.target.value)} />
+          <Input placeholder="Teléfono" value={phone} onChange={(event) => setPhone(event.target.value)} />
+          <Input placeholder="Placa inicial opcional" value={plate} onChange={(event) => setPlate(event.target.value)} />
+          <Button
+            className="h-12 w-full rounded-xl"
+            disabled={!name.trim() || createCustomer.isPending}
+            onClick={handleCreate}
+          >
+            {createCustomer.isPending ? "Creando..." : "Crear cliente"}
+          </Button>
+        </AppDrawer.Body>
+      </AppDrawer>
+    </>
+  );
+}
+
+function StandardCustomersPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
@@ -332,4 +473,9 @@ export default function CustomersPage() {
       <QuickTagModal />
     </>
   );
+}
+
+export default function CustomersPage() {
+  const { is } = useBusinessMode();
+  return is.cochera ? <CocheraCustomersPage /> : <StandardCustomersPage />;
 }

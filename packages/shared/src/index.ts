@@ -1,3 +1,8 @@
+import type {
+  CocheraPaymentTiming,
+  CocheraPricingSnapshot,
+} from "./cochera-billing";
+
 // Enums as const objects for frontend usage
 export const UserRole = {
   ADMIN: "ADMIN",
@@ -575,6 +580,16 @@ export type {
   BusinessModeSlug,
 } from "./business-modes";
 
+export {
+  calculateCocheraBilling,
+  createCocheraPricingSnapshot,
+} from "./cochera-billing";
+export type {
+  CocheraBillingCalculation,
+  CocheraPaymentTiming,
+  CocheraPricingSnapshot,
+} from "./cochera-billing";
+
 // Cochera (Parking) Settings
 export interface CocheraSettings {
   id: string;
@@ -585,7 +600,13 @@ export interface CocheraSettings {
   dailyRate: string | null;
   graceMinutes: number;
   totalSpaces: number;
+  hourlyBillingEnabled: boolean;
+  hourlyBaseRate: string;
+  hourlyBaseHours: number;
+  extraHourRate: string;
+  defaultPaymentTiming: CocheraPaymentTiming;
   acceptedPaymentMethods: ("efectivo" | "yape" | "plin")[];
+  vehicleTypes: CocheraVehicleTypeConfig[];
   createdAt: string;
   updatedAt: string;
 }
@@ -597,7 +618,13 @@ export interface CocheraSettingsInput {
   dailyRate?: number | null;
   graceMinutes: number;
   totalSpaces: number;
+  hourlyBillingEnabled: boolean;
+  hourlyBaseRate: number;
+  hourlyBaseHours: number;
+  extraHourRate: number;
+  defaultPaymentTiming: CocheraPaymentTiming;
   acceptedPaymentMethods: ("efectivo" | "yape" | "plin")[];
+  vehicleTypes: CocheraVehicleTypeConfig[];
 }
 
 // Cochera Vehicle Sessions
@@ -605,10 +632,20 @@ export const CocheraVehicleType = {
   AUTO: "auto",
   MOTO: "moto",
   CAMIONETA: "camioneta",
+  MOTOTAXI: "mototaxi",
+  MOTOLINEAL: "motolineal",
 } as const;
 
 export type CocheraVehicleType =
-  (typeof CocheraVehicleType)[keyof typeof CocheraVehicleType];
+  | (typeof CocheraVehicleType)[keyof typeof CocheraVehicleType]
+  | (string & {});
+
+export interface CocheraVehicleTypeConfig {
+  id: string;
+  label: string;
+  enabled: boolean;
+  isDefault?: boolean;
+}
 
 export const CocheraSessionStatus = {
   DENTRO: "dentro",
@@ -627,6 +664,11 @@ export interface CocheraSession {
   entryAt: string;
   exitAt: string | null;
   notes: string | null;
+  paymentTiming: CocheraPaymentTiming | null;
+  entryAmountPaid: string;
+  entryPaymentMethod: string | null;
+  entryPaymentAt: string | null;
+  pricingSnapshot: CocheraPricingSnapshot | null;
   totalAmount: string | null;
   discountAmount: string | null;
   amountPaid: string | null;
@@ -634,6 +676,7 @@ export interface CocheraSession {
   paymentMode: PaymentMode | null;
   paymentMethod: string | null;
   responsibleCustomerId: string | null;
+  customerVehicleId: string | null;
   responsibleName: string | null;
   responsiblePhone: string | null;
   settlementNotes: string | null;
@@ -647,6 +690,9 @@ export interface CreateCocheraSessionInput {
   plate: string;
   vehicleType: CocheraVehicleType;
   notes?: string;
+  paymentTiming?: CocheraPaymentTiming;
+  entryAmountPaid?: number;
+  entryPaymentMethod?: "efectivo" | "yape" | "plin";
 }
 
 // Cochera Checkout
@@ -655,6 +701,8 @@ export interface CocheraCheckoutInput {
   amountPaid?: number;
   paymentMethod?: "efectivo" | "yape" | "plin";
   responsibleCustomerId?: string | null;
+  customerVehicleId?: string | null;
+  shouldCreateCustomerVehicle?: boolean;
   responsibleName?: string | null;
   responsiblePhone?: string | null;
   notes?: string | null;
@@ -670,6 +718,12 @@ export interface CocheraCheckoutResult {
   checkoutAt: string;
   durationMinutes: number;
   billableHours: number;
+  baseHours: number;
+  extraHours: number;
+  baseAmount: string;
+  extraAmount: string;
+  entryAmountPaid: string;
+  remainingAmount: string;
   hourlyRate: string;
   discountAmount: string;
   totalAmount: string;
@@ -677,6 +731,8 @@ export interface CocheraCheckoutResult {
   balanceDue: string;
   paymentMode: PaymentMode;
   paymentMethod: string | null;
+  responsibleCustomerId: string | null;
+  customerVehicleId: string | null;
   responsibleName: string | null;
   responsiblePhone: string | null;
   checkoutBy: string | null;
@@ -742,6 +798,8 @@ export interface CocheraDebtItem {
   amountPaid: string;
   balanceDue: string;
   paymentMode: PaymentMode | null;
+  responsibleCustomerId: string | null;
+  customerVehicleId: string | null;
   responsibleName: string | null;
   responsiblePhone: string | null;
   notes: string | null;
@@ -756,6 +814,82 @@ export interface CocheraDebtSummary {
 export interface CocheraDebtListResult {
   items: CocheraDebtItem[];
   summary: CocheraDebtSummary;
+  customers?: CocheraDebtCustomerGroup[];
+}
+
+export interface CocheraCustomerVehicle {
+  id: string;
+  businessId: string;
+  customerId: string;
+  plate: string;
+  vehicleType: CocheraVehicleType;
+  alias: string | null;
+  notes: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CocheraCustomerSummary {
+  id: string;
+  name: string;
+  phone: string | null;
+  dni: string | null;
+  address: string | null;
+  notes: string | null;
+  vehicles: CocheraCustomerVehicle[];
+  vehicleCount: number;
+  activeDebt: string;
+  pendingSessions: number;
+  lastActivityAt: string | null;
+}
+
+export interface CocheraDebtCustomerGroup {
+  customerId: string;
+  customerName: string;
+  customerPhone: string | null;
+  totalDebt: string;
+  pendingSessions: number;
+  vehicles: {
+    plate: string;
+    vehicleType: CocheraVehicleType;
+    balanceDue: string;
+    sessions: CocheraDebtItem[];
+  }[];
+}
+
+export interface CocheraCustomerListResult {
+  items: CocheraCustomerSummary[];
+  summary: {
+    totalCustomers: number;
+    totalDebt: string;
+    totalVehicles: number;
+  };
+}
+
+export interface CreateCocheraCustomerInput {
+  name: string;
+  phone?: string | null;
+  dni?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  vehicles?: CreateCocheraCustomerVehicleInput[];
+}
+
+export interface CreateCocheraCustomerVehicleInput {
+  customerId?: string;
+  plate: string;
+  vehicleType: CocheraVehicleType;
+  alias?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateCocheraCustomerVehicleInput {
+  plate?: string;
+  vehicleType?: CocheraVehicleType;
+  alias?: string | null;
+  notes?: string | null;
+  active?: boolean;
 }
 
 export interface CocheraSessionPayment {

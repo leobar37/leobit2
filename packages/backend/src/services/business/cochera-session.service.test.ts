@@ -21,6 +21,24 @@ describe("CocheraSessionService", () => {
     getDailyIncomeLast7Days: vi.fn(),
     getRecentActivity: vi.fn(),
   });
+  const createSettingsRepo = () => ({
+    getOrCreate: vi.fn().mockResolvedValue({
+      vehicleTypes: [
+        { id: "auto", label: "Auto", enabled: true },
+        { id: "moto", label: "Moto", enabled: true },
+        { id: "camioneta", label: "Camioneta", enabled: true },
+      ],
+      acceptedPaymentMethods: ["efectivo", "yape", "plin"],
+      hourlyBillingEnabled: false,
+      hourlyRate: "5.00",
+      dailyRate: null,
+      graceMinutes: 10,
+      hourlyBaseRate: "5.00",
+      hourlyBaseHours: 1,
+      extraHourRate: "1.00",
+      defaultPaymentTiming: "exit",
+    }),
+  });
 
   beforeEach(() => {
     vi.useRealTimers();
@@ -30,7 +48,8 @@ describe("CocheraSessionService", () => {
     const repo = createRepo();
     repo.findActiveByPlate.mockResolvedValue({ id: "session-1", plate: "ABC-123" });
 
-    const service = new CocheraSessionService(repo as never);
+    const settingsRepo = createSettingsRepo();
+    const service = new CocheraSessionService(repo as never, settingsRepo as never);
 
     await expect(
       service.create(ctx as never, {
@@ -45,7 +64,7 @@ describe("CocheraSessionService", () => {
 
   it("rejects session creation outside cochera mode", async () => {
     const repo = createRepo();
-    const service = new CocheraSessionService(repo as never);
+    const service = new CocheraSessionService(repo as never, createSettingsRepo() as never);
 
     await expect(
       service.create(
@@ -80,7 +99,7 @@ describe("CocheraSessionService", () => {
       updatedAt: fixedDate,
     }));
 
-    const service = new CocheraSessionService(repo as never);
+    const service = new CocheraSessionService(repo as never, createSettingsRepo() as never);
 
     await service.create(ctx as never, {
       plate: " abc-123 ",
@@ -101,7 +120,7 @@ describe("CocheraSessionService", () => {
 
   it("validates vehicle type", async () => {
     const repo = createRepo();
-    const service = new CocheraSessionService(repo as never);
+    const service = new CocheraSessionService(repo as never, createSettingsRepo() as never);
 
     await expect(
       service.create(ctx as never, {
@@ -111,5 +130,44 @@ describe("CocheraSessionService", () => {
     ).rejects.toThrow(ValidationError);
 
     expect(repo.findActiveByPlate).not.toHaveBeenCalled();
+  });
+
+  it("stores hourly billing snapshot and entry payment when charging at entry", async () => {
+    const repo = createRepo();
+    repo.findActiveByPlate.mockResolvedValue(undefined);
+    repo.create.mockImplementation(async (_ctx, data) => ({ id: "session-1", ...data }));
+    const settingsRepo = createSettingsRepo();
+    settingsRepo.getOrCreate.mockResolvedValue({
+      ...(await settingsRepo.getOrCreate()),
+      hourlyBillingEnabled: true,
+      hourlyBaseRate: "5.00",
+      hourlyBaseHours: 1,
+      extraHourRate: "1.00",
+      defaultPaymentTiming: "entry",
+    });
+
+    const service = new CocheraSessionService(repo as never, settingsRepo as never);
+
+    await service.create(ctx as never, {
+      plate: "ABC-456",
+      vehicleType: "auto",
+      paymentTiming: "entry",
+      entryAmountPaid: 5,
+      entryPaymentMethod: "yape",
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      ctx,
+      expect.objectContaining({
+        paymentTiming: "entry",
+        entryAmountPaid: "5.00",
+        entryPaymentMethod: "yape",
+        pricingSnapshot: expect.objectContaining({
+          hourlyBillingEnabled: true,
+          hourlyBaseRate: "5.00",
+          extraHourRate: "1.00",
+        }),
+      })
+    );
   });
 });

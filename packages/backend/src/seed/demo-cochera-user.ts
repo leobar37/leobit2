@@ -12,6 +12,7 @@ import {
 } from "../db/schema";
 import { RequestContext } from "../context/request-context";
 import { defaultCalculatorSettings } from "../db/schema/businesses";
+import { DEFAULT_COCHERA_VEHICLE_TYPES } from "../services/repository/cochera-settings.repository";
 
 const COCHERA_ADMIN = {
   email: "cochera@avileo.com",
@@ -243,6 +244,7 @@ async function seedCocheraData(ctx: RequestContext) {
       graceMinutes: 10,
       totalSpaces: 24,
       acceptedPaymentMethods: ["efectivo", "yape", "plin"],
+      vehicleTypes: [...DEFAULT_COCHERA_VEHICLE_TYPES],
     });
     console.log("✓ Cochera settings created");
   } else {

@@ -11,19 +11,20 @@ import {
   Tag,
   AlertCircle,
   CreditCard,
-  User,
   MessageSquare,
 } from "lucide-react";
-import { MobileShell } from "~/components/mobile/mobile-shell";
 import { MobileSlot } from "~/components/mobile/mobile-slots";
 import { MobilePage } from "~/components/mobile/mobile-page";
+import { MobileFixedFooter } from "~/components/mobile/mobile-fixed-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GarageCustomerSelect } from "~/components/cochera/garage-customer-select";
 import { useCocheraSessions } from "~/hooks/use-cochera-sessions";
 import { useCocheraSettings } from "~/hooks/use-cochera-settings";
 import { useCocheraCheckout } from "~/hooks/use-cochera-checkout";
 import { useBusinessMode } from "~/hooks/use-business-mode";
 import { cn } from "~/lib/utils";
+import { calculateCocheraBilling, createCocheraPricingSnapshot } from "@avileo/shared";
 
 const PAYMENT_OPTIONS = [
   { id: "efectivo" as const, label: "Efectivo", icon: Banknote },
@@ -55,13 +56,38 @@ export default function CocheraCobrarPage() {
   const { data: sessions } = useCocheraSessions(undefined, { enabled: is.cochera });
   const { data: settings } = useCocheraSettings({ enabled: is.cochera });
   const checkoutMutation = useCocheraCheckout();
+  const backButton = useMemo(
+    () => (
+      <Link
+        to={is.cochera ? "/cochera" : "/dashboard"}
+        className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Link>
+    ),
+    [is.cochera]
+  );
+  const headerTitle = useMemo(
+    () => (
+      <div className="flex min-w-0 items-center gap-2 flex-1">
+        <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
+        <h1 className="font-bold text-lg truncate">Cobrar</h1>
+      </div>
+    ),
+    []
+  );
 
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("pago_total");
   const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "yape" | "plin">("efectivo");
   const [discountInput, setDiscountInput] = useState("");
   const [amountPaidInput, setAmountPaidInput] = useState("");
-  const [responsibleName, setResponsibleName] = useState("");
-  const [responsiblePhone, setResponsiblePhone] = useState("");
+  const [responsibleCustomer, setResponsibleCustomer] = useState<{
+    id: string;
+    name: string;
+    phone?: string | null;
+    vehicle?: { id: string } | null;
+    shouldCreateVehicle?: boolean;
+  } | null>(null);
   const [settlementNotes, setSettlementNotes] = useState("");
 
   const session = useMemo(() => {
@@ -78,21 +104,23 @@ export default function CocheraCobrarPage() {
   const preview = useMemo(() => {
     if (!session || !settings) return null;
 
-    const grace = settings.graceMinutes ?? 0;
-    const rate = Number(settings.hourlyRate) || 0;
     const discount = Number(discountInput) || 0;
-
-    const billableMinutes = Math.max(0, elapsedMinutes - grace);
-    const billableHours = Math.ceil(billableMinutes / 60);
-    const rawAmount = billableHours * rate - discount;
-    const totalAmount = Math.max(0, rawAmount);
+    const pricing = session.pricingSnapshot ?? createCocheraPricingSnapshot(settings);
+    const calculation = calculateCocheraBilling({
+      entryAt: session.entryAt,
+      checkoutAt: new Date(),
+      pricing,
+      entryAmountPaid: session.entryAmountPaid,
+      discount,
+    });
 
     return {
+      ...calculation,
       durationMinutes: elapsedMinutes,
-      billableHours,
-      hourlyRate: rate,
+      hourlyRate: pricing.hourlyBillingEnabled
+        ? Number(pricing.extraHourRate)
+        : Number(pricing.hourlyRate) || 0,
       discount,
-      totalAmount,
     };
   }, [session, settings, elapsedMinutes, discountInput]);
 
@@ -103,7 +131,7 @@ export default function CocheraCobrarPage() {
   const settlementPreview = useMemo(() => {
     if (!preview) return null;
 
-    const totalAmount = preview.totalAmount;
+    const totalAmount = preview.remainingAmount;
     const amountPaid =
       paymentMode === "pago_total"
         ? totalAmount
@@ -127,16 +155,16 @@ export default function CocheraCobrarPage() {
     if (paymentMode === "a_cuenta") {
       const amountPaid = Number(amountPaidInput) || 0;
       if (amountPaid <= 0) return "Ingresa un monto a cuenta mayor a cero.";
-      if (amountPaid >= preview.totalAmount) return "El monto a cuenta debe ser menor al total.";
-      if (!responsibleName.trim()) return "Ingresa el responsable del saldo pendiente.";
+      if (amountPaid >= preview.remainingAmount) return "El monto a cuenta debe ser menor al total.";
+      if (!responsibleCustomer) return "Selecciona el cliente responsable del saldo pendiente.";
     }
 
-    if (paymentMode === "debe_todo" && !responsibleName.trim()) {
-      return "Ingresa el responsable de la deuda.";
+    if (paymentMode === "debe_todo" && !responsibleCustomer) {
+      return "Selecciona el cliente responsable de la deuda.";
     }
 
     return null;
-  }, [acceptedMethods, amountPaidInput, paymentMethod, paymentMode, preview, responsibleName]);
+  }, [acceptedMethods, amountPaidInput, paymentMethod, paymentMode, preview, responsibleCustomer]);
 
   const submitLabel =
     paymentMode === "pago_total"
@@ -155,12 +183,12 @@ export default function CocheraCobrarPage() {
         paymentMode,
         amountPaid: paymentMode === "a_cuenta" ? amountPaid : undefined,
         paymentMethod: paymentMode === "debe_todo" ? undefined : paymentMethod,
-        responsibleName:
-          paymentMode === "pago_total" ? undefined : responsibleName.trim(),
-        responsiblePhone:
-          paymentMode === "pago_total" || !responsiblePhone.trim()
-            ? undefined
-            : responsiblePhone.trim(),
+        responsibleCustomerId:
+          paymentMode === "pago_total" ? undefined : responsibleCustomer?.id,
+        customerVehicleId:
+          paymentMode === "pago_total" ? undefined : responsibleCustomer?.vehicle?.id,
+        shouldCreateCustomerVehicle:
+          paymentMode === "pago_total" ? undefined : Boolean(responsibleCustomer?.shouldCreateVehicle),
         notes: settlementNotes.trim() || undefined,
         discount,
       },
@@ -172,8 +200,7 @@ export default function CocheraCobrarPage() {
     amountPaidInput,
     paymentMode,
     paymentMethod,
-    responsibleName,
-    responsiblePhone,
+    responsibleCustomer,
     settlementNotes,
     checkoutMutation,
     navigate,
@@ -181,17 +208,11 @@ export default function CocheraCobrarPage() {
 
   if (!is.cochera) {
     return (
-      <MobileShell.Root variant="protected">
-        <MobileShell.BackButton>
-          <Link
-            to="/dashboard"
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </MobileShell.BackButton>
-        <MobileShell.Content>
-          <MobilePage.Root maxWidth="md">
+      <>
+        <MobileSlot name="header:left" priority={10}>
+          {backButton}
+        </MobileSlot>
+        <MobilePage.Root maxWidth="md">
             <div className="text-center space-y-4 py-12">
               <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-muted-foreground" />
@@ -203,25 +224,18 @@ export default function CocheraCobrarPage() {
                 </p>
               </div>
             </div>
-          </MobilePage.Root>
-        </MobileShell.Content>
-      </MobileShell.Root>
+        </MobilePage.Root>
+      </>
     );
   }
 
   if (!session) {
     return (
-      <MobileShell.Root variant="protected">
-        <MobileShell.BackButton>
-          <Link
-            to="/cochera"
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </MobileShell.BackButton>
-        <MobileShell.Content>
-          <MobilePage.Root maxWidth="md">
+      <>
+        <MobileSlot name="header:left" priority={10}>
+          {backButton}
+        </MobileSlot>
+        <MobilePage.Root maxWidth="md">
             <div className="text-center space-y-4 py-12">
               <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-muted-foreground" />
@@ -233,33 +247,29 @@ export default function CocheraCobrarPage() {
                 </p>
               </div>
             </div>
-          </MobilePage.Root>
-        </MobileShell.Content>
-      </MobileShell.Root>
+        </MobilePage.Root>
+      </>
     );
   }
 
   return (
-    <MobileShell.Root variant="protected">
-      <MobileShell.BackButton>
-        <Link
-          to="/cochera"
-          className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-      </MobileShell.BackButton>
-
-      <MobileSlot name="header:center" priority={10}>
-        <div className="flex min-w-0 items-center gap-2 flex-1">
-          <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
-          <h1 className="font-bold text-lg truncate">Cobrar</h1>
-        </div>
+    <>
+      <MobileSlot name="header:left" priority={10}>
+        {backButton}
       </MobileSlot>
 
-      <MobileShell.Content>
-        <MobilePage.Root maxWidth="md">
-          <div className="space-y-6">
+      <MobileSlot name="header:center" priority={10}>
+        {headerTitle}
+      </MobileSlot>
+
+      <MobilePage.Root maxWidth="md">
+          <div
+            className="space-y-6"
+            style={{
+              paddingBottom:
+                "calc(var(--shell-bottom-nav-height, 0px) + var(--shell-safe-area-bottom, env(safe-area-inset-bottom)) + 5.5rem)",
+            }}
+          >
             {/* Vehicle summary */}
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
@@ -295,12 +305,37 @@ export default function CocheraCobrarPage() {
                     {preview.billableHours} h
                   </span>
                 </div>
+                {settings.hourlyBillingEnabled ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-orange-800">Tarifa base</span>
+                      <span className="font-medium text-orange-900">
+                        S/ {preview.baseAmount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-orange-800">Horas extra</span>
+                      <span className="font-medium text-orange-900">
+                        {preview.extraHours} h · S/ {preview.extraAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-orange-800">Tarifa por hora</span>
                   <span className="font-medium text-orange-900">
                     S/ {preview.hourlyRate.toFixed(2)}
                   </span>
                 </div>
+                )}
+                {preview.entryAmountPaid > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-orange-800">Pagado al entrar</span>
+                    <span className="font-medium text-orange-900">
+                      -S/ {preview.entryAmountPaid.toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 {preview.discount > 0 && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-orange-800">Descuento</span>
@@ -310,9 +345,9 @@ export default function CocheraCobrarPage() {
                   </div>
                 )}
                 <div className="border-t border-orange-200 pt-2 flex items-center justify-between">
-                  <span className="font-semibold text-orange-900">Total a pagar</span>
+                  <span className="font-semibold text-orange-900">Saldo a cobrar</span>
                   <span className="text-xl font-bold text-orange-700">
-                    S/ {preview.totalAmount.toFixed(2)}
+                    S/ {preview.remainingAmount.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -409,33 +444,21 @@ export default function CocheraCobrarPage() {
 
             {paymentMode !== "pago_total" && (
               <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-                <p className="text-sm font-medium">Responsable del saldo</p>
-                <div className="space-y-2">
-                  <label htmlFor="responsibleName" className="text-sm font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Nombre *
-                  </label>
-                  <Input
-                    id="responsibleName"
-                    data-testid="cochera-responsible-name-input"
-                    placeholder="Ej: Juan Pérez"
-                    value={responsibleName}
-                    onChange={(e) => setResponsibleName(e.target.value)}
-                    className="h-12 rounded-xl text-base"
-                  />
+                <div>
+                  <p className="text-sm font-medium">Cliente responsable *</p>
+                  <p className="text-xs text-muted-foreground">
+                    La deuda quedará asociada a este cliente.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <label htmlFor="responsiblePhone" className="text-sm font-medium">Teléfono opcional</label>
-                  <Input
-                    id="responsiblePhone"
-                    data-testid="cochera-responsible-phone-input"
-                    inputMode="tel"
-                    placeholder="Ej: 999 999 999"
-                    value={responsiblePhone}
-                    onChange={(e) => setResponsiblePhone(e.target.value)}
-                    className="h-12 rounded-xl text-base"
-                  />
-                </div>
+                <GarageCustomerSelect
+                  value={responsibleCustomer?.id ?? null}
+                  selectedCustomer={responsibleCustomer}
+                  currentPlate={session.plate}
+                  currentVehicleType={session.vehicleType}
+                  onChange={setResponsibleCustomer}
+                  required
+                  helperText="Obligatorio para dejar saldo pendiente"
+                />
               </div>
             )}
 
@@ -513,30 +536,31 @@ export default function CocheraCobrarPage() {
               </div>
             )}
 
-            {/* Submit */}
-            <div className="pt-2">
-              <Button
-                onClick={handleSubmit}
-                data-testid="cochera-checkout-submit"
-                disabled={checkoutMutation.isPending || Boolean(validationMessage)}
-                className="h-14 w-full rounded-xl bg-orange-500 text-lg font-semibold hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
-              >
-                {checkoutMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <Banknote className="mr-2 h-5 w-5" />
-                    {submitLabel}
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
+      </MobilePage.Root>
+
+      <MobileFixedFooter aboveNav>
+        <MobilePage.Root maxWidth="md">
+          <Button
+            onClick={handleSubmit}
+            data-testid="cochera-checkout-submit"
+            disabled={checkoutMutation.isPending || Boolean(validationMessage)}
+            className="h-14 w-full rounded-xl bg-orange-500 text-lg font-semibold hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          >
+            {checkoutMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Procesando...
+              </>
+            ) : (
+              <>
+                <Banknote className="mr-2 h-5 w-5" />
+                {submitLabel}
+              </>
+            )}
+          </Button>
         </MobilePage.Root>
-      </MobileShell.Content>
-    </MobileShell.Root>
+      </MobileFixedFooter>
+    </>
   );
 }

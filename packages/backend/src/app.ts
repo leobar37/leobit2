@@ -42,6 +42,7 @@ import { cocheraSessionRoutes } from "./api/cochera-sessions";
 import { cocheraDashboardRoutes } from "./api/cochera-dashboard";
 import { cocheraReportRoutes } from "./api/cochera-reports";
 import { cocheraDebtRoutes } from "./api/cochera-debts";
+import { cocheraCustomerRoutes } from "./api/cochera-customers";
 import { getCorsConfig, getCorsOrigin, mergeExposeHeaders } from "./lib/cors";
 
 const corsConfig = getCorsConfig();
@@ -117,6 +118,7 @@ export const app = new Elysia()
   .use(cocheraDashboardRoutes)
   .use(cocheraReportRoutes)
   .use(cocheraDebtRoutes)
+  .use(cocheraCustomerRoutes)
   .use(authRoutes)
   .get("/", () => ({
     message: "Avileo Backend API",

@@ -9,6 +9,14 @@ import {
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
 
+export const DEFAULT_COCHERA_VEHICLE_TYPES = [
+  { id: "auto", label: "Auto", enabled: true, isDefault: true },
+  { id: "moto", label: "Moto", enabled: true, isDefault: true },
+  { id: "camioneta", label: "Camioneta", enabled: true, isDefault: true },
+  { id: "mototaxi", label: "Mototaxi", enabled: true, isDefault: true },
+  { id: "motolineal", label: "Motolineal", enabled: true, isDefault: true },
+] as const;
+
 export class CocheraSettingsRepository {
   async findByBusinessId(
     ctx: RequestContext,
@@ -78,7 +86,13 @@ export class CocheraSettingsRepository {
         dailyRate: null,
         graceMinutes: 0,
         totalSpaces: 0,
+        hourlyBillingEnabled: false,
+        hourlyBaseRate: "0",
+        hourlyBaseHours: 1,
+        extraHourRate: "0",
+        defaultPaymentTiming: "exit",
         acceptedPaymentMethods: ["efectivo"],
+        vehicleTypes: [...DEFAULT_COCHERA_VEHICLE_TYPES],
       },
       tx
     );

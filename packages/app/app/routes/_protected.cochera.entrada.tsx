@@ -1,7 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
 import { AlertCircle, ArrowLeft, CarFront } from "lucide-react";
-import { MobileShell } from "~/components/mobile/mobile-shell";
 import { MobileSlot } from "~/components/mobile/mobile-slots";
 import { MobilePage } from "~/components/mobile/mobile-page";
 import {
@@ -11,12 +10,35 @@ import {
 import {
   useCreateCocheraSession,
 } from "~/hooks/use-cochera-sessions";
+import { useCocheraSettings } from "~/hooks/use-cochera-settings";
 import { useBusinessMode } from "~/hooks/use-business-mode";
 
 export default function CocheraEntradaPage() {
   const navigate = useNavigate();
   const { is } = useBusinessMode();
   const createMutation = useCreateCocheraSession();
+  const { data: settings } = useCocheraSettings({ enabled: is.cochera });
+  const backHref = is.cochera ? "/cochera" : "/dashboard";
+  const backButton = useMemo(
+    () => (
+      <Link
+        to={backHref}
+        className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Link>
+    ),
+    [backHref]
+  );
+  const headerTitle = useMemo(
+    () => (
+      <div className="flex min-w-0 items-center gap-2 flex-1">
+        <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
+        <h1 className="font-bold text-lg truncate">Nueva entrada</h1>
+      </div>
+    ),
+    []
+  );
 
   const handleSubmit = useCallback(
     async (data: EntryFormData) => {
@@ -24,6 +46,9 @@ export default function CocheraEntradaPage() {
         plate: data.plate,
         vehicleType: data.vehicleType,
         notes: data.notes,
+        paymentTiming: data.paymentTiming,
+        entryAmountPaid: data.paymentTiming === "entry" ? data.entryAmountPaid : undefined,
+        entryPaymentMethod: data.paymentTiming === "entry" ? data.entryPaymentMethod : undefined,
       });
       navigate("/cochera");
     },
@@ -32,18 +57,12 @@ export default function CocheraEntradaPage() {
 
   if (!is.cochera) {
     return (
-      <MobileShell.Root variant="protected">
-        <MobileShell.BackButton>
-          <Link
-            to="/dashboard"
-            className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </MobileShell.BackButton>
+      <>
+        <MobileSlot name="header:left" priority={10}>
+          {backButton}
+        </MobileSlot>
 
-        <MobileShell.Content>
-          <MobilePage.Root maxWidth="md">
+        <MobilePage.Root maxWidth="md">
             <div className="text-center space-y-4 py-12">
               <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-muted-foreground" />
@@ -55,33 +74,29 @@ export default function CocheraEntradaPage() {
                 </p>
               </div>
             </div>
-          </MobilePage.Root>
-        </MobileShell.Content>
-      </MobileShell.Root>
+        </MobilePage.Root>
+      </>
     );
   }
 
   return (
-    <MobileShell.Root variant="protected">
-      <MobileShell.BackButton>
-        <Link
-          to="/cochera"
-          className="-ml-2 rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-white/70 hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-      </MobileShell.BackButton>
-
-      <MobileSlot name="header:center" priority={10}>
-        <div className="flex min-w-0 items-center gap-2 flex-1">
-          <CarFront className="h-5 w-5 text-orange-600 shrink-0" />
-          <h1 className="font-bold text-lg truncate">Nueva entrada</h1>
-        </div>
+      <>
+        <MobileSlot name="header:left" priority={10}>
+          {backButton}
       </MobileSlot>
 
-      <MobileShell.Content>
-        <MobilePage.Root maxWidth="md">
-          <div className="space-y-6">
+      <MobileSlot name="header:center" priority={10}>
+        {headerTitle}
+      </MobileSlot>
+
+      <MobilePage.Root maxWidth="md">
+          <div
+            className="space-y-6"
+            style={{
+              paddingBottom:
+                "calc(var(--shell-bottom-nav-height, 0px) + var(--shell-safe-area-bottom, env(safe-area-inset-bottom)) + 5.5rem)",
+            }}
+          >
             <div className="text-center space-y-4">
               <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto">
                 <CarFront className="h-8 w-8 text-orange-600" />
@@ -97,6 +112,8 @@ export default function CocheraEntradaPage() {
             <EntryForm
               onSubmit={handleSubmit}
               isSubmitting={createMutation.isPending}
+              vehicleTypes={settings?.vehicleTypes}
+              settings={settings}
             />
 
             {createMutation.isError ? (
@@ -116,8 +133,7 @@ export default function CocheraEntradaPage() {
               </div>
             ) : null}
           </div>
-        </MobilePage.Root>
-      </MobileShell.Content>
-    </MobileShell.Root>
+      </MobilePage.Root>
+    </>
   );
 }
