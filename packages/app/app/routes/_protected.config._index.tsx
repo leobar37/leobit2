@@ -21,6 +21,7 @@ import {
   ReceiptText,
   CarFront,
   MapPinned,
+  Globe2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
@@ -52,8 +53,8 @@ const baseConfigItems: ConfigItem[] = [
   },
   {
     icon: Package,
-    title: "Inventario",
-    description: "Gestiona tus productos y stock",
+    title: "Productos e inventario",
+    description: "Gestiona productos, precios y stock",
     href: "/productos",
     color: "text-green-600",
   },
@@ -79,6 +80,14 @@ const teamConfigItem: ConfigItem = {
   description: "Gestiona vendedores e invitaciones",
   href: "/team",
   color: "text-teal-600",
+};
+
+const publicCatalogConfigItem: ConfigItem = {
+  icon: Globe2,
+  title: "Catálogo público",
+  description: "Activa y comparte el enlace para pedidos de clientes",
+  href: "/config/catalogo",
+  color: "text-sky-600",
 };
 
 const distribucionesConfigItem: ConfigItem = {
@@ -214,6 +223,7 @@ export default function ConfigIndexPage() {
     ? [
         baseConfigItems[0],
         baseConfigItems[1],
+        publicCatalogConfigItem,
         teamConfigItem,
         ...(isCocheraMode ? [cocheraClientsItem, cocheraConfigItem] : [distribucionesConfigItem, comprasConfigItem]),
         ...(isCocheraMode ? [] : [gastosConfigItem]),

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
@@ -31,11 +31,11 @@ export interface AccountsReceivablePage {
   total: number;
 }
 
-export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
+export function accountsReceivableQueryOptions(filters: AccountsReceivableFilters = {}) {
   const limit = filters.limit ?? (filters.customerId ? 1 : 100);
   const offset = filters.offset ?? 0;
 
-  const query = useQuery({
+  return queryOptions<AccountsReceivablePage>({
     queryKey: queryKeys.reports.accountsReceivable({
       ...filters,
       limit,
@@ -71,7 +71,10 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
       };
     },
   });
+}
 
+export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
+  const query = useQuery(accountsReceivableQueryOptions(filters));
   return {
     ...query,
     data: query.data?.items ?? [],
@@ -82,17 +85,25 @@ export function useAccountsReceivable(filters: AccountsReceivableFilters = {}) {
 export function useTotalAccountsReceivable(
   filters: AccountsReceivableFilters = {}
 ) {
-  const { data: totalDebt = 0, isLoading } = useQuery({
-    queryKey: queryKeys.reports.accountsReceivableTotal(filters),
+  const { data: totalDebt = 0, isLoading } = useQuery(
+    totalAccountsReceivableQueryOptions(filters)
+  );
+
+  return {
+    data: totalDebt,
+    isLoading,
+  };
+}
+
+export function totalAccountsReceivableQueryOptions(
+  _filters: AccountsReceivableFilters = {}
+) {
+  return queryOptions<number>({
+    queryKey: queryKeys.reports.accountsReceivableTotal(),
     queryFn: async () => {
       const response = await api.reports["accounts-receivable"].total.get();
       const data = extractData<{ total: number }>(response);
       return data.total;
     },
   });
-
-  return {
-    data: totalDebt,
-    isLoading,
-  };
 }

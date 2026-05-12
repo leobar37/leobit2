@@ -152,6 +152,12 @@ Transition handlers execute side effects only through repositories and shared tr
 | `src/context/request-context.ts` | Context model |
 | `src/errors/index.ts` | Domain errors |
 
+## Logging and local observability
+
+- Use `createLogger()` from `src/lib/logger.ts`; avoid `console.*` in backend code.
+- Dev request/response IO logs are emitted by `src/plugins/dev-request-logger.ts` and can be disabled with `AVILEO_DEV_IO_LOGS=false`.
+- Inspect backend logs with `bun run avileo logs --service backend` or the dashboard started by `bun run avileo dev`.
+
 ## Quick commands
 
 ```bash

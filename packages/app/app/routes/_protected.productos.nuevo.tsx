@@ -5,12 +5,13 @@ import { Package, Loader2, Save, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { CardContent } from "@/components/ui/card";
 import { useCreateProduct } from "~/hooks/use-products";
 import { FormPage } from "~/components/layout/form-page";
-import { MobilePage } from "~/components/mobile/mobile-page";
 import { ProductFormContent } from "~/components/products/product-form-content";
-import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
+import {
+  productSchema,
+  type ProductFormData,
+} from "~/lib/schemas/product-schema";
 import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
 import { assetField } from "~/lib/forms/media-field-resolvers";
 
@@ -60,7 +61,7 @@ export default function NuevoProductoPage() {
     },
     () => {
       toast.error("Completa nombre y precio para guardar");
-    }
+    },
   );
 
   return (
@@ -99,38 +100,36 @@ export default function NuevoProductoPage() {
         >
           <ProductFormContent form={form} />
 
-          {/* Variants Toggle Card */}
-          <MobilePage.Card variant="flat" className="rounded-[22px] border-0 bg-card/80 dark:bg-[#151821]">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10">
-                    <Layers className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <Label htmlFor="hasVariants" className="font-medium text-foreground cursor-pointer">
-                      Este producto tiene variantes
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {hasVariants
-                        ? "Podrás agregar variantes después de guardar"
-                        : "Se creará automáticamente una variante con el nombre del producto"}
-                    </p>
-                  </div>
+          <section className="border-b border-border/60 pb-4 dark:border-white/[0.07]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Layers className="h-4 w-4 text-orange-500" />
+                <div>
+                  <Label
+                    htmlFor="hasVariants"
+                    className="cursor-pointer text-sm font-medium text-foreground"
+                  >
+                    Este producto tiene variantes
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {hasVariants
+                      ? "Podrás agregar variantes después de guardar"
+                      : "Se creará automáticamente una variante con el nombre del producto"}
+                  </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    id="hasVariants"
-                    type="checkbox"
-                    checked={hasVariants}
-                    onChange={(e) => setHasVariants(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300"></div>
-                </label>
               </div>
-            </CardContent>
-          </MobilePage.Card>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  id="hasVariants"
+                  type="checkbox"
+                  checked={hasVariants}
+                  onChange={(e) => setHasVariants(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <div className="peer h-5 w-10 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+              </label>
+            </div>
+          </section>
         </form>
       </WrapperFormProvider>
     </FormPage>

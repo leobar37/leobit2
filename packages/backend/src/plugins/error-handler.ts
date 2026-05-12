@@ -1,8 +1,10 @@
 import { Elysia } from "elysia";
 import { AppError } from "../errors";
 import { getCorsConfig, getCorsOrigin } from "../lib/cors";
+import { createLogger, sanitizeForLog } from "../lib/logger";
 
 const corsConfig = getCorsConfig();
+const logger = createLogger("error-handler");
 
 function setCorsHeaders(set: { headers: Record<string, string | number> }, requestOrigin: string | null) {
   set.headers["access-control-allow-origin"] = getCorsOrigin(requestOrigin);
@@ -49,19 +51,7 @@ export const errorPlugin = new Elysia({ name: "error-handler" })
       };
     }
 
-    console.error("Unexpected error:", error);
-    if (error instanceof Error) {
-      console.error("Stack trace:", error.stack);
-    }
-    // Also write to file for debugging
-    try {
-      Bun.write("/tmp/error-debug.log", JSON.stringify({
-        code,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
-      }, null, 2));
-    } catch {}
+    logger.error({ code, err: sanitizeForLog(error) }, "Unexpected error");
 
     set.status = 500;
     setCorsHeaders(set, requestOrigin);

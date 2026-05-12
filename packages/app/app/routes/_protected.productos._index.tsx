@@ -1,6 +1,6 @@
 // @ts-nocheck - Route file with complex type errors
 import { useState } from "react";
-import { Package, Search, Plus, X } from "lucide-react";
+import { Package, Search, Plus } from "lucide-react";
 import { Link } from "react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,18 +18,22 @@ import { cn } from "~/lib/utils";
 import { getCategoryColor } from "~/lib/utils/category-colors";
 
 export default function ProductsPage() {
-  useSetLayout({ title: "Catálogo" });
+  useSetLayout({ title: "Productos e inventario" });
 
   const { data: products, isLoading, error } = useProducts();
   const { data: categories } = useProductCategories();
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | "uncategorized" | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<
+    string | "uncategorized" | null
+  >(null);
   const [managerOpen, setManagerOpen] = useState(false);
 
-  const { filteredItems: searchFilteredProducts, search, setSearch } = useListSearch({
+  const {
+    filteredItems: searchFilteredProducts,
+    search,
+    setSearch,
+  } = useListSearch({
     items: products,
-    searchFields: [
-      (product) => product.name,
-    ],
+    searchFields: [(product) => product.name],
   });
 
   const filteredProducts = searchFilteredProducts.filter((product) => {
@@ -51,12 +55,12 @@ export default function ProductsPage() {
           />
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2 dark:border-white/[0.07]">
           <CategoryManagerTrigger onClick={() => setManagerOpen(true)} />
         </div>
 
         {categories && categories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-hide">
             <button
               data-testid="products-category-filter-chip"
               type="button"
@@ -65,7 +69,7 @@ export default function ProductsPage() {
                 "flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                 selectedCategoryId === null
                   ? "bg-orange-500 text-white"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "text-muted-foreground hover:bg-muted/60",
               )}
             >
               Todas
@@ -77,10 +81,10 @@ export default function ProductsPage() {
                 type="button"
                 onClick={() => setSelectedCategoryId(category.id)}
                 className={cn(
-                  "flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5",
+                  "flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   selectedCategoryId === category.id
                     ? "text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    : "text-muted-foreground hover:bg-muted/60",
                 )}
                 style={
                   selectedCategoryId === category.id
@@ -89,7 +93,7 @@ export default function ProductsPage() {
                 }
               >
                 <span
-                  className="w-2 h-2 rounded-full"
+                  className="h-2 w-2 rounded-full"
                   style={{ backgroundColor: getCategoryColor(category.color) }}
                 />
                 {category.name}
@@ -100,13 +104,13 @@ export default function ProductsPage() {
               type="button"
               onClick={() => setSelectedCategoryId("uncategorized")}
               className={cn(
-                "flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5",
+                "flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                 selectedCategoryId === "uncategorized"
                   ? "bg-foreground text-background"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "text-muted-foreground hover:bg-muted/60",
               )}
             >
-              <span className="w-2 h-2 rounded-full border border-muted-foreground bg-transparent" />
+              <span className="h-2 w-2 rounded-full border border-muted-foreground bg-transparent" />
               Sin categoría
             </button>
           </div>
@@ -129,12 +133,14 @@ export default function ProductsPage() {
           <div className="py-8 text-center">
             <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">
-              {search ? "No se encontraron productos" : "No hay productos registrados"}
+              {search
+                ? "No se encontraron productos"
+                : "No hay productos registrados"}
             </p>
           </div>
         )}
 
-        <div className="space-y-3">
+        <div>
           {filteredProducts?.map((product) => (
             <Link
               key={product.id}
@@ -151,7 +157,7 @@ export default function ProductsPage() {
         <Button
           size="icon"
           asChild
-          className="h-14 w-14 rounded-full bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] hover:bg-orange-600"
+          className="h-12 w-12 rounded-xl bg-orange-500 text-white shadow-[0_10px_24px_rgba(249,115,22,0.2)] hover:bg-orange-600"
         >
           <Link to="/productos/nuevo" aria-label="Nuevo producto">
             <Plus className="h-6 w-6" />

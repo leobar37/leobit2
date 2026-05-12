@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusiness } from "@/hooks/use-business";
+import { useSmartPrefetch } from "@/hooks/use-smart-prefetch";
 import { ThemeToggle } from "~/components/theme";
 import { Button } from "@/components/ui/button";
 import {
@@ -119,7 +120,7 @@ const ROUTE_LAYOUTS: Array<[pattern: RegExp, config: Partial<RouteLayoutConfig>]
   [/^\/distribuciones\/?$/, { title: "Distribuciones del día", showBackButton: true, backHref: "/config" }],
   [/^\/productos\/nuevo\/?$/, { title: "Nuevo Producto", showBackButton: true, backHref: "/productos" }],
   [/^\/productos\/[^/]+\/?$/, { title: "Producto", showBackButton: true, backHref: "/productos" }],
-  [/^\/productos\/?$/, { title: "Catálogo" }],
+  [/^\/productos\/?$/, { title: "Productos" }],
   [/^\/gastos\/nuevo\/?$/, { title: "Nuevo Gasto", showBackButton: true, backHref: "/gastos" }],
   [/^\/gastos\/[^/]+\/?$/, { title: "Detalle del Gasto", showBackButton: true, backHref: "/gastos" }],
   [/^\/gastos\/?$/, { title: "Gastos" }],
@@ -145,6 +146,7 @@ const ROUTE_LAYOUTS: Array<[pattern: RegExp, config: Partial<RouteLayoutConfig>]
   [/^\/config\/whatsapp\/?$/, { title: "WhatsApp", showBackButton: true, backHref: "/config" }],
   [/^\/config\/tags\/?$/, { title: "Etiquetas", showBackButton: true, backHref: "/config" }],
   [/^\/config\/puntos-venta\/?$/, { title: "Puntos de venta", showBackButton: true, backHref: "/config" }],
+  [/^\/config\/catalogo\/?$/, { title: "Catálogo público", showBackButton: true, backHref: "/config" }],
   [/^\/config\/flags\/?$/, { title: "Funciones", showBackButton: true, backHref: "/config" }],
   [/^\/config\/?$/, { title: "Avileo" }],
   [/^\/activos\/?$/, { title: "Activos", showBackButton: true, backHref: "/config" }],
@@ -227,6 +229,7 @@ function AppLayoutHeaderControl({ children }: { children: ReactNode }) {
 export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
   const { user, logout, isLoggingOut } = useAuth();
   const { data: business } = useBusiness();
+  const { prefetchRoute } = useSmartPrefetch();
   const location = useLocation();
   const navigation = useNavigation();
   const routeLayout = useMemo(
@@ -421,6 +424,9 @@ export function AppLayout({ children, headerAccessory }: AppLayoutProps) {
                   <Link
                     key={item.href}
                     to={item.href}
+                    onMouseEnter={() => prefetchRoute(item.href)}
+                    onFocus={() => prefetchRoute(item.href)}
+                    onTouchStart={() => prefetchRoute(item.href)}
                     aria-current={isActive ? "page" : undefined}
                     aria-busy={isPending || undefined}
                     className={`relative flex flex-1 flex-col items-center gap-1 rounded-lg px-1.5 pb-1.5 pt-2 text-[11px] font-medium transition-colors ${

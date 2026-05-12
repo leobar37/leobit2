@@ -15,12 +15,15 @@ import { NotFoundError, ValidationError, ForbiddenError } from "../errors";
 import { normalizeAmount, normalizeQuantity } from "../lib/number-utils";
 import { servicesPlugin } from "../plugins/services";
 import { isValidTokenFormat } from "../services/business/sale-token.service";
+import type { SaleTokenService } from "../services/business/sale-token.service";
 
 type PublicCartItemInput = {
   productId: string;
   variantId: string;
   quantity: number;
 };
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function normalizeSlug(value: string): string {
   return value.trim().toLowerCase();
@@ -288,6 +291,7 @@ async function createPublicCustomer(
 }
 
 async function createPublicPreOrder(
+  saleTokenService: SaleTokenService,
   businessId: string,
   input: {
     customerName?: string;
@@ -385,7 +389,16 @@ async function createPublicPreOrder(
       );
     }
 
-    return serializeSale(sale, await tx.select().from(saleItems).where(eq(saleItems.saleId, sale.id)));
+    const { token } = await saleTokenService.generatePublicTokenForSale(
+      businessId,
+      sale.id,
+      tx
+    );
+
+    return {
+      sale: serializeSale(sale, await tx.select().from(saleItems).where(eq(saleItems.saleId, sale.id))),
+      token,
+    };
   });
 }
 
@@ -623,15 +636,27 @@ export const publicSaleRoutes = new Elysia({ prefix: "/public/venta" })
   )
   .post(
     "/:slug/confirmar",
-    async ({ params, body }) => {
+    async ({ params, body, saleTokenService }) => {
       if (!body.token) {
         const business = await getBusinessBySlug(params.slug);
         if (!business.publicCatalogEnabled) {
           throw new ForbiddenError("El catálogo público no está activo");
         }
 
-        const sale = await createPublicPreOrder(business.id, body);
-        return { success: true, data: { message: "Pedido confirmado exitosamente", saleId: sale.id, status: sale.status } };
+        const { sale, token } = await createPublicPreOrder(
+          saleTokenService,
+          business.id,
+          body
+        );
+        return {
+          success: true,
+          data: {
+            message: "Pedido confirmado exitosamente",
+            saleId: sale.id,
+            status: sale.status,
+            token,
+          },
+        };
       }
 
       const { saleData } = await getTokenSaleContext(params.slug, body.token);

@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useUpdateProduct } from "~/hooks/use-products";
 import { useProduct } from "~/hooks/use-products-live";
-import { ProductForm, type ProductFormData } from "~/components/products/product-form";
+import {
+  ProductForm,
+  type ProductFormData,
+} from "~/components/products/product-form";
 import { VariantList } from "~/components/products/variant-list";
 import { type VariantFormData } from "~/components/products/variant-form";
 import { MobilePage, MobileShell, MobileSlot } from "~/components/mobile";
@@ -19,14 +22,12 @@ import {
   useReorderVariants,
   type ProductVariant,
 } from "~/hooks/use-product-variants";
-import { VariantModal, useVariantModal } from "~/components/products/variant-modal";
+import {
+  VariantModal,
+  useVariantModal,
+} from "~/components/products/variant-modal";
 import { useConfirmDialog } from "~/hooks/use-confirm-dialog";
 import { getCategoryColor } from "~/lib/utils/category-colors";
-
-const unitLabels = {
-  kg: "Kilogramo (kg)",
-  unidad: "Unidad",
-};
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -95,7 +96,10 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleVariantSubmit = async (data: VariantFormData, variantId?: string) => {
+  const handleVariantSubmit = async (
+    data: VariantFormData,
+    variantId?: string,
+  ) => {
     if (!id) return;
 
     const isEditing = !!variantId;
@@ -130,7 +134,11 @@ export default function ProductDetailPage() {
       await refetchVariants();
     } catch (error) {
       console.error("Error saving variant:", error);
-      toast.error(isEditing ? "Error al actualizar la variante" : "Error al crear la variante");
+      toast.error(
+        isEditing
+          ? "Error al actualizar la variante"
+          : "Error al crear la variante",
+      );
     }
   };
 
@@ -154,7 +162,8 @@ export default function ProductDetailPage() {
   const handleVariantDelete = async (variantId: string) => {
     const confirmed = await confirm({
       title: "Desactivar variante",
-      description: "¿Estás seguro de desactivar esta variante? Se mantendrá en el historial pero no estará disponible para nuevas ventas.",
+      description:
+        "¿Estás seguro de desactivar esta variante? Se mantendrá en el historial pero no estará disponible para nuevas ventas.",
       confirmText: "Desactivar",
       cancelText: "Cancelar",
       variant: "destructive",
@@ -225,33 +234,37 @@ export default function ProductDetailPage() {
       </MobileShell.BackButton>
 
       <MobileSlot name="header:center" priority={10}>
-        <div className="flex min-w-0 items-center gap-2 flex-1">
-          <h1 className="truncate text-lg font-bold tracking-tight">{product.name}</h1>
+        <h1 className="truncate text-lg font-bold tracking-tight">
+          {product.name}
+        </h1>
+      </MobileSlot>
+
+      <MobileSlot name="header:right" priority={10}>
+        <span className="text-sm font-semibold text-orange-600">
+          S/ {product.basePrice}
+        </span>
+      </MobileSlot>
+
+      <MobilePage.Root className="space-y-3">
+        <section className="flex items-center justify-between gap-3 border-b border-border/60 pb-3 dark:border-white/[0.07]">
           {product.category ? (
             <Badge
-              className="text-[10px] px-1.5 py-0"
+              className="max-w-[70%] truncate rounded-full border-0 px-2.5 py-1 text-xs"
               style={{
-                backgroundColor: `${getCategoryColor(product.category.color)}20`,
+                backgroundColor: `${getCategoryColor(product.category.color)}18`,
                 color: getCategoryColor(product.category.color),
               }}
             >
               {product.category.name}
             </Badge>
           ) : (
-            <Badge className="bg-muted px-1.5 py-0 text-[10px] text-muted-foreground">
+            <Badge className="rounded-full border-0 bg-muted px-2.5 py-1 text-xs text-muted-foreground">
               Sin categoría
             </Badge>
           )}
-        </div>
-      </MobileSlot>
-
-      <MobileSlot name="header:right" priority={10}>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-semibold text-orange-600 text-sm">S/ {product.basePrice}</span>
-          <span className="text-border">|</span>
           <Badge
             variant={product.isActive ? "default" : "secondary"}
-            className={`text-[10px] px-1.5 py-0 ${
+            className={`rounded-full border-0 px-2.5 py-1 text-xs ${
               product.isActive
                 ? "bg-emerald-500/12 text-emerald-700 hover:bg-emerald-500/12 dark:text-emerald-300"
                 : "bg-muted text-muted-foreground hover:bg-muted"
@@ -259,10 +272,8 @@ export default function ProductDetailPage() {
           >
             {product.isActive ? "Activo" : "Inactivo"}
           </Badge>
-        </div>
-      </MobileSlot>
+        </section>
 
-      <MobilePage.Root className="space-y-3">
         <ProductForm
           product={product}
           onSubmit={handleSubmit}
@@ -273,12 +284,15 @@ export default function ProductDetailPage() {
         />
 
         {/* Variants Toggle */}
-        <div className="rounded-[22px] border-0 bg-card/80 p-3 shadow-none dark:bg-[#151821]">
+        <section className="border-b border-border/60 pb-4 dark:border-white/[0.07]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Layers className="h-4 w-4 text-orange-500" />
               <div>
-                <Label htmlFor="showVariants" className="text-sm font-medium text-foreground cursor-pointer">
+                <Label
+                  htmlFor="showVariants"
+                  className="cursor-pointer text-sm font-medium text-foreground"
+                >
                   Este producto tiene variantes
                 </Label>
                 <p className="text-xs text-muted-foreground">
@@ -300,7 +314,7 @@ export default function ProductDetailPage() {
               <div className="peer h-5 w-10 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:cursor-not-allowed peer-disabled:opacity-50"></div>
             </label>
           </div>
-        </div>
+        </section>
 
         {showVariants && (
           <VariantList

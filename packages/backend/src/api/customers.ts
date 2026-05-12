@@ -108,7 +108,7 @@ export const customerRoutes = new Elysia({ prefix: "/customers" })
       }),
     }
   )
-  .get(
+  .put(
     "/:id",
     async ({ customerService, ctx, params, body }) => {
       const result = await customerService.updateCustomer(ctx as RequestContext, params.id, body);

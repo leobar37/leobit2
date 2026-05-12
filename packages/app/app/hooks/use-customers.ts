@@ -3,7 +3,7 @@
  * Reactively fetch and mutate customers using Eden Treaty API
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
@@ -123,8 +123,8 @@ export interface CustomerActivity {
 /**
  * Get all customers for the current business
  */
-export function useCustomers(filters?: CustomerSearchFilters) {
-  return useQuery({
+export function customersQueryOptions(filters?: CustomerSearchFilters) {
+  return queryOptions<Customer[]>({
     queryKey: filters
       ? queryKeys.customers.search(filters)
       : queryKeys.customers.all,
@@ -142,11 +142,15 @@ export function useCustomers(filters?: CustomerSearchFilters) {
   });
 }
 
+export function useCustomers(filters?: CustomerSearchFilters) {
+  return useQuery(customersQueryOptions(filters));
+}
+
 /**
  * Get paginated customers for the current business
  */
-export function usePaginatedCustomers(query: CustomerPageQuery) {
-  return useQuery({
+export function paginatedCustomersQueryOptions(query: CustomerPageQuery) {
+  return queryOptions<PaginatedCustomersResult>({
     queryKey: queryKeys.customers.page(query),
     queryFn: async (): Promise<PaginatedCustomersResult> => {
       const response = await api.customers.get({
@@ -163,6 +167,10 @@ export function usePaginatedCustomers(query: CustomerPageQuery) {
       return { items: data, total: data.length };
     },
   });
+}
+
+export function usePaginatedCustomers(query: CustomerPageQuery) {
+  return useQuery(paginatedCustomersQueryOptions(query));
 }
 
 export function useCustomerActivity(filters?: {

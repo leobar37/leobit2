@@ -33,7 +33,7 @@ export class PaymentTokenService {
   async generateToken(
     ctx: RequestContext,
     paymentId: string
-  ): Promise<{ token: string }> {
+  ): Promise<PaymentToken> {
     if (!paymentId) {
       throw new ValidationError("El ID del pago es requerido");
     }
@@ -45,7 +45,7 @@ export class PaymentTokenService {
 
     const existingToken = await this.repository.findByPaymentId(ctx, paymentId);
     if (existingToken) {
-      return { token: existingToken.token };
+      return existingToken;
     }
 
     let token: string;
@@ -68,9 +68,7 @@ export class PaymentTokenService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRATION_DAYS);
 
-    await this.repository.create(ctx, { paymentId, token, expiresAt });
-
-    return { token };
+    return this.repository.create(ctx, { paymentId, token, expiresAt });
   }
 
   async getTokenByPaymentId(
@@ -109,7 +107,7 @@ export class PaymentTokenService {
   async regenerateToken(
     ctx: RequestContext,
     paymentId: string
-  ): Promise<{ token: string }> {
+  ): Promise<PaymentToken> {
     if (!paymentId) {
       throw new ValidationError("El ID del pago es requerido");
     }

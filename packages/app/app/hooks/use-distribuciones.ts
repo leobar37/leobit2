@@ -2,7 +2,7 @@
  * Distribuciones Hook (API-based)
  * Reactively fetch and mutate distribuciones using Eden Treaty API
  */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
@@ -223,6 +223,13 @@ export function useMiDistribucion(fecha?: string) {
   const vendedorId = business?.businessUserId;
 
   return useQuery({
+    ...miDistribucionQueryOptions(vendedorId, fecha),
+    enabled: !!businessId && !!vendedorId,
+  });
+}
+
+export function miDistribucionQueryOptions(vendedorId?: string, fecha?: string) {
+  return queryOptions<DistribucionWithItems | null>({
     queryKey: PERSISTED_REMOTE_QUERY_KEYS.distribuciones.mine(vendedorId || "", fecha),
     queryFn: async () => {
       if (!vendedorId) return null;
@@ -235,7 +242,6 @@ export function useMiDistribucion(fecha?: string) {
       }>(response);
       return data ? mapDistribucionWithItems(data) : null;
     },
-    enabled: !!businessId && !!vendedorId,
   });
 }
 

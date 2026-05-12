@@ -29,7 +29,12 @@ describe("PaymentTokenService", () => {
 
     const result = await service.generateToken(ctx as never, "payment-1");
 
-    expect(result).toEqual({ token: "existing1234" });
+    expect(result).toEqual({
+      id: "token-1",
+      paymentId: "payment-1",
+      token: "existing1234",
+      isActive: true,
+    });
     expect(repository.create).not.toHaveBeenCalled();
     expect(repository.tokenExists).not.toHaveBeenCalled();
   });

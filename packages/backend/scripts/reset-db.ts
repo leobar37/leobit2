@@ -113,6 +113,8 @@ async function ensureDemoUserExists() {
         phone: DEMO_BUSINESS.phone,
         email: DEMO_BUSINESS.email,
         usarDistribucion: true,
+        publicCatalogEnabled: true,
+        publicCatalogSlug: "pollos-demo",
       })
       .returning();
 
@@ -133,6 +135,11 @@ async function ensureDemoUserExists() {
   } else {
     console.log(`✓ Business exists: ${businessUser.business.name} (ID: ${businessUser.businessId})`);
   }
+
+  await db
+    .update(businesses)
+    .set({ publicCatalogEnabled: true })
+    .where(eq(businesses.id, businessUser.businessId));
 
   return { demoUser, businessUser };
 }

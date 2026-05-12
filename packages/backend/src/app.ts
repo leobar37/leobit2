@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { serve } from "inngest/bun";
 import { errorPlugin } from "./plugins/error-handler";
+import { devRequestLoggerPlugin } from "./plugins/dev-request-logger";
 import { authRoutes } from "./api/auth";
 import { inngest } from "./lib/inngest";
 import { whatsAppFunctions } from "./inngest/whatsapp-functions";
@@ -58,6 +59,7 @@ const inngestHandler = serve({
  */
 export const app = new Elysia()
   .use(errorPlugin)
+  .use(devRequestLoggerPlugin)
   .options("/*", ({ request, set }) => {
     const requestOrigin = request.headers.get("origin");
     set.status = 204;

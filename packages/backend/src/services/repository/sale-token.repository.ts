@@ -2,7 +2,7 @@
  * Sale Token Repository
  * Data access layer for sale tokens
  */
-import { eq, and } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db } from "../../lib/db";
 import { saleTokens, type SaleToken, type NewSaleToken } from "../../db/schema/sale-tokens";
 import { sales } from "../../db/schema/sales";
@@ -29,6 +29,28 @@ export class SaleTokenRepository {
 
     return result[0]?.token;
   }
+
+  async findBySaleIdPublic(
+    saleId: string,
+    businessId: string,
+    tx?: DbTransaction
+  ): Promise<SaleToken | undefined> {
+    const executor = tx ?? db;
+    const result = await executor
+      .select({ token: saleTokens })
+      .from(saleTokens)
+      .innerJoin(sales, eq(sales.id, saleTokens.saleId))
+      .where(
+        and(
+          eq(saleTokens.saleId, saleId),
+          eq(sales.businessId, businessId)
+        )
+      )
+      .limit(1);
+
+    return result[0]?.token;
+  }
+
 
   /**
    * Find token by token string (with context)
@@ -101,6 +123,23 @@ export class SaleTokenRepository {
   }
 
   /**
+   * Create a token from public flows where there is no authenticated context.
+   */
+  async createPublic(data: Omit<NewSaleToken, "id" | "createdAt">, tx?: DbTransaction): Promise<SaleToken> {
+    const executor = tx ?? db;
+
+    const [token] = await executor
+      .insert(saleTokens)
+      .values({
+        ...data,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    return token;
+  }
+
+  /**
    * Update token status (activate/deactivate)
    */
   async updateStatus(
@@ -111,20 +150,21 @@ export class SaleTokenRepository {
   ): Promise<SaleToken | undefined> {
     const executor = tx ?? db;
 
-    // Use a subquery to check business_id via the related sale
+    const [tokenRecord] = await executor
+      .select({ id: saleTokens.id })
+      .from(saleTokens)
+      .innerJoin(sales, eq(sales.id, saleTokens.saleId))
+      .where(and(eq(saleTokens.id, tokenId), eq(sales.businessId, ctx.businessId)))
+      .limit(1);
+
+    if (!tokenRecord) {
+      return undefined;
+    }
+
     const [updated] = await executor
       .update(saleTokens)
       .set({ isActive })
-      .where(
-        and(
-          eq(saleTokens.id, tokenId),
-          eq(saleTokens.saleId,
-            db.select({ saleId: sales.id })
-              .from(sales)
-              .where(eq(sales.businessId, ctx.businessId))
-          )
-        )
-      )
+      .where(eq(saleTokens.id, tokenId))
       .returning();
 
     return updated;
@@ -189,7 +229,17 @@ export class SaleTokenRepository {
    */
   async tokenExists(_ctx: RequestContext, token: string): Promise<boolean> {
     const result = await db
-      .select({ count: db.$count(saleTokens) })
+      .select({ count: count() })
+      .from(saleTokens)
+      .where(eq(saleTokens.token, token));
+
+    return (result[0]?.count ?? 0) > 0;
+  }
+
+  async tokenExistsPublic(token: string, tx?: DbTransaction): Promise<boolean> {
+    const executor = tx ?? db;
+    const result = await executor
+      .select({ count: count() })
       .from(saleTokens)
       .where(eq(saleTokens.token, token));
 

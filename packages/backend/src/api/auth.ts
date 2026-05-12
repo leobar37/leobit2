@@ -46,7 +46,6 @@ export const authRoutes = new Elysia()
         pathname: new URL(request.url).pathname,
         origin: request.headers.get("origin"),
         hasAuthorization: Boolean(request.headers.get("authorization")),
-        authorizationPreview: request.headers.get("authorization")?.slice(0, 24) ?? null,
       });
 
       const response = await withTimeout(

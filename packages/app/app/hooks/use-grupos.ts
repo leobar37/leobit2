@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
@@ -48,8 +48,8 @@ function mapApiGroup(data: {
 /**
  * Get all customer groups for the current business
  */
-export function useCustomerGroups() {
-  return useQuery({
+export function customerGroupsQueryOptions() {
+  return queryOptions<CustomerGroup[]>({
     queryKey: queryKeys.customerGroups.all,
     queryFn: async () => {
       const response = await api.groups.get();
@@ -64,6 +64,10 @@ export function useCustomerGroups() {
     },
     staleTime: 1000 * 60,
   });
+}
+
+export function useCustomerGroups() {
+  return useQuery(customerGroupsQueryOptions());
 }
 
 /**

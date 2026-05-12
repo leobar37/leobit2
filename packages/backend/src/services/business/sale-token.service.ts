@@ -3,11 +3,16 @@
  * Business logic for generating and managing sale tokens
  */
 import { randomBytes } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 import type { SaleTokenRepository } from "../repository/sale-token.repository";
 import type { SaleRepository } from "../repository/sale.repository";
 import type { RequestContext } from "../../context/request-context";
 import type { SaleToken } from "../../db/schema/sale-tokens";
+import { sales } from "../../db/schema/sales";
 import { NotFoundError, ValidationError, ConflictError } from "../../errors";
+import { db } from "../../lib/db";
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const ALLOWED_CHARS_REGEX = /^[a-zA-Z0-9_-]+$/;
 const TOKEN_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
@@ -60,29 +65,48 @@ export class SaleTokenService {
       throw new ConflictError("Ya existe un token para esta venta");
     }
 
-    // Generate unique token
-    let token: string;
-    let attempts = 0;
-
-    do {
-      token = generateSecureToken();
-      attempts++;
-
-      if (attempts >= MAX_TOKEN_ATTEMPTS) {
-        throw new Error("No se pudo generar un token único después de múltiples intentos");
-      }
-
-      const existing = await this.repository.tokenExists(ctx, token);
-      if (!existing) {
-        break;
-      }
-    } while (true);
-
-    // Create the token with expiration
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRATION_DAYS);
+    const { token, expiresAt } = await this.buildUniqueToken((candidate) =>
+      this.repository.tokenExists(ctx, candidate)
+    );
 
     await this.repository.create(ctx, { saleId, token, expiresAt });
+
+    return { token };
+  }
+
+  async generatePublicTokenForSale(
+    businessId: string,
+    saleId: string,
+    tx?: DbTransaction
+  ): Promise<{ token: string }> {
+    if (!businessId) {
+      throw new ValidationError("El negocio es requerido");
+    }
+    if (!saleId) {
+      throw new ValidationError("El ID de la venta es requerido");
+    }
+
+    const existingToken = await this.repository.findBySaleIdPublic(saleId, businessId, tx);
+    if (existingToken) {
+      throw new ConflictError("Ya existe un token para esta venta");
+    }
+
+    const executor = tx ?? db;
+    const [sale] = await executor
+      .select({ id: sales.id })
+      .from(sales)
+      .where(and(eq(sales.id, saleId), eq(sales.businessId, businessId)))
+      .limit(1);
+
+    if (!sale) {
+      throw new NotFoundError("Venta no encontrada");
+    }
+
+    const { token, expiresAt } = await this.buildUniqueToken((candidate) =>
+      this.repository.tokenExistsPublic(candidate, tx)
+    );
+
+    await this.repository.createPublic({ saleId, token, expiresAt }, tx);
 
     return { token };
   }
@@ -187,27 +211,9 @@ export class SaleTokenService {
     // Delete the old token
     await this.repository.deleteBySaleId(ctx, saleId);
 
-    // Generate new unique token
-    let token: string;
-    let attempts = 0;
-
-    do {
-      token = generateSecureToken();
-      attempts++;
-
-      if (attempts >= MAX_TOKEN_ATTEMPTS) {
-        throw new Error("No se pudo generar un token único después de múltiples intentos");
-      }
-
-      const existing = await this.repository.tokenExists(ctx, token);
-      if (!existing) {
-        break;
-      }
-    } while (true);
-
-    // Create the new token with expiration
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRATION_DAYS);
+    const { token, expiresAt } = await this.buildUniqueToken((candidate) =>
+      this.repository.tokenExists(ctx, candidate)
+    );
 
     await this.repository.create(ctx, { saleId, token, expiresAt });
 
@@ -239,5 +245,30 @@ export class SaleTokenService {
     if (token) {
       await this.repository.updateStatus(ctx, token.id, false, tx);
     }
+  }
+
+  private async buildUniqueToken(
+    exists: (token: string) => Promise<boolean>
+  ): Promise<{ token: string; expiresAt: Date }> {
+    let token: string;
+    let attempts = 0;
+
+    do {
+      token = generateSecureToken();
+      attempts++;
+
+      if (attempts >= MAX_TOKEN_ATTEMPTS) {
+        throw new Error("No se pudo generar un token único después de múltiples intentos");
+      }
+
+      if (!(await exists(token))) {
+        break;
+      }
+    } while (true);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRATION_DAYS);
+
+    return { token, expiresAt };
   }
 }

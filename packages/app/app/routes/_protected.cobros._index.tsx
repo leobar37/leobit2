@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { useAccountsReceivable, useTotalAccountsReceivable } from "~/hooks/use-accounts-receivable";
+import {
+  useAccountsReceivable,
+  useTotalAccountsReceivable,
+  type AccountsReceivableItem,
+} from "~/hooks/use-accounts-receivable";
 import { usePaginatedCustomers, type Customer } from "~/hooks/use-customers";
 import { useSetLayout } from "~/components/layout/app-layout";
 import { useBusinessMode } from "~/hooks/use-business-mode";
@@ -504,17 +508,17 @@ function PolleriaCobrosPage() {
   return (
     <div className="space-y-4">
       {/* Stats Card */}
-      <div className="shell-card-soft border-l-4 border-red-500 py-3 pl-4 pr-3">
-        <div className="flex items-center justify-between">
+      <div className="shell-card-soft overflow-hidden rounded-2xl border-red-200/80 bg-gradient-to-br from-red-50 via-white to-white px-4 py-3 shadow-sm dark:border-red-500/20 dark:from-red-950/30 dark:via-[#16171c] dark:to-[#101114] dark:shadow-[0_16px_40px_rgba(0,0,0,0.26)]">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Total por cobrar</p>
-            <p className="text-3xl font-bold text-foreground">S/ {formatCurrency(displayTotalDebt)}</p>
+            <p className="text-sm font-medium text-red-700/75 dark:text-red-200/70">Total por cobrar</p>
+            <p className="mt-1 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">S/ {formatCurrency(displayTotalDebt)}</p>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100/90 text-red-600 dark:bg-destructive/15 dark:text-destructive-foreground">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-600 ring-1 ring-red-200/80 dark:bg-red-500/10 dark:text-red-100 dark:ring-red-400/15">
             <Wallet className="h-5 w-5" />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300/80">
           {debtors.length} {debtors.length === 1 ? "cliente" : "clientes"} con deuda
         </p>
       </div>

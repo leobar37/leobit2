@@ -107,21 +107,21 @@ export class PaymentTokenRepository {
   ): Promise<PaymentToken | undefined> {
     const executor = tx ?? db;
 
+    const [tokenRecord] = await executor
+      .select({ id: paymentTokens.id })
+      .from(paymentTokens)
+      .innerJoin(abonos, eq(abonos.id, paymentTokens.paymentId))
+      .where(and(eq(paymentTokens.id, tokenId), eq(abonos.businessId, ctx.businessId)))
+      .limit(1);
+
+    if (!tokenRecord) {
+      return undefined;
+    }
+
     const [updated] = await executor
       .update(paymentTokens)
       .set({ isActive })
-      .where(
-        and(
-          eq(paymentTokens.id, tokenId),
-          eq(
-            paymentTokens.paymentId,
-            db
-              .select({ paymentId: abonos.id })
-              .from(abonos)
-              .where(eq(abonos.businessId, ctx.businessId))
-          )
-        )
-      )
+      .where(eq(paymentTokens.id, tokenId))
       .returning();
 
     return updated;

@@ -289,7 +289,12 @@ export function useConfirmPublicSale() {
         items,
       });
       if (response.error) throw new Error(getErrorMessage(response.error.value));
-      return response.data?.data as { message: string; saleId: string; status: string };
+      return response.data?.data as {
+        message: string;
+        saleId: string;
+        status: string;
+        token?: string;
+      };
     },
     onSuccess: (_, { slug, token }) => {
       queryClient.invalidateQueries({ queryKey: publicSaleKeys.page(slug, token) });

@@ -8,8 +8,9 @@ export interface PaymentToken {
   paymentId: string;
   token: string;
   isActive: boolean;
-  createdAt: string;
-  lastUsedAt?: string | null;
+  expiresAt?: string | Date | null;
+  createdAt: string | Date;
+  lastUsedAt?: string | Date | null;
 }
 
 export function usePaymentToken(paymentId: string | null) {
@@ -63,9 +64,10 @@ export function useRegeneratePaymentToken() {
   return useMutation({
     mutationFn: async (paymentId: string) => {
       const response = await api.payments({ id: paymentId }).token.regenerate.post();
-      return extractData<{ token: string }>(response);
+      return extractData<PaymentToken>(response);
     },
-    onSuccess: (_, paymentId) => {
+    onSuccess: (data, paymentId) => {
+      queryClient.setQueryData(["payment-token", paymentId], data);
       queryClient.invalidateQueries({ queryKey: ["payment-token", paymentId] });
       toast.success("Enlace regenerado");
     },
@@ -89,7 +91,8 @@ export function useTogglePaymentToken() {
       const response = await api.payments({ id: paymentId }).token.toggle.post({ isActive });
       return extractData<PaymentToken>(response);
     },
-    onSuccess: (_, { paymentId, isActive }) => {
+    onSuccess: (data, { paymentId, isActive }) => {
+      queryClient.setQueryData(["payment-token", paymentId], data);
       queryClient.invalidateQueries({ queryKey: ["payment-token", paymentId] });
       toast.success(isActive ? "Enlace activado" : "Enlace desactivado");
     },

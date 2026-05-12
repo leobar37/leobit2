@@ -10,7 +10,7 @@ export class NewProductPage {
   readonly categoryCreateDialog: Locator;
   readonly categoryCreateNameInput: Locator;
   readonly categoryCreateSaveButton: Locator;
-  readonly unitSelect: Locator;
+  readonly unitOptions: Locator;
   readonly basePriceInput: Locator;
   readonly saveButton: Locator;
   readonly hasVariantsToggle: Locator;
@@ -25,7 +25,7 @@ export class NewProductPage {
     this.categoryCreateDialog = page.getByTestId("product-category-create-dialog");
     this.categoryCreateNameInput = this.categoryCreateDialog.getByPlaceholder("Nombre de la categoría");
     this.categoryCreateSaveButton = this.categoryCreateDialog.getByTestId("product-category-save-button");
-    this.unitSelect = page.getByTestId("product-unit-select");
+    this.unitOptions = page.getByTestId(/^product-unit-option-/);
     this.basePriceInput = page.getByTestId("product-baseprice-input");
     this.saveButton = page.getByTestId("save-product-button");
     this.hasVariantsToggle = page.locator("#hasVariants");
@@ -47,7 +47,7 @@ export class NewProductPage {
     } else if (data.categoryName) {
       await this.selectCategory(data.categoryName);
     }
-    await this.unitSelect.selectOption(data.unit);
+    await this.page.getByTestId(`product-unit-option-${data.unit}`).click();
     await this.basePriceInput.fill(data.basePrice);
   }
 

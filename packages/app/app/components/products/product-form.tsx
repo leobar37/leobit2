@@ -3,13 +3,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { AssetPicker } from "@/components/assets/asset-picker";
 import { CategorySelect } from "@/components/products/category-select";
+import { ProductUnitSelector } from "@/components/products/product-unit-selector";
 import type { Product } from "@avileo/shared";
-import { productSchema, type ProductFormData } from "~/lib/schemas/product-schema";
+import {
+  productSchema,
+  type ProductFormData,
+} from "~/lib/schemas/product-schema";
 
 interface ProductFormProps {
   onSubmit: (data: ProductFormData) => void;
@@ -20,7 +23,14 @@ interface ProductFormProps {
   variantCount?: number;
 }
 
-export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariants, variantCount }: ProductFormProps) {
+export function ProductForm({
+  onSubmit,
+  onCancel,
+  isLoading,
+  product,
+  hasVariants,
+  variantCount,
+}: ProductFormProps) {
   const isEditing = !!product;
 
   const form = useForm<ProductFormData>({
@@ -61,13 +71,13 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
 
   return (
     <FormProvider {...form}>
-    <Card className="shell-card-flat rounded-[22px] border-0 bg-card/80 shadow-none dark:bg-[#151821]">
-      <CardHeader className="pb-2 pt-4 px-4">
-        <CardTitle className="text-base font-semibold">Información del Producto</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 px-4 pb-4">
+      <section className="space-y-3 border-b border-border/60 pb-4 dark:border-white/[0.07]">
+        <h2 className="text-base font-semibold">Información del producto</h2>
+
         <div className="space-y-1.5">
-          <Label htmlFor="name" className="text-sm">Nombre *</Label>
+          <Label htmlFor="name" className="text-sm">
+            Nombre *
+          </Label>
           <Input
             id="name"
             data-testid="product-name-input"
@@ -98,33 +108,24 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="unit" className="text-sm">Unidad *</Label>
-          <select
-            id="unit"
-            data-testid="product-unit-select"
-            {...register("unit")}
-            className="shell-field h-11 w-full rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="kg">Kilogramo (kg)</option>
-            <option value="unidad">Unidad</option>
-          </select>
-          {errors.unit && (
-            <p className="text-xs text-red-500">{errors.unit.message}</p>
-          )}
+          <ProductUnitSelector form={form} errorClassName="text-xs" />
         </div>
 
         {hasVariants && (
           <Alert className="rounded-xl border-orange-500/20 bg-orange-500/10">
             <Info className="h-4 w-4 text-orange-600" />
             <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
-              Este producto tiene {variantCount} {variantCount === 1 ? "variante" : "variantes"} con precios propios.
-              El precio base solo se usa como referencia.
+              Este producto tiene {variantCount}{" "}
+              {variantCount === 1 ? "variante" : "variantes"} con precios
+              propios. El precio base solo se usa como referencia.
             </AlertDescription>
           </Alert>
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="basePrice" className="text-sm">Precio base (S/) *</Label>
+          <Label htmlFor="basePrice" className="text-sm">
+            Precio base (S/) *
+          </Label>
           <Input
             id="basePrice"
             data-testid="product-baseprice-input"
@@ -138,7 +139,10 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="isActive" className="flex items-center gap-2 cursor-pointer">
+          <Label
+            htmlFor="isActive"
+            className="flex cursor-pointer items-center gap-2"
+          >
             <input
               id="isActive"
               type="checkbox"
@@ -160,8 +164,8 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
             {isLoading
               ? "Guardando..."
               : isEditing
-              ? "Guardar cambios"
-              : "Guardar Producto"}
+                ? "Guardar cambios"
+                : "Guardar Producto"}
           </Button>
 
           {onCancel && (
@@ -178,8 +182,7 @@ export function ProductForm({ onSubmit, onCancel, isLoading, product, hasVariant
         {saveDisabledReason && (
           <p className="text-xs text-muted-foreground">{saveDisabledReason}</p>
         )}
-      </CardContent>
-    </Card>
+      </section>
     </FormProvider>
   );
 }

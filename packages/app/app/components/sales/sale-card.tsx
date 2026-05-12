@@ -3,7 +3,6 @@ import {
   ChevronRight,
   Loader2,
   Trash2,
-  User,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,13 +68,13 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
         className="cursor-pointer"
       >
         <Card className="shell-card-flat w-full rounded-2xl border-0 transition-colors">
-          <CardContent className="p-4">
+          <CardContent className="p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-[1.05rem] font-semibold leading-tight text-foreground sm:text-lg">
+                <p className="truncate text-base font-semibold leading-tight text-foreground sm:text-lg">
                   {customerName}
                 </p>
-                <p className="mt-0.5 text-sm text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {saleTypeLabel[sale.type]} #{sale.id.slice(-6)}
                 </p>
               </div>
@@ -104,17 +103,17 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
               </div>
             </div>
 
-            <div className="mt-3 flex items-start justify-between gap-3">
+            <div className="mt-3 flex items-end justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="max-w-full whitespace-nowrap text-[clamp(1.5rem,6vw,1.8rem)] font-bold leading-tight tracking-[-0.035em] text-foreground">
+                <p className="max-w-full whitespace-nowrap text-[clamp(1.6rem,7vw,2rem)] font-bold leading-none tracking-[-0.045em] text-foreground">
                   S/ {formatCurrency(sale.totalAmount)}
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-xs font-medium text-muted-foreground">
                   {isCredit ? "Crédito" : "Contado"}
                 </p>
               </div>
 
-              <div className="flex max-w-[44%] flex-wrap justify-end gap-1.5 self-start">
+              <div className="flex max-w-[52%] flex-wrap justify-end gap-1.5 pb-0.5">
                 <Badge
                   variant={isDraft ? "warning" : "success"}
                   className="rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none"
@@ -133,21 +132,12 @@ export function SaleCard({ sale, onClick }: SaleCardProps) {
               </div>
             </div>
 
-            <div className="mt-3 grid gap-2 border-t shell-divider pt-3 text-sm text-muted-foreground sm:grid-cols-2">
-              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5">
-                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/15 dark:text-orange-300">
-                  <User className="h-3.5 w-3.5" />
-                </div>
-                <span className="truncate font-medium text-foreground/75">
-                  {customerName}
-                </span>
-              </div>
-
-              <div className="shell-card-soft flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 sm:justify-end">
+            <div className="mt-3 border-t shell-divider pt-2.5 text-sm text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-2">
                 <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 ring-1 ring-blue-500/15 dark:text-blue-300">
                   <CalendarDays className="h-3.5 w-3.5" />
                 </div>
-                <span className="truncate font-medium text-foreground/75">
+                <span className="truncate text-sm font-medium text-foreground/70">
                   {isPreOrder
                     ? formatDeliveryCountdown(sale.deliveryDate)
                     : formatRecentDateTime(sale.saleDate)}

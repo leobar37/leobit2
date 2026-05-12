@@ -181,6 +181,8 @@ export async function seedDemoUser() {
         phone: DEMO_BUSINESS.phone,
         email: DEMO_BUSINESS.email,
         usarDistribucion: true,
+        publicCatalogEnabled: true,
+        publicCatalogSlug: "pollos-demo",
       })
       .returning();
 
@@ -198,6 +200,11 @@ export async function seedDemoUser() {
     console.log(`✓ Business created: ${business.name} (ID: ${business.id})`);
     console.log(`✓ User linked to business as ADMIN_NEGOCIO`);
   }
+
+  await db
+    .update(businesses)
+    .set({ publicCatalogEnabled: true })
+    .where(eq(businesses.id, businessId));
 
   // Create context for seeding data
   const ctx = RequestContext.forWorker(businessId, businessUserId);

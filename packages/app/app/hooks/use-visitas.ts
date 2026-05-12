@@ -3,7 +3,7 @@
  * Reactively fetch and mutate visits using Eden Treaty API
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
@@ -117,8 +117,8 @@ function mapVisita(v: BackendVisita): Visita {
 /**
  * Get visitas by distribucion
  */
-export function useVisitas(distribucionId: string | undefined) {
-  return useQuery({
+export function visitasQueryOptions(distribucionId: string | undefined) {
+  return queryOptions<Visita[]>({
     queryKey: PERSISTED_REMOTE_QUERY_KEYS.visitas.byDistribucion(distribucionId || ""),
     queryFn: async () => {
       if (!distribucionId) return [];
@@ -128,6 +128,12 @@ export function useVisitas(distribucionId: string | undefined) {
       const data = extractData<BackendVisita[]>(response);
       return data.map(mapVisita);
     },
+  });
+}
+
+export function useVisitas(distribucionId: string | undefined) {
+  return useQuery({
+    ...visitasQueryOptions(distribucionId),
     enabled: !!distribucionId,
   });
 }

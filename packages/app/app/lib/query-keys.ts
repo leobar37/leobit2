@@ -98,7 +98,7 @@ export const queryKeys = {
   reports: {
     accountsReceivable: (filters: object) =>
       ["reports", "accounts-receivable", filters] as const,
-    accountsReceivableTotal: (filters: object) =>
+    accountsReceivableTotal: (filters: object = {}) =>
       ["reports", "accounts-receivable", "total", filters] as const,
   },
   expenses: {
