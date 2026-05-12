@@ -216,12 +216,30 @@ export default function App() {
           persistOptions={{ persister: queryPersister }}
         >
           <NuqsAdapter>
-            <Outlet />
+            <div className="app-mobile-viewport">
+              <Outlet />
+            </div>
+            <DesktopUnsupportedNotice />
           </NuqsAdapter>
           <Toaster position="top-center" />
         </PersistQueryClientProvider>
       </JotaiProvider>
     </ThemeProvider>
+  );
+}
+
+function DesktopUnsupportedNotice() {
+  return (
+    <aside className="app-desktop-unsupported" aria-live="polite">
+      <div className="app-desktop-unsupported__face" aria-hidden="true">
+        :(
+      </div>
+      <h1>Versión desktop pendiente</h1>
+      <p>
+        Aún no implementamos la versión desktop. Puedes achicar tu pantalla para
+        activar el modo mobile.
+      </p>
+    </aside>
   );
 }
 
