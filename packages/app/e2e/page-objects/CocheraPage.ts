@@ -46,6 +46,42 @@ export class CocheraPage {
     await this.page.getByTestId("cochera-entry-submit").click();
   }
 
+  async expectEntryVehiclePricing(vehicleType: "auto" | "moto" | "camioneta", text: RegExp | string) {
+    await this.gotoEntry();
+    await expect(this.page.getByTestId(`cochera-vehicle-type-${vehicleType}`)).toContainText(text);
+  }
+
+  async configureMotoPricing(hourlyRate: string, dailyRate: string) {
+    await this.gotoConfig();
+    const pricingToggle = this.page.getByTestId("cochera-vehicle-pricing-toggle-moto");
+    await pricingToggle.scrollIntoViewIfNeeded();
+
+    const hourlyInput = this.page.getByTestId("input-vehicleTypes.1.pricing.hourlyRate");
+    const dailyInput = this.page.getByTestId("input-vehicleTypes.1.pricing.dailyRate");
+
+    if (!await hourlyInput.isVisible({ timeout: 500 }).catch(() => false)) {
+      await pricingToggle.click({ force: true });
+      await expect(pricingToggle).toContainText("Activa");
+    }
+
+    await hourlyInput.waitFor({ state: "visible" });
+    await hourlyInput.fill(hourlyRate);
+    await dailyInput.fill(dailyRate);
+    await this.page.getByTestId("cochera-settings-submit").click();
+    await expect(this.page.getByTestId("cochera-settings-submit")).toBeDisabled();
+  }
+
+  async openCheckout(plate: string) {
+    await this.gotoActiveSessions();
+    await this.page.getByTestId(`cochera-checkout-link-${plate}`).click();
+    await this.page.waitForURL(/\/cochera\/cobrar\//);
+  }
+
+  async expectCheckoutHourlyRate(rate: string) {
+    await expect(this.page.getByTestId("cochera-pricing-source")).toContainText("Tarifa guardada al ingreso");
+    await expect(this.page.getByTestId("cochera-preview-hourly-rate")).toHaveText(rate);
+  }
+
   async expectEntryError(text: RegExp | string) {
     await expect(this.page.getByTestId("cochera-entry-error")).toContainText(text);
   }

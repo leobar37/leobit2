@@ -24,7 +24,11 @@ import { useCocheraSettings } from "~/hooks/use-cochera-settings";
 import { useCocheraCheckout } from "~/hooks/use-cochera-checkout";
 import { useBusinessMode } from "~/hooks/use-business-mode";
 import { cn } from "~/lib/utils";
-import { calculateCocheraBilling, createCocheraPricingSnapshot } from "@avileo/shared";
+import {
+  calculateCocheraBilling,
+  resolveCocheraPricingForVehicle,
+  type CocheraCustomerVehicle,
+} from "@avileo/shared";
 
 const PAYMENT_OPTIONS = [
   { id: "efectivo" as const, label: "Efectivo", icon: Banknote },
@@ -85,7 +89,7 @@ export default function CocheraCobrarPage() {
     id: string;
     name: string;
     phone?: string | null;
-    vehicle?: { id: string } | null;
+    vehicle?: CocheraCustomerVehicle | null;
     shouldCreateVehicle?: boolean;
   } | null>(null);
   const [settlementNotes, setSettlementNotes] = useState("");
@@ -105,7 +109,11 @@ export default function CocheraCobrarPage() {
     if (!session || !settings) return null;
 
     const discount = Number(discountInput) || 0;
-    const pricing = session.pricingSnapshot ?? createCocheraPricingSnapshot(settings);
+    const pricing = session.pricingSnapshot
+      ?? resolveCocheraPricingForVehicle(settings, session.vehicleType);
+    const pricingSourceLabel = session.pricingSnapshot
+      ? "Tarifa guardada al ingreso"
+      : "Tarifa actual de configuración";
     const calculation = calculateCocheraBilling({
       entryAt: session.entryAt,
       checkoutAt: new Date(),
@@ -120,6 +128,8 @@ export default function CocheraCobrarPage() {
       hourlyRate: pricing.hourlyBillingEnabled
         ? Number(pricing.extraHourRate)
         : Number(pricing.hourlyRate) || 0,
+      hourlyBillingEnabled: pricing.hourlyBillingEnabled,
+      pricingSourceLabel,
       discount,
     };
   }, [session, settings, elapsedMinutes, discountInput]);
@@ -299,13 +309,21 @@ export default function CocheraCobrarPage() {
             {/* Calculation preview */}
             {preview && (
               <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-orange-800" data-testid="cochera-pricing-source">
+                    {preview.pricingSourceLabel}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-900 capitalize">
+                    {session.vehicleType}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-orange-800">Tiempo facturable</span>
                   <span className="font-medium text-orange-900">
                     {preview.billableHours} h
                   </span>
                 </div>
-                {settings.hourlyBillingEnabled ? (
+                {preview.hourlyBillingEnabled ? (
                   <>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-orange-800">Tarifa base</span>
@@ -323,7 +341,7 @@ export default function CocheraCobrarPage() {
                 ) : (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-orange-800">Tarifa por hora</span>
-                  <span className="font-medium text-orange-900">
+                  <span className="font-medium text-orange-900" data-testid="cochera-preview-hourly-rate">
                     S/ {preview.hourlyRate.toFixed(2)}
                   </span>
                 </div>

@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { cn } from "~/lib/utils";
 import { MobileFixedFooter, MobilePage } from "~/components/mobile";
-import type { CocheraPaymentTiming, CocheraSettings, CocheraVehicleTypeConfig } from "@avileo/shared";
+import {
+  resolveCocheraPricingForVehicle,
+  type CocheraPaymentTiming,
+  type CocheraSettings,
+  type CocheraVehicleTypeConfig,
+} from "@avileo/shared";
 
 export const entryFormSchema = z.object({
   plate: z
@@ -26,6 +31,7 @@ export const entryFormSchema = z.object({
 });
 
 export type EntryFormData = z.infer<typeof entryFormSchema>;
+type EntryFormInput = z.input<typeof entryFormSchema>;
 
 interface EntryFormProps {
   onSubmit: (data: EntryFormData) => void | Promise<void>;
@@ -46,6 +52,25 @@ function getVehicleIcon(id: string) {
   return Car;
 }
 
+function formatMoney(value: string | number | null | undefined): string {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+}
+
+function getVehiclePricingLabel(settings: CocheraSettings | null | undefined, option: { id: string }): string | null {
+  if (!settings) return null;
+
+  const pricing = resolveCocheraPricingForVehicle(settings, option.id);
+  const typeConfig = settings.vehicleTypes?.find((type) => type.id === option.id);
+  const sourceLabel = typeConfig?.pricing ? "Propia" : "Global";
+
+  if (pricing.hourlyBillingEnabled) {
+    return `${sourceLabel}: base S/ ${formatMoney(pricing.hourlyBaseRate)} por ${pricing.hourlyBaseHours} h`;
+  }
+
+  return `${sourceLabel}: S/ ${formatMoney(pricing.hourlyRate)}/h`;
+}
+
 export function EntryForm({ onSubmit, isSubmitting = false, vehicleTypes, settings }: EntryFormProps) {
   const rawOptions = useMemo(
     () => vehicleTypes?.filter((type) => type.enabled) ?? VEHICLE_OPTIONS,
@@ -60,7 +85,7 @@ export function EntryForm({ onSubmit, isSubmitting = false, vehicleTypes, settin
       })),
     [rawOptions]
   );
-  const form = useForm<EntryFormData>({
+  const form = useForm<EntryFormInput, unknown, EntryFormData>({
     resolver: zodResolver(entryFormSchema),
     mode: "onChange",
     defaultValues: {
@@ -126,6 +151,7 @@ export function EntryForm({ onSubmit, isSubmitting = false, vehicleTypes, settin
           <div className="grid grid-cols-3 gap-3">
             {options.map((option) => {
               const isSelected = selectedType === option.id;
+              const pricingLabel = getVehiclePricingLabel(settings, option);
               return (
                 <button
                   key={option.id}
@@ -133,14 +159,26 @@ export function EntryForm({ onSubmit, isSubmitting = false, vehicleTypes, settin
                   data-testid={`cochera-vehicle-type-${option.id}`}
                   onClick={() => handleTypeSelect(option.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-sm font-medium transition-all",
+                    "flex min-h-[7.25rem] flex-col items-center justify-center gap-1.5 rounded-2xl border px-3 py-4 text-center text-sm font-medium transition-all",
                     isSelected
                       ? "border-orange-300 bg-orange-50 text-orange-700 shadow-sm shadow-orange-500/10 dark:border-orange-400/55 dark:bg-orange-500/15 dark:text-orange-100"
                       : "border-gray-100 bg-gray-50/50 text-muted-foreground hover:border-gray-200 hover:text-foreground dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-300 dark:hover:border-orange-300/35 dark:hover:bg-orange-500/10 dark:hover:text-orange-50"
                   )}
                 >
                   <option.icon className="h-6 w-6" />
-                  {option.label}
+                  <span>{option.label}</span>
+                  {pricingLabel ? (
+                    <span
+                      className={cn(
+                        "text-[11px] font-medium leading-tight",
+                        isSelected
+                          ? "text-orange-700/80 dark:text-orange-100/80"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {pricingLabel}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}

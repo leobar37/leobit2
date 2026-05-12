@@ -21,7 +21,7 @@ import { useBusinessMode } from "~/hooks/use-business-mode";
 import { cn } from "~/lib/utils";
 import {
   calculateCocheraBilling,
-  createCocheraPricingSnapshot,
+  resolveCocheraPricingForVehicle,
   type CocheraSession,
   type CocheraSettings,
   type CocheraVehicleType,
@@ -48,7 +48,8 @@ function getEstimatedAmount(
 ): { amount: number; isExtra: boolean } | null {
   if (!settings) return null;
 
-  const pricing = session.pricingSnapshot ?? createCocheraPricingSnapshot(settings);
+  const pricing = session.pricingSnapshot
+    ?? resolveCocheraPricingForVehicle(settings, session.vehicleType);
   const calculation = calculateCocheraBilling({
     entryAt: session.entryAt,
     checkoutAt: now,

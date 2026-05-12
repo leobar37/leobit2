@@ -21,23 +21,24 @@ describe("CocheraSessionService", () => {
     getDailyIncomeLast7Days: vi.fn(),
     getRecentActivity: vi.fn(),
   });
+  const baseSettings = {
+    vehicleTypes: [
+      { id: "auto", label: "Auto", enabled: true },
+      { id: "moto", label: "Moto", enabled: true },
+      { id: "camioneta", label: "Camioneta", enabled: true },
+    ],
+    acceptedPaymentMethods: ["efectivo", "yape", "plin"],
+    hourlyBillingEnabled: false,
+    hourlyRate: "5.00",
+    dailyRate: null,
+    graceMinutes: 10,
+    hourlyBaseRate: "5.00",
+    hourlyBaseHours: 1,
+    extraHourRate: "1.00",
+    defaultPaymentTiming: "exit",
+  };
   const createSettingsRepo = () => ({
-    getOrCreate: vi.fn().mockResolvedValue({
-      vehicleTypes: [
-        { id: "auto", label: "Auto", enabled: true },
-        { id: "moto", label: "Moto", enabled: true },
-        { id: "camioneta", label: "Camioneta", enabled: true },
-      ],
-      acceptedPaymentMethods: ["efectivo", "yape", "plin"],
-      hourlyBillingEnabled: false,
-      hourlyRate: "5.00",
-      dailyRate: null,
-      graceMinutes: 10,
-      hourlyBaseRate: "5.00",
-      hourlyBaseHours: 1,
-      extraHourRate: "1.00",
-      defaultPaymentTiming: "exit",
-    }),
+    getOrCreate: vi.fn().mockResolvedValue(baseSettings),
   });
 
   beforeEach(() => {
@@ -138,7 +139,7 @@ describe("CocheraSessionService", () => {
     repo.create.mockImplementation(async (_ctx, data) => ({ id: "session-1", ...data }));
     const settingsRepo = createSettingsRepo();
     settingsRepo.getOrCreate.mockResolvedValue({
-      ...(await settingsRepo.getOrCreate()),
+      ...baseSettings,
       hourlyBillingEnabled: true,
       hourlyBaseRate: "5.00",
       hourlyBaseHours: 1,
@@ -166,6 +167,83 @@ describe("CocheraSessionService", () => {
           hourlyBillingEnabled: true,
           hourlyBaseRate: "5.00",
           extraHourRate: "1.00",
+        }),
+      })
+    );
+  });
+
+  it("stores vehicle-specific pricing snapshot when the selected type has pricing", async () => {
+    const repo = createRepo();
+    repo.findActiveByPlate.mockResolvedValue(undefined);
+    repo.create.mockImplementation(async (_ctx, data) => ({ id: "session-1", ...data }));
+    const settingsRepo = createSettingsRepo();
+    settingsRepo.getOrCreate.mockResolvedValue({
+      ...baseSettings,
+      hourlyRate: "5.00",
+      vehicleTypes: [
+        { id: "auto", label: "Auto", enabled: true },
+        {
+          id: "moto",
+          label: "Moto",
+          enabled: true,
+          pricing: {
+            hourlyBillingEnabled: true,
+            hourlyRate: 2,
+            dailyRate: 8,
+            hourlyBaseRate: 3,
+            hourlyBaseHours: 2,
+            extraHourRate: 1,
+          },
+        },
+      ],
+    });
+
+    const service = new CocheraSessionService(repo as never, settingsRepo as never);
+
+    await service.create(ctx as never, {
+      plate: "MTO-123",
+      vehicleType: "moto",
+      entryAmountPaid: 3,
+      entryPaymentMethod: "efectivo",
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      ctx,
+      expect.objectContaining({
+        vehicleType: "moto",
+        paymentTiming: "exit",
+        entryAmountPaid: "3.00",
+        pricingSnapshot: expect.objectContaining({
+          hourlyBillingEnabled: true,
+          hourlyRate: "2",
+          dailyRate: "8",
+          hourlyBaseRate: "3",
+          hourlyBaseHours: 2,
+          extraHourRate: "1",
+        }),
+      })
+    );
+  });
+
+  it("falls back to global pricing when the selected type has no pricing", async () => {
+    const repo = createRepo();
+    repo.findActiveByPlate.mockResolvedValue(undefined);
+    repo.create.mockImplementation(async (_ctx, data) => ({ id: "session-1", ...data }));
+
+    const service = new CocheraSessionService(repo as never, createSettingsRepo() as never);
+
+    await service.create(ctx as never, {
+      plate: "CAR-123",
+      vehicleType: "auto",
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      ctx,
+      expect.objectContaining({
+        pricingSnapshot: expect.objectContaining({
+          hourlyBillingEnabled: false,
+          hourlyRate: "5.00",
+          graceMinutes: 10,
         }),
       })
     );

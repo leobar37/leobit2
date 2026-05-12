@@ -18,6 +18,30 @@ const DEFAULT_VEHICLE_TYPES = [
   { id: "motolineal", label: "Motolineal", enabled: true, isDefault: true },
 ];
 
+const pricingSchema = z.object({
+  hourlyBillingEnabled: z.boolean(),
+  hourlyRate: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ message: "Ingresa un número válido" }).min(0, "Debe ser mayor o igual a 0")
+  ),
+  dailyRate: z.preprocess(
+    (value) => (value === "" || value == null ? null : Number(value)),
+    z.number().min(0, "Debe ser mayor o igual a 0").nullable()
+  ),
+  hourlyBaseRate: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ message: "Ingresa un número válido" }).min(0, "Debe ser mayor o igual a 0")
+  ),
+  hourlyBaseHours: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ message: "Ingresa un número válido" }).int("Debe ser un número entero").min(1, "Mínimo 1")
+  ),
+  extraHourRate: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ message: "Ingresa un número válido" }).min(0, "Debe ser mayor o igual a 0")
+  ),
+});
+
 export const cocheraSettingsSchema = z.object({
   displayName: z.string().max(120, "Máximo 120 caracteres").optional(),
   displayAddress: z.string().optional(),
@@ -57,6 +81,7 @@ export const cocheraSettingsSchema = z.object({
     label: z.string().min(2, "Nombre requerido"),
     enabled: z.boolean(),
     isDefault: z.boolean().optional(),
+    pricing: pricingSchema.nullable().optional(),
   })).min(1, "Configura al menos un tipo de vehículo"),
 });
 
@@ -136,6 +161,27 @@ export function CocheraSettingsForm({
   const vehicleTypes = watch("vehicleTypes") ?? [];
   const hourlyBillingEnabled = watch("hourlyBillingEnabled");
   const defaultPaymentTiming = watch("defaultPaymentTiming") ?? "exit";
+  const hourlyRate = watch("hourlyRate");
+  const dailyRate = watch("dailyRate");
+  const hourlyBaseRate = watch("hourlyBaseRate");
+  const hourlyBaseHours = watch("hourlyBaseHours");
+  const extraHourRate = watch("extraHourRate");
+
+  const getDefaultVehiclePricing = useCallback(() => ({
+    hourlyBillingEnabled: Boolean(hourlyBillingEnabled),
+    hourlyRate: Number(hourlyRate) || 0,
+    dailyRate: dailyRate == null ? null : Number(dailyRate) || 0,
+    hourlyBaseRate: Number(hourlyBaseRate) || 0,
+    hourlyBaseHours: Math.max(1, Number(hourlyBaseHours) || 1),
+    extraHourRate: Number(extraHourRate) || 0,
+  }), [
+    dailyRate,
+    extraHourRate,
+    hourlyBaseHours,
+    hourlyBaseRate,
+    hourlyBillingEnabled,
+    hourlyRate,
+  ]);
 
   const togglePaymentMethod = useCallback(
     (method: "efectivo" | "yape" | "plin") => {
@@ -200,6 +246,32 @@ export function CocheraSettingsForm({
       );
     },
     [setValue, vehicleTypes]
+  );
+
+  const toggleVehiclePricing = useCallback(
+    (index: number, enabled: boolean) => {
+      setValue(
+        `vehicleTypes.${index}.pricing`,
+        enabled ? getDefaultVehiclePricing() : null,
+        { shouldValidate: true, shouldDirty: true }
+      );
+    },
+    [getDefaultVehiclePricing, setValue]
+  );
+
+  const toggleVehicleHourlyBilling = useCallback(
+    (index: number, enabled: boolean) => {
+      const currentPricing = vehicleTypes[index]?.pricing ?? getDefaultVehiclePricing();
+      setValue(
+        `vehicleTypes.${index}.pricing`,
+        {
+          ...currentPricing,
+          hourlyBillingEnabled: enabled,
+        },
+        { shouldValidate: true, shouldDirty: true }
+      );
+    },
+    [getDefaultVehiclePricing, setValue, vehicleTypes]
   );
 
   const setDefaultPaymentTiming = useCallback(
@@ -381,48 +453,135 @@ export function CocheraSettingsForm({
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            {vehicleTypes.map((type) => (
+            {vehicleTypes.map((type, index) => (
               <div
                 key={type.id}
-                className="flex min-w-0 items-center gap-3 border-b border-border/70 px-3 py-3 last:border-b-0"
+                className="space-y-3 border-b border-border/70 px-3 py-3 last:border-b-0"
               >
-                <Switch
-                  checked={type.enabled}
-                  onCheckedChange={() => toggleVehicleType(type.id)}
-                  data-testid={`cochera-vehicle-type-toggle-${type.id}`}
-                  className="shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  {type.isDefault ? (
-                    <p
-                      className={cn(
-                        "truncate text-sm font-medium",
-                        type.enabled ? "text-foreground" : "text-muted-foreground"
-                      )}
-                    >
-                      {type.label}
+                <div className="flex min-w-0 items-center gap-3">
+                  <Switch
+                    checked={type.enabled}
+                    onCheckedChange={() => toggleVehicleType(type.id)}
+                    data-testid={`cochera-vehicle-type-toggle-${type.id}`}
+                    className="shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    {type.isDefault ? (
+                      <p
+                        className={cn(
+                          "truncate text-sm font-medium",
+                          type.enabled ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {type.label}
+                      </p>
+                    ) : (
+                      <input
+                        value={type.label}
+                        onChange={(event) => updateVehicleLabel(type.id, event.target.value)}
+                        className="h-9 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-orange-400"
+                      />
+                    )}
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {type.enabled ? "Disponible en entrada" : "Oculto en entrada"}
                     </p>
-                  ) : (
-                    <input
-                      value={type.label}
-                      onChange={(event) => updateVehicleLabel(type.id, event.target.value)}
-                      className="h-9 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-orange-400"
-                    />
-                  )}
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {type.enabled ? "Disponible en entrada" : "Oculto en entrada"}
-                  </p>
+                  </div>
+                  {!type.isDefault ? (
+                    <button
+                      type="button"
+                      aria-label={`Eliminar ${type.label}`}
+                      onClick={() => removeVehicleType(type.id)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  ) : null}
                 </div>
-                {!type.isDefault ? (
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
                   <button
                     type="button"
-                    aria-label={`Eliminar ${type.label}`}
-                    onClick={() => removeVehicleType(type.id)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                    data-testid={`cochera-vehicle-pricing-toggle-${type.id}`}
+                    className="flex w-full items-center justify-between gap-3 text-left"
+                    onClick={() => toggleVehiclePricing(index, !type.pricing)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <div>
+                      <p className="text-sm font-medium">Tarifa propia</p>
+                      <p className="text-xs text-muted-foreground">
+                        {type.pricing
+                          ? "Este tipo usa su propia tarifa al registrar entradas."
+                          : "Usa la tarifa global por defecto."}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-3 py-1 text-xs font-semibold",
+                        type.pricing
+                          ? "bg-orange-500 text-white"
+                          : "bg-background text-muted-foreground"
+                      )}
+                    >
+                      {type.pricing ? "Activa" : "Global"}
+                    </span>
                   </button>
-                ) : null}
+
+                  {type.pricing ? (
+                    <div className="mt-3 grid gap-3 border-t border-border pt-3">
+                      <FormNumberInput
+                        name={`vehicleTypes.${index}.pricing.hourlyRate`}
+                        label="Tarifa por hora (S/) *"
+                        decimals={2}
+                      />
+                      <FormNumberInput
+                        name={`vehicleTypes.${index}.pricing.dailyRate`}
+                        label="Tarifa por día completo (S/)"
+                        decimals={2}
+                      />
+                      <button
+                        type="button"
+                        data-testid={`cochera-vehicle-hourly-billing-toggle-${type.id}`}
+                        className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-3 text-left"
+                        onClick={() => toggleVehicleHourlyBilling(index, !type.pricing?.hourlyBillingEnabled)}
+                      >
+                        <div>
+                          <p className="text-sm font-medium">Cobro por horas</p>
+                          <p className="text-xs text-muted-foreground">
+                            Tarifa base y hora extra para este vehículo.
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-3 py-1 text-xs font-semibold",
+                            type.pricing.hourlyBillingEnabled
+                              ? "bg-orange-500 text-white"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {type.pricing.hourlyBillingEnabled ? "Activo" : "Inactivo"}
+                        </span>
+                      </button>
+                      {type.pricing.hourlyBillingEnabled ? (
+                        <div className="grid gap-3">
+                          <FormNumberInput
+                            name={`vehicleTypes.${index}.pricing.hourlyBaseRate`}
+                            label="Tarifa base (S/) *"
+                            decimals={2}
+                          />
+                          <FormNumberInput
+                            name={`vehicleTypes.${index}.pricing.hourlyBaseHours`}
+                            label="Horas incluidas *"
+                            decimals={0}
+                            allowDecimal={false}
+                          />
+                          <FormNumberInput
+                            name={`vehicleTypes.${index}.pricing.extraHourRate`}
+                            label="Hora extra (S/) *"
+                            decimals={2}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

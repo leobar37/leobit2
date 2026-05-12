@@ -183,7 +183,15 @@ export default function CocheraConfigPage() {
         extraHourRate: decimalStringOrZero(settings.extraHourRate),
         defaultPaymentTiming: settings.defaultPaymentTiming,
         acceptedPaymentMethods: settings.acceptedPaymentMethods,
-        vehicleTypes: settings.vehicleTypes,
+        vehicleTypes: settings.vehicleTypes.map((type) => ({
+          ...type,
+          pricing: type.pricing
+            ? {
+                ...type.pricing,
+                dailyRate: type.pricing.dailyRate ?? null,
+              }
+            : null,
+        })),
       }
     : undefined;
 

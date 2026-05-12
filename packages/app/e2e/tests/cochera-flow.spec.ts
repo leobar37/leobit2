@@ -26,9 +26,6 @@ test.describe("Avileo Cocheras", () => {
     await expect(page.getByTestId("input-graceMinutes")).toHaveValue(COCHERA_FIXTURES.graceMinutes);
     await expect(page.getByTestId("input-totalSpaces")).toHaveValue(COCHERA_FIXTURES.totalSpaces);
 
-    await cocheraPage.gotoActiveSessions();
-    await cocheraPage.expectVehicleVisible(COCHERA_FIXTURES.activePlate);
-
     await cocheraPage.createEntry(uniquePlate, "auto");
     await expect(page).toHaveURL(/\/cochera$/);
     await cocheraPage.expectVehicleVisible(uniquePlate);
@@ -43,6 +40,36 @@ test.describe("Avileo Cocheras", () => {
     await cocheraPage.expectReportRow(uniquePlate);
     await page.getByTestId("cochera-report-period-week").click();
     await cocheraPage.expectReportRow(COCHERA_FIXTURES.completedPlate);
+  });
+
+  test("admin configures vehicle-specific pricing and checkout keeps the entry snapshot", async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    const cocheraPage = new CocheraPage(page);
+    const suffix = Date.now().toString().slice(-6);
+    const motoPlate = `MT-${suffix}`;
+    const autoPlate = `AU-${suffix}`;
+
+    await loginPage.goto();
+    await loginPage.login(COCHERA_ADMIN_USER.email, COCHERA_ADMIN_USER.password);
+
+    await cocheraPage.configureMotoPricing("2", "20");
+    await cocheraPage.expectEntryVehiclePricing("moto", /Propia: S\/ 2\.00\/h/);
+    await cocheraPage.expectEntryVehiclePricing("auto", /Global: S\/ 5\.00\/h/);
+
+    await cocheraPage.createEntry(motoPlate, "moto");
+    await expect(page).toHaveURL(/\/cochera$/);
+    await cocheraPage.expectVehicleVisible(motoPlate);
+    await cocheraPage.openCheckout(motoPlate);
+    await cocheraPage.expectCheckoutHourlyRate("S/ 2.00");
+
+    await cocheraPage.configureMotoPricing("9", "90");
+    await cocheraPage.openCheckout(motoPlate);
+    await cocheraPage.expectCheckoutHourlyRate("S/ 2.00");
+
+    await cocheraPage.createEntry(autoPlate, "auto");
+    await expect(page).toHaveURL(/\/cochera$/);
+    await cocheraPage.openCheckout(autoPlate);
+    await cocheraPage.expectCheckoutHourlyRate("S/ 5.00");
   });
 
   test("vendedor can operate cochera flow but cannot edit cochera settings", async ({ page }) => {

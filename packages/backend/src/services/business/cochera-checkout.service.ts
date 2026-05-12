@@ -14,7 +14,7 @@ import { db } from "../../lib/db";
 import { z } from "zod";
 import {
   calculateCocheraBilling,
-  createCocheraPricingSnapshot,
+  resolveCocheraPricingForVehicle,
   type CocheraPricingSnapshot,
 } from "@avileo/shared";
 
@@ -299,7 +299,8 @@ export class CocheraCheckoutService {
 
     const checkoutAt = new Date();
 
-    const pricing = session.pricingSnapshot ?? createCocheraPricingSnapshot(settings);
+    const pricing = session.pricingSnapshot
+      ?? resolveCocheraPricingForVehicle(settings, session.vehicleType);
     const calculation = this.calculateCheckout(
       new Date(session.entryAt),
       checkoutAt,

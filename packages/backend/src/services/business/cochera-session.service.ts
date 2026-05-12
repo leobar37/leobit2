@@ -4,7 +4,7 @@ import { ValidationError, ConflictError, NotFoundError, ForbiddenError } from ".
 import type { RequestContext } from "../../context/request-context";
 import type { CocheraSession, NewCocheraSession } from "../../db/schema";
 import { z } from "zod";
-import { createCocheraPricingSnapshot } from "@avileo/shared";
+import { resolveCocheraPricingForVehicle } from "@avileo/shared";
 
 const createSchema = z.object({
   plate: z.string().min(1, "La placa es requerida").max(20, "Placa muy larga"),
@@ -74,10 +74,11 @@ export class CocheraSessionService {
       throw new ValidationError("Tipo de vehículo inválido");
     }
 
-    const paymentTiming = settings.hourlyBillingEnabled
+    const pricingSnapshot = resolveCocheraPricingForVehicle(settings, normalizedVehicleType);
+    const paymentTiming = pricingSnapshot.hourlyBillingEnabled
       ? result.data.paymentTiming ?? settings.defaultPaymentTiming
       : null;
-    const entryAmountPaid = settings.hourlyBillingEnabled ? result.data.entryAmountPaid ?? 0 : 0;
+    const entryAmountPaid = pricingSnapshot.hourlyBillingEnabled ? result.data.entryAmountPaid ?? 0 : 0;
     if (entryAmountPaid > 0 && !result.data.entryPaymentMethod) {
       throw new ValidationError("Selecciona un método de pago para el cobro de entrada");
     }
@@ -106,7 +107,7 @@ export class CocheraSessionService {
       entryAmountPaid: entryAmountPaid.toFixed(2),
       entryPaymentMethod: entryAmountPaid > 0 ? result.data.entryPaymentMethod : null,
       entryPaymentAt: entryAmountPaid > 0 ? new Date() : null,
-      pricingSnapshot: createCocheraPricingSnapshot(settings),
+      pricingSnapshot,
     };
 
     return this.repo.create(ctx, data);

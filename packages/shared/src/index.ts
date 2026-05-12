@@ -1,6 +1,7 @@
 import type {
   CocheraPaymentTiming,
   CocheraPricingSnapshot,
+  CocheraVehiclePricingConfig,
 } from "./cochera-billing";
 
 // Enums as const objects for frontend usage
@@ -583,11 +584,13 @@ export type {
 export {
   calculateCocheraBilling,
   createCocheraPricingSnapshot,
+  resolveCocheraPricingForVehicle,
 } from "./cochera-billing";
 export type {
   CocheraBillingCalculation,
   CocheraPaymentTiming,
   CocheraPricingSnapshot,
+  CocheraVehiclePricingConfig,
 } from "./cochera-billing";
 
 // Cochera (Parking) Settings
@@ -645,6 +648,7 @@ export interface CocheraVehicleTypeConfig {
   label: string;
   enabled: boolean;
   isDefault?: boolean;
+  pricing?: CocheraVehiclePricingConfig | null;
 }
 
 export const CocheraSessionStatus = {

@@ -25,6 +25,14 @@ const updateSchema = z.object({
     label: z.string().trim().min(2).max(40),
     enabled: z.boolean(),
     isDefault: z.boolean().optional(),
+    pricing: z.object({
+      hourlyBillingEnabled: z.boolean(),
+      hourlyRate: z.number().min(0),
+      dailyRate: z.number().min(0).nullable().optional(),
+      hourlyBaseRate: z.number().min(0),
+      hourlyBaseHours: z.number().int().min(1),
+      extraHourRate: z.number().min(0),
+    }).nullable().optional(),
   })).min(1),
 });
 
@@ -61,15 +69,29 @@ export class CocheraSettingsService {
 
     const existing = await this.repo.findByBusinessId(ctx);
 
-    const normalizedVehicleTypes = result.data.vehicleTypes.map((type) => ({
-      id: type.id.trim().toLowerCase(),
-      label: type.label.trim(),
-      enabled: type.enabled,
-      isDefault: Boolean(
-        type.isDefault ||
-          DEFAULT_COCHERA_VEHICLE_TYPES.some((defaultType) => defaultType.id === type.id)
-      ),
-    }));
+    const normalizedVehicleTypes = result.data.vehicleTypes.map((type) => {
+      const id = type.id.trim().toLowerCase();
+
+      return {
+        id,
+        label: type.label.trim(),
+        enabled: type.enabled,
+        isDefault: Boolean(
+          type.isDefault ||
+            DEFAULT_COCHERA_VEHICLE_TYPES.some((defaultType) => defaultType.id === id)
+        ),
+        pricing: type.pricing
+          ? {
+              hourlyBillingEnabled: type.pricing.hourlyBillingEnabled,
+              hourlyRate: type.pricing.hourlyRate,
+              dailyRate: type.pricing.dailyRate ?? null,
+              hourlyBaseRate: type.pricing.hourlyBaseRate,
+              hourlyBaseHours: type.pricing.hourlyBaseHours,
+              extraHourRate: type.pricing.extraHourRate,
+            }
+          : null,
+      };
+    });
     const enabledCount = normalizedVehicleTypes.filter((type) => type.enabled).length;
     const uniqueCount = new Set(normalizedVehicleTypes.map((type) => type.id)).size;
     if (enabledCount === 0) {

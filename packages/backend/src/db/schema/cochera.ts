@@ -56,7 +56,20 @@ export const cocheraSettings = pgTable(
       .notNull()
       .default(["efectivo"]),
     vehicleTypes: jsonb("vehicle_types")
-      .$type<{ id: string; label: string; enabled: boolean; isDefault?: boolean }[]>()
+      .$type<{
+        id: string;
+        label: string;
+        enabled: boolean;
+        isDefault?: boolean;
+        pricing?: {
+          hourlyBillingEnabled: boolean;
+          hourlyRate: number;
+          dailyRate?: number | null;
+          hourlyBaseRate: number;
+          hourlyBaseHours: number;
+          extraHourRate: number;
+        } | null;
+      }[]>()
       .notNull()
       .default([
         { id: "auto", label: "Auto", enabled: true, isDefault: true },

@@ -10,6 +10,34 @@ export interface CocheraPricingSnapshot {
   extraHourRate: string;
 }
 
+export interface CocheraVehiclePricingInput {
+  hourlyBillingEnabled?: boolean;
+  hourlyRate?: string | number;
+  dailyRate?: string | number | null;
+  hourlyBaseRate?: string | number;
+  hourlyBaseHours?: number;
+  extraHourRate?: string | number;
+}
+
+export interface CocheraVehiclePricingConfig {
+  hourlyBillingEnabled: boolean;
+  hourlyRate: number;
+  dailyRate: number | null;
+  hourlyBaseRate: number;
+  hourlyBaseHours: number;
+  extraHourRate: number;
+}
+
+export interface CocheraVehicleTypePricingConfig {
+  id: string;
+  pricing?: CocheraVehiclePricingInput | null;
+}
+
+export interface CocheraSettingsPricingInput extends CocheraVehiclePricingInput {
+  graceMinutes?: number;
+  vehicleTypes?: CocheraVehicleTypePricingConfig[] | null;
+}
+
 export interface CocheraBillingInput {
   entryAt: Date | string;
   checkoutAt: Date | string;
@@ -57,6 +85,22 @@ export function createCocheraPricingSnapshot(settings: {
     hourlyBaseHours: Math.max(1, settings.hourlyBaseHours ?? 1),
     extraHourRate: String(settings.extraHourRate ?? settings.hourlyRate ?? "0"),
   };
+}
+
+export function resolveCocheraPricingForVehicle(
+  settings: CocheraSettingsPricingInput,
+  vehicleType: string
+): CocheraPricingSnapshot {
+  const normalizedVehicleType = vehicleType.trim().toLowerCase();
+  const vehiclePricing = settings.vehicleTypes?.find(
+    (type) => type.id.trim().toLowerCase() === normalizedVehicleType
+  )?.pricing;
+
+  return createCocheraPricingSnapshot({
+    ...settings,
+    ...(vehiclePricing ?? {}),
+    graceMinutes: settings.graceMinutes,
+  });
 }
 
 export function calculateCocheraBilling(input: CocheraBillingInput): CocheraBillingCalculation {

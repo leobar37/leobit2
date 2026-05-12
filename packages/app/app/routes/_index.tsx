@@ -70,17 +70,17 @@ export default function Index() {
   // If no stored token, user must login
   if (!hasStoredToken || showTimeoutRedirect) {
     if (showTimeoutRedirect) {
-      console.log("[Index] Timeout redirect to landing");
+      console.log("[Index] Timeout redirect to login");
     } else {
-      console.log("[Index] No stored token found, redirecting to landing");
+      console.log("[Index] No stored token found, redirecting to login");
     }
-    return <Navigate to="/landing" replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  // If token is expired, redirect to landing
+  // If token is expired, redirect to login
   if (isTokenExpired(hasStoredToken)) {
-    console.log("[Index] Token is expired, redirecting to landing");
-    return <Navigate to="/landing" replace />;
+    console.log("[Index] Token is expired, redirecting to login");
+    return <Navigate to="/login" replace />;
   }
 
   // If we have a token but no session user yet, let sync handle validation
