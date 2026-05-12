@@ -1,5 +1,6 @@
 import { CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 
 interface PricingCardProps {
@@ -9,8 +10,8 @@ interface PricingCardProps {
   description: string;
   features: string[];
   cta: string;
+  ctaHref: string;
   highlighted?: boolean;
-  onCtaClick?: () => void;
 }
 
 export function PricingCard({
@@ -20,8 +21,8 @@ export function PricingCard({
   description,
   features,
   cta,
+  ctaHref,
   highlighted = false,
-  onCtaClick
 }: PricingCardProps) {
   return (
     <motion.div
@@ -36,7 +37,7 @@ export function PricingCard({
       {highlighted && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
           <span className="bg-orange-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-            Mas popular
+            Más popular
           </span>
         </div>
       )}
@@ -60,14 +61,14 @@ export function PricingCard({
       </ul>
 
       <Button
-        onClick={onCtaClick}
+        asChild
         className={`w-full h-11 rounded-xl font-medium transition-colors duration-300 ${
           highlighted
             ? "bg-orange-500 hover:bg-orange-600 text-white"
             : "bg-muted hover:bg-muted/80 text-foreground"
         }`}
       >
-        {cta}
+        <Link to={ctaHref}>{cta}</Link>
       </Button>
     </motion.div>
   );

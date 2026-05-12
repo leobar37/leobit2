@@ -3,19 +3,19 @@ import { TestimonialCard } from "./testimonial-card";
 
 const testimonials = [
   {
-    quote: "Ahora veo cuanto vendio cada vendedor sin esperar al cierre del dia. Tomo decisiones mas rapido y con numeros claros. Ha cambiado mi negocio.",
-    author: "Juan Perez",
-    role: "Propietario, Avicola El Dorado"
+    quote: "Ahora veo cuánto vendió cada vendedor sin esperar al cierre del día. Tomo decisiones más rápido y con números claros. Ha cambiado mi negocio.",
+    author: "Juan Pérez",
+    role: "Propietario, Avícola El Dorado"
   },
   {
-    quote: "Antes llevaba clientes y deudas en un cuaderno. Con Avileo se quien debe, cuanto debe y que se cobro hoy. Mi cobranza esta bajo control.",
-    author: "Maria Garcia",
-    role: "Propietaria, Avicola San Jose"
+    quote: "Antes anotaba los pedidos de agua en hojas sueltas y siempre perdía cuentas. Con Avileo registro clientes, controlo los envases y sé exactamente cuánto me deben.",
+    author: "Rosa Huamán",
+    role: "Propietaria, Distribuidora San Pablo (Agua)"
   },
   {
-    quote: "El inventario ya no se me escapa. Asigno kilos, reviso ventas en tiempo real y cierro el dia con mas orden y menos perdidas.",
-    author: "Carlos Rodriguez",
-    role: "Administrador, Pollo Delicia"
+    quote: "Llevar el control de entradas y salidas del estacionamiento en papel era un desorden. Ahora veo los ingresos del día en tiempo real y cierro sin dolores de cabeza.",
+    author: "Miguel Torres",
+    role: "Administrador, Estacionamiento Central"
   }
 ];
 

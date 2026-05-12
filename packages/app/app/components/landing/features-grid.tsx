@@ -5,33 +5,33 @@ import { FeatureCard } from "./feature-card";
 const features = [
   {
     icon: Calculator,
-    title: "Calculadora Automatica",
-    description: "Peso × precio/kg con resta de tara. Tus vendedores cobran rapido y sin errores."
+    title: "Cuentas Claras al Instante",
+    description: "Precio x cantidad automático. Tus cobros son rápidos y sin errores de cálculo."
   },
   {
     icon: ShoppingCart,
-    title: "Venta Rapida y Precisa",
-    description: "Contado o credito, con o sin cliente. Registra cada venta en segundos desde el celular."
+    title: "Venta Rápida y Precisa",
+    description: "Contado o crédito, con o sin cliente. Registra cada venta en segundos desde el celular."
   },
   {
     icon: Users,
-    title: "Clientes y Cuentas al Dia",
-    description: "Sabe quien debe, cuanto y cuando cobraste. Ninguna deuda se pierde."
+    title: "Clientes y Cuentas al Día",
+    description: "Sabe quién debe, cuánto y cuándo cobraste. Ninguna deuda se pierde."
   },
   {
     icon: Package,
-    title: "Inventario Siempre Claro",
-    description: "Asigna inventario por vendedor y controla lo vendido en tiempo real. Sin sorpresas."
+    title: "Controla tu Inventario",
+    description: "Lleva el control de tu stock y lo que vendes en tiempo real. Sin sorpresas ni faltantes."
   },
   {
     icon: BarChart3,
-    title: "Numeros que Deciden por Ti",
-    description: "Dashboard con metricas claras y exportacion a Excel. Deja de calcular de memoria."
+    title: "Números que Deciden por Ti",
+    description: "Dashboard con métricas claras y exportación a Excel. Deja de calcular de memoria."
   },
   {
     icon: MessageCircle,
     title: "WhatsApp sin Complicaciones",
-    description: "Envia comprobantes directo al celular del cliente. Mas profesionalismo, menos preguntas."
+    description: "Envía comprobantes directo al celular del cliente. Más profesionalismo, menos preguntas."
   }
 ];
 
@@ -60,7 +60,7 @@ export function FeaturesGrid() {
             Todo lo que necesitas para tu negocio
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Funciones completas disenadas para avicolas y negocios con equipo de ventas en campo.
+            Funciones completas para cualquier negocio que vende, cobra y controla sus cuentas.
           </p>
         </motion.div>
 

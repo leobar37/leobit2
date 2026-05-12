@@ -3,30 +3,33 @@ import { PricingCard } from "./pricing-card";
 
 const plans = [
   {
-    title: "Basico",
+    title: "Básico",
     price: "S/0",
     period: "/mes",
     description: "Ordena tus primeras ventas",
-    features: ["1 usuario", "Ventas basicas", "Hasta 50 clientes"],
+    features: ["1 usuario", "Ventas básicas", "Hasta 50 clientes"],
     cta: "Comenzar gratis",
+    ctaHref: "/register",
     highlighted: false
   },
   {
     title: "Pro",
     price: "S/99",
     period: "/mes",
-    description: "Para equipos que venden todos los dias",
+    description: "Para equipos que venden todos los días",
     features: ["5 usuarios", "Inventario completo", "Clientes ilimitados", "Reportes Excel", "WhatsApp"],
-    cta: "Prueba gratis 14 dias",
+    cta: "Prueba gratis 14 días",
+    ctaHref: "/register",
     highlighted: true
   },
   {
     title: "Empresa",
-    price: "Custom",
+    price: "A medida",
     period: "",
     description: "Para operaciones con varias sedes o integraciones",
-    features: ["Usuarios ilimitados", "API access", "Soporte 24/7", "Dominio propio", "Integraciones"],
+    features: ["Usuarios ilimitados", "Acceso API", "Soporte personalizado", "Dominio propio", "Integraciones"],
     cta: "Contactar ventas",
+    ctaHref: "/register?plan=empresa",
     highlighted: false
   }
 ];
@@ -46,7 +49,7 @@ export function PricingSection() {
             Planes claros para crecer sin desorden
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Empieza gratis y sube de plan cuando tu operacion necesite mas control.
+            Empieza gratis y sube de plan cuando tu operación necesite más control.
           </p>
         </motion.div>
 
@@ -66,6 +69,7 @@ export function PricingSection() {
                 description={plan.description}
                 features={plan.features}
                 cta={plan.cta}
+                ctaHref={plan.ctaHref}
                 highlighted={plan.highlighted}
               />
             </motion.div>

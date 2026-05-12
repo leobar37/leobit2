@@ -8,7 +8,7 @@ import type { Route } from "./+types/_index";
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "Avileo" },
-    { name: "description", content: "Sistema de ventas de pollo" },
+    { name: "description", content: "Controla tus cuentas desde el celular, sin papel. Avileo es el cuaderno digital para tu negocio." },
   ];
 }
 

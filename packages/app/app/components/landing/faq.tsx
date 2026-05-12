@@ -4,28 +4,36 @@ import { ChevronDown } from "lucide-react";
 
 const faqs = [
   {
+    question: "¿Para qué tipos de negocio sirve Avileo?",
+    answer: "Avileo funciona para cualquier negocio que lleve ventas, clientes e inventario. Está pensado para distribuidoras de agua, pollerías y avícolas, cocheras y estacionamientos, bodegas, y muchos más. Si aún usas cuaderno y lápiz, Avileo es para ti."
+  },
+  {
     question: "¿Necesito instalar algo?",
-    answer: "No. Avileo funciona desde el navegador de tu computadora o celular. Solo necesitas iniciar sesion y empezar a registrar tu operacion."
+    answer: "No. Avileo funciona desde el navegador de tu computadora o celular. Solo necesitas iniciar sesión y empezar a registrar tu operación."
   },
   {
-    question: "¿Mis datos estan seguros?",
-    answer: "Si. La informacion se guarda en la nube con acceso protegido por usuario y contrasena. Ademas puedes exportar tus datos en cualquier momento."
+    question: "¿Cómo reemplazo mi cuaderno con Avileo?",
+    answer: "Es más simple de lo que piensas. Registras a tus clientes una vez y desde ahí anotas cada venta, abono o fiado con dos toques. Ya no necesitas sumar a mano ni buscar hojas perdidas — todo está ordenado y disponible al instante."
   },
   {
-    question: "¿Cuantos usuarios puedo tener?",
-    answer: "Depende de tu plan. El plan Basico incluye 1 usuario, Pro incluye 5 usuarios, y Empresa tiene usuarios ilimitados. Puedes agregar mas usuarios en cualquier momento."
+    question: "¿Mis datos están seguros?",
+    answer: "Sí. La información se guarda en la nube con acceso protegido por usuario y contraseña. Además puedes exportar tus datos en cualquier momento."
+  },
+  {
+    question: "¿Cuántos usuarios puedo tener?",
+    answer: "Depende de tu plan. El plan Básico incluye 1 usuario, Pro incluye 5 usuarios, y Empresa tiene usuarios ilimitados. Puedes agregar más usuarios en cualquier momento."
   },
   {
     question: "¿Puedo exportar mis datos?",
-    answer: "Si, en los planes Pro y Empresa puedes exportar tus ventas, clientes e inventario a Excel para analisis o control contable."
+    answer: "Sí, en los planes Pro y Empresa puedes exportar tus ventas, clientes e inventario a Excel para análisis o control contable."
   },
   {
-    question: "¿Como funciona la integracion con WhatsApp?",
-    answer: "Puedes enviar comprobantes de venta directamente a tus clientes por WhatsApp. El sistema genera un mensaje automatico con los detalles de la compra que puedes enviar con un solo click."
+    question: "¿Cómo funciona la integración con WhatsApp?",
+    answer: "Puedes enviar comprobantes de venta directamente a tus clientes por WhatsApp. El sistema genera un mensaje automático con los detalles de la compra que puedes enviar con un solo clic."
   },
   {
     question: "¿Hay contrato de permanencia?",
-    answer: "No, no hay contratos de permanencia. Puedes cancelar tu suscripcion en cualquier momento. Si cancelas, conservas acceso a tus datos hasta el final del periodo pagado."
+    answer: "No, no hay contratos de permanencia. Puedes cancelar tu suscripción en cualquier momento. Si cancelas, conservas acceso a tus datos hasta el final del período pagado."
   }
 ];
 

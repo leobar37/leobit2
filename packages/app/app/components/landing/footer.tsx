@@ -12,7 +12,7 @@ export function Footer() {
             <span className="text-lg font-bold text-foreground">Avileo</span>
           </div>
           <div className="flex items-center gap-6 text-muted-foreground text-sm">
-            <a href="#" className="hover:text-foreground transition-colors">Terminos</a>
+            <a href="#" className="hover:text-foreground transition-colors">Términos</a>
             <a href="#" className="hover:text-foreground transition-colors">Privacidad</a>
             <a href="#" className="hover:text-foreground transition-colors">Contacto</a>
           </div>
