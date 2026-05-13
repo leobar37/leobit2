@@ -84,7 +84,7 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
         referenceNumber: body.referenceNumber,
         receiptImageId: body.receiptImageId,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -122,7 +122,7 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
         referenceNumber: body.referenceNumber,
         receiptImageId: body.receiptImageId,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -195,7 +195,7 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
       return {
         success: true,
         data: result.data,
-        txid: result.txid,
+
       };
     },
     {

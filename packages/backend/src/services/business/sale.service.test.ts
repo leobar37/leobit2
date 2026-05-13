@@ -67,7 +67,7 @@ describe("SaleService - Item Operations", () => {
   describe("addItem", () => {
     it("adds item to draft sale and recalculates total", async () => {
       const tx = {
-        execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+        execute: vi.fn().mockResolvedValue([]),
       };
       transactionMock.mockImplementation(async (callback) => callback(tx as never));
 
@@ -100,7 +100,7 @@ describe("SaleService - Item Operations", () => {
         subtotal: 50,
       });
 
-      expect(result.data).toEqual(mockItem);
+      expect(result).toEqual(mockItem);
       expect(repository.addItem).toHaveBeenCalled();
       expect(repository.updateTotalAmount).toHaveBeenCalledWith(ctx, "sale-1", "80.00", tx);
     });
@@ -135,7 +135,7 @@ describe("SaleService - Item Operations", () => {
   describe("removeItem", () => {
     it("removes item from draft sale and recalculates total", async () => {
       const tx = {
-        execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+        execute: vi.fn().mockResolvedValue([]),
       };
       transactionMock.mockImplementation(async (callback) => callback(tx as never));
 
@@ -189,7 +189,7 @@ describe("SaleService - Item Operations", () => {
   describe("updateItem", () => {
     it("updates item and recalculates total when subtotal changes", async () => {
       const tx = {
-        execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+        execute: vi.fn().mockResolvedValue([]),
       };
       transactionMock.mockImplementation(async (callback) => callback(tx as never));
 
@@ -219,13 +219,13 @@ describe("SaleService - Item Operations", () => {
         subtotal: 60,
       });
 
-      expect(result.data).toEqual(updatedItem);
+      expect(result).toEqual(updatedItem);
       expect(repository.updateTotalAmount).toHaveBeenCalledWith(ctx, "sale-1", "85.00", tx);
     });
 
     it("allows updates to confirmed pre_orders", async () => {
       const tx = {
-        execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+        execute: vi.fn().mockResolvedValue([]),
       };
       transactionMock.mockImplementation(async (callback) => callback(tx as never));
 
@@ -251,14 +251,14 @@ describe("SaleService - Item Operations", () => {
         orderedQuantity: 5,
       });
 
-      expect(result.data).toBeDefined();
+      expect(result).toBeDefined();
       expect(repository.updateItem).toHaveBeenCalled();
     });
   });
 
   describe("agua full-payment rules", () => {
     const createTxMock = () => ({
-      execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+      execute: vi.fn().mockResolvedValue([]),
     });
 
     const createService = (repository: Record<string, unknown>, paymentRepository = {}) => new SaleService(
@@ -413,8 +413,8 @@ describe("SaleService - Item Operations", () => {
         amountPaid: 100,
       });
 
-      expect(result.data.status).toBe("active");
-      expect(result.data.paymentMethod).toBe("yape");
+      expect(result.status).toBe("active");
+      expect(result.paymentMethod).toBe("yape");
       expect(paymentRepository.create).not.toHaveBeenCalled();
     });
 
@@ -453,14 +453,14 @@ describe("SaleService - Item Operations", () => {
         amountPaid: 30,
       });
 
-      expect(result.data.saleType).toBe("credito");
+      expect(result.saleType).toBe("credito");
       expect(paymentRepository.create).toHaveBeenCalled();
     });
   });
 
   describe("confirmSale", () => {
     const createTxMock = () => ({
-      execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+      execute: vi.fn().mockResolvedValue([]),
     });
 
     const createBaseSale = (overrides: Record<string, unknown> = {}) => ({
@@ -522,8 +522,8 @@ describe("SaleService - Item Operations", () => {
         amountPaid: 100,
       });
 
-      expect(result.data.status).toBe("active");
-      expect(result.data.saleType).toBe("contado");
+      expect(result.status).toBe("active");
+      expect(result.saleType).toBe("contado");
       expect(paymentRepository.create).not.toHaveBeenCalled();
     });
 
@@ -567,10 +567,10 @@ describe("SaleService - Item Operations", () => {
         proofImageId: "img-1",
       });
 
-      expect(result.data.status).toBe("active");
-      expect(result.data.saleType).toBe("credito");
-      expect(result.data.amountPaid).toBe("30.00");
-      expect(result.data.balanceDue).toBe("70.00");
+      expect(result.status).toBe("active");
+      expect(result.saleType).toBe("credito");
+      expect(result.amountPaid).toBe("30.00");
+      expect(result.balanceDue).toBe("70.00");
       expect(paymentRepository.create).toHaveBeenCalledWith(
         ctx,
         {
@@ -622,7 +622,7 @@ describe("SaleService - Item Operations", () => {
         amountPaid: 0,
       });
 
-      expect(result.data.status).toBe("active");
+      expect(result.status).toBe("active");
       expect(paymentRepository.create).not.toHaveBeenCalled();
     });
 
@@ -663,8 +663,8 @@ describe("SaleService - Item Operations", () => {
         amountPaid: 0,
       });
 
-      expect(result.data.status).toBe("active");
-      expect(result.data.paymentMode).toBe("debe_todo");
+      expect(result.status).toBe("active");
+      expect(result.paymentMode).toBe("debe_todo");
       expect(paymentRepository.create).not.toHaveBeenCalled();
     });
 
@@ -851,9 +851,9 @@ describe("SaleService - Item Operations", () => {
       const ctx = { businessId: "biz-1", businessUserId: "user-1" };
       const result = await service.confirmSale(ctx as never, "sale-1");
 
-      expect(result.data.status).toBe("active");
-      expect(result.data.amountPaid).toBe("25.00");
-      expect(result.data.balanceDue).toBe("75.00");
+      expect(result.status).toBe("active");
+      expect(result.amountPaid).toBe("25.00");
+      expect(result.balanceDue).toBe("75.00");
       expect(paymentRepository.create).toHaveBeenCalledWith(
         ctx,
         expect.objectContaining({
@@ -954,8 +954,8 @@ describe("SaleService - Item Operations", () => {
         paymentMethod: "yape",
       });
 
-      expect(result.data.status).toBe("confirmed");
-      expect(result.data.version).toBe(2);
+      expect(result.status).toBe("confirmed");
+      expect(result.version).toBe(2);
       expect(paymentRepository.create).not.toHaveBeenCalled();
     });
 
@@ -998,7 +998,7 @@ describe("SaleService - Item Operations", () => {
       const ctx = { businessId: "biz-1", businessUserId: "user-1" };
       const result = await service.confirmSale(ctx as never, "sale-1", 1);
 
-      expect(result.data.status).toBe("confirmed");
+      expect(result.status).toBe("confirmed");
       expect(repository.update).toHaveBeenCalledWith(
         ctx,
         "sale-1",

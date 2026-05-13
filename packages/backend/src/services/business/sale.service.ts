@@ -9,7 +9,6 @@ import type { RequestContext } from "../../context/request-context";
 import { ValidationError, ForbiddenError, NotFoundError } from "../../errors";
 import type { Sale, SaleItem } from "../../db/schema";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { toISODateString, now, parseDateString } from "../../lib/date-utils";
 import { normalizeAmount } from "../../lib/number-utils";
 import { decimalToNumber } from "@avileo/shared";
@@ -213,10 +212,7 @@ export class SaleService {
         );
       }
 
-      return {
-        data: sale,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return sale;
     });
   }
 
@@ -335,10 +331,7 @@ export class SaleService {
         tx
       );
 
-      return {
-        data: updatedSale,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updatedSale;
     });
   }
 
@@ -491,10 +484,7 @@ export class SaleService {
           tx,
           baseVersion
         );
-        return {
-          data: confirmedSale,
-          txid: await getCurrentTransactionId(tx),
-        };
+        return confirmedSale;
       });
     }
 
@@ -569,10 +559,7 @@ export class SaleService {
         }, tx);
       }
 
-      return {
-        data: confirmedSale,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return confirmedSale;
     });
   }
 
@@ -605,10 +592,7 @@ export class SaleService {
         tx,
         baseVersion
       );
-      return {
-        data: deliveredSale,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return deliveredSale;
     });
   }
 
@@ -856,10 +840,7 @@ export class SaleService {
       const newTotal = newItemsList.reduce((sum, i) => sum + decimalToNumber(i.subtotal), 0);
       await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
 
-      return {
-        data: item,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return item;
     });
   }
 
@@ -959,10 +940,7 @@ export class SaleService {
         await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
       }
 
-      return {
-        data: updatedItem,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updatedItem;
     });
   }
 
@@ -997,11 +975,6 @@ export class SaleService {
       // Recalculate total
       const newTotal = existingItems.reduce((sum, i) => sum + decimalToNumber(i.subtotal), 0);
       await this.repository.updateTotalAmount(ctx, saleId, newTotal.toFixed(2), tx);
-
-      return {
-        data: undefined,
-        txid: await getCurrentTransactionId(tx),
-      };
     });
   }
 

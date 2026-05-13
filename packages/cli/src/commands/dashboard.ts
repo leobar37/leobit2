@@ -9,7 +9,7 @@ export function createDashboardCommand(): Command {
 
   command
     .description("Abre el dashboard web de logs con streaming en vivo (SSE). Si no esta construido, lo compila automaticamente con Vite.")
-    .option("--port <port>", "Puerto del dashboard", "5174")
+    .option("--port <port>", "Puerto del dashboard", "5173")
     .option("--no-browser", "No abrir navegador automáticamente")
     .option("--force-build", "Forzar reconstrucción del dashboard")
     .option("--skip-build", "Saltar build del dashboard (error si no existe)")
@@ -19,7 +19,7 @@ export function createDashboardCommand(): Command {
       forceBuild?: boolean;
       skipBuild?: boolean;
     }) => {
-      const port = parseInt(options.port ?? "3099", 10);
+      const port = parseInt(options.port ?? "5173", 10);
 
       logCli("Iniciando dashboard de logs...");
 

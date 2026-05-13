@@ -136,6 +136,7 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         publicCatalogSlug: body.publicCatalogSlug,
         businessMode: body.businessMode,
         modeConfigOverrides: body.modeConfigOverrides,
+        logoFileId: body.logoFileId,
       });
 
       return {
@@ -158,6 +159,7 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
         publicCatalogSlug: t.Optional(t.Nullable(t.String({ minLength: 3, maxLength: 100 }))),
         businessMode: t.Optional(t.Union([t.Literal("polleria"), t.Literal("agua"), t.Literal("cochera")])),
         modeConfigOverrides: t.Optional(t.Record(t.String(), t.Any())),
+        logoFileId: t.Optional(t.Nullable(t.String())),
       }),
     }
   )
@@ -369,17 +371,17 @@ export const businessRoutes = new Elysia({ prefix: "/businesses" })
           sales: t.Object({
             hideTara: t.Boolean(),
             autoFillPrice: t.Boolean(),
-            hidePrices: t.Boolean(),
+            hidePrices: t.Optional(t.Boolean()),
           }),
           orders: t.Object({
             hideTara: t.Boolean(),
             autoFillPrice: t.Boolean(),
-            hidePrices: t.Boolean(),
+            hidePrices: t.Optional(t.Boolean()),
           }),
           purchases: t.Object({
             hideTara: t.Boolean(),
             autoFillPrice: t.Boolean(),
-            hidePrices: t.Boolean(),
+            hidePrices: t.Optional(t.Boolean()),
           }),
         }),
       }),

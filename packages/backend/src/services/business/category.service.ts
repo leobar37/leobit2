@@ -6,7 +6,6 @@ import { and, eq, sql } from "drizzle-orm";
 import type { CategoryRepository } from "../repository/category.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   ConflictError,
   ForbiddenError,
@@ -65,10 +64,7 @@ export class CategoryService {
         tx
       );
 
-      return {
-        data: category,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return category;
     });
   }
 
@@ -112,10 +108,7 @@ export class CategoryService {
         throw new NotFoundError("Categoría de producto");
       }
 
-      return {
-        data: updated,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updated;
     });
   }
 

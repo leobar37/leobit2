@@ -77,6 +77,7 @@ export class BusinessRepository {
       publicCatalogSlug?: string | null;
       businessMode?: string;
       modeConfigOverrides?: Record<string, unknown> | null;
+      logoFileId?: string | null;
     }
   ): Promise<Business | undefined> {
     const [business] = await db
@@ -92,6 +93,7 @@ export class BusinessRepository {
         ...(data.publicCatalogSlug !== undefined && { publicCatalogSlug: data.publicCatalogSlug }),
         ...(data.businessMode !== undefined && { businessMode: data.businessMode }),
         ...(data.modeConfigOverrides !== undefined && { modeConfigOverrides: data.modeConfigOverrides }),
+        ...(data.logoFileId !== undefined && { logoFileId: data.logoFileId }),
         updatedAt: new Date(),
       })
       .where(eq(businesses.id, id))

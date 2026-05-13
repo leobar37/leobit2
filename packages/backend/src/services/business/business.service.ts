@@ -15,6 +15,8 @@ import { eq } from "drizzle-orm";
 import { db, businessUsers } from "../../lib/db";
 import { businesses, defaultCalculatorSettings } from "../../db/schema/businesses";
 import type { BusinessCalculatorSettings } from "../../db/schema/businesses";
+import { files } from "../../db/schema/files";
+import { eq as eqDrizzle } from "drizzle-orm";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./default-templates";
 import { BusinessModeSlugSchema } from "@avileo/shared";
 
@@ -32,6 +34,27 @@ function normalizePublicCatalogSlug(value: string): string {
 function buildDefaultPublicCatalogSlug(name: string, id: string): string {
   const base = normalizePublicCatalogSlug(name) || "catalogo";
   return `${base}-${id.slice(0, 8)}`.slice(0, 100);
+}
+
+function normalizeCalculatorSettings(
+  settings: Partial<BusinessCalculatorSettings> | null | undefined
+): BusinessCalculatorSettings {
+  return {
+    calculators: {
+      sales: {
+        ...defaultCalculatorSettings.calculators.sales,
+        ...settings?.calculators?.sales,
+      },
+      orders: {
+        ...defaultCalculatorSettings.calculators.orders,
+        ...settings?.calculators?.orders,
+      },
+      purchases: {
+        ...defaultCalculatorSettings.calculators.purchases,
+        ...settings?.calculators?.purchases,
+      },
+    },
+  };
 }
 
 export class BusinessService {
@@ -52,6 +75,18 @@ export class BusinessService {
       throw new NotFoundError("Negocio");
     }
 
+    // Resolve logo URL from file system if logoFileId is set
+    let logoUrl = membership.business.logoUrl;
+    if (membership.business.logoFileId) {
+      const logoFile = await db.query.files.findFirst({
+        where: eqDrizzle(files.id, membership.business.logoFileId),
+      });
+      if (logoFile) {
+        const { r2Storage } = await import("../r2-storage.service");
+        logoUrl = await r2Storage.getFileUrl(logoFile.storagePath);
+      }
+    }
+
     return {
       id: membership.business.id,
       businessUserId: membership.id,
@@ -60,7 +95,8 @@ export class BusinessService {
       address: membership.business.address,
       phone: membership.business.phone,
       email: membership.business.email,
-      logoUrl: membership.business.logoUrl,
+      logoUrl,
+      logoFileId: membership.business.logoFileId,
       publicCatalogEnabled: membership.business.publicCatalogEnabled,
       publicCatalogSlug: membership.business.publicCatalogSlug,
       usarDistribucion: membership.business.usarDistribucion,
@@ -156,6 +192,7 @@ export class BusinessService {
       publicCatalogSlug?: string | null;
       businessMode?: string;
       modeConfigOverrides?: Record<string, unknown> | null;
+      logoFileId?: string | null;
     }
   ) {
     if (!ctx.isAdmin()) {
@@ -215,6 +252,7 @@ export class BusinessService {
       publicCatalogSlug,
       businessMode,
       modeConfigOverrides: data.modeConfigOverrides,
+      logoFileId: data.logoFileId,
     });
 
     return business;
@@ -244,7 +282,7 @@ export class BusinessService {
       throw new NotFoundError("Negocio");
     }
 
-    return membership.business.calculatorSettings ?? defaultCalculatorSettings;
+    return normalizeCalculatorSettings(membership.business.calculatorSettings);
   }
 
   async updateCalculatorSettings(
@@ -261,16 +299,20 @@ export class BusinessService {
       throw new NotFoundError("Negocio");
     }
 
+    const normalizedSettings = normalizeCalculatorSettings(settings);
+
     const [updated] = await db
       .update(businesses)
       .set({
-        calculatorSettings: settings,
+        calculatorSettings: normalizedSettings,
         updatedAt: new Date(),
       })
       .where(eq(businesses.id, ctx.businessId))
       .returning();
 
-    return updated.calculatorSettings ?? {} as BusinessCalculatorSettings;
+    RequestContextClass.invalidateCache(ctx.userId);
+
+    return normalizeCalculatorSettings(updated?.calculatorSettings);
   }
 
   /**

@@ -42,7 +42,7 @@ export const expenseCategoryRoutes = new Elysia({ prefix: "/expense-categories" 
         icon: body.icon,
         color: body.color,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -63,7 +63,7 @@ export const expenseCategoryRoutes = new Elysia({ prefix: "/expense-categories" 
         color: body.color,
         isActive: body.isActive,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({

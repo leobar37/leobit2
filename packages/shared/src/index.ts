@@ -116,7 +116,6 @@ export interface PlanStatus {
 export type ApiResponse<T = unknown> = {
   success: boolean;
   data?: T;
-  txid?: number;
   error?: string;
 };
 
@@ -129,6 +128,7 @@ export interface Business {
   phone: string | null;
   email: string | null;
   logoUrl: string | null;
+  logoFileId: string | null;
   publicCatalogEnabled: boolean;
   publicCatalogSlug: string | null;
   usarDistribucion: boolean;
@@ -161,6 +161,7 @@ export interface UpdateBusinessInput {
   publicCatalogSlug?: string | null;
   businessMode?: "polleria" | "agua" | "cochera";
   modeConfigOverrides?: Record<string, unknown>;
+  logoFileId?: string | null;
 }
 
 export const InvitationStatus = {

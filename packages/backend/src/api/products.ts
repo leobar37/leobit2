@@ -57,7 +57,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
         hasVariants: body.hasVariants,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -80,7 +80,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         basePrice: body.basePrice ? parseFloat(body.basePrice) : undefined,
         costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -149,7 +149,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
           isActive: body.isActive,
         }
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -241,7 +241,7 @@ export const variantRoutes = new Elysia({ prefix: "/variants" })
           isActive: body.isActive,
         }
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -293,7 +293,7 @@ export const variantRoutes = new Elysia({ prefix: "/variants" })
         params.id,
         body.quantity
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({

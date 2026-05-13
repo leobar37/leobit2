@@ -1,7 +1,6 @@
 import type { SupplierRepository } from "../repository/supplier.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -89,10 +88,7 @@ export class SupplierService {
         isActive: true,
       }, tx);
 
-      return {
-        data: supplier,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return supplier;
     });
   }
 
@@ -150,10 +146,7 @@ export class SupplierService {
         throw new NotFoundError("Proveedor");
       }
 
-      return {
-        data: updated,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updated;
     });
   }
 

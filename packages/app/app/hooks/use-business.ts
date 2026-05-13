@@ -49,22 +49,7 @@ async function updateBusiness(
   return data.data as unknown as Business;
 }
 
-async function uploadBusinessLogo(
-  id: string,
-  file: File
-): Promise<{ logoUrl: string }> {
-  const { data, error } = await api.businesses({ id }).logo.post({ file });
 
-  if (error) {
-    const errorValue = error.value as { code?: string; message?: string } | undefined;
-    throw new Error(errorValue?.message || "Error al subir logo");
-  }
-  if (!data?.success || !data.data) {
-    throw new Error("Failed to upload logo");
-  }
-
-  return data.data as { logoUrl: string };
-}
 
 export function useBusiness() {
   return useQuery<Business>({
@@ -126,14 +111,4 @@ export function useUpdateBusiness() {
   });
 }
 
-export function useUploadBusinessLogo() {
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({ id, file }: { id: string; file: File }) =>
-      uploadBusinessLogo(id, file),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: PERSISTED_REMOTE_QUERY_KEYS.business });
-    },
-  });
-}

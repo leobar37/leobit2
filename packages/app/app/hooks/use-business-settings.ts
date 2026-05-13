@@ -1,15 +1,39 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "~/lib/api-client";
-import type { BusinessCalculatorSettings } from "@avileo/shared";
+import {
+  defaultCalculatorSettings,
+  type BusinessCalculatorSettings,
+} from "@avileo/shared";
 import { PERSISTED_REMOTE_QUERY_KEYS } from "~/lib/query/persisted-query-keys";
 
 const CALCULATOR_SETTINGS_KEY = PERSISTED_REMOTE_QUERY_KEYS.businessCalculatorSettings;
+
+function normalizeCalculatorSettings(
+  settings: Partial<BusinessCalculatorSettings> | null | undefined
+): BusinessCalculatorSettings {
+  return {
+    calculators: {
+      sales: {
+        ...defaultCalculatorSettings.calculators.sales,
+        ...settings?.calculators?.sales,
+      },
+      orders: {
+        ...defaultCalculatorSettings.calculators.orders,
+        ...settings?.calculators?.orders,
+      },
+      purchases: {
+        ...defaultCalculatorSettings.calculators.purchases,
+        ...settings?.calculators?.purchases,
+      },
+    },
+  };
+}
 
 async function fetchCalculatorSettings(): Promise<BusinessCalculatorSettings> {
   const { data, error } = await api.businesses.me["calculator-settings"].get();
   if (error) throw new Error(String(error.value));
   if (!data?.success || !data.data) throw new Error("Failed to fetch settings");
-  return data.data;
+  return normalizeCalculatorSettings(data.data);
 }
 
 async function updateCalculatorSettings(
@@ -18,7 +42,7 @@ async function updateCalculatorSettings(
   const { data, error } = await api.businesses.me["calculator-settings"].put(settings);
   if (error) throw new Error(String(error.value));
   if (!data?.success || !data.data) throw new Error("Failed to update settings");
-  return data.data;
+  return normalizeCalculatorSettings(data.data);
 }
 
 export function useBusinessSettings() {

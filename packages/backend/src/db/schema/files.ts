@@ -51,6 +51,10 @@ export const filesRelations = relations(files, ({ one }) => ({
     fields: [files.businessId],
     references: [businesses.id],
   }),
+  logoForBusiness: one(businesses, {
+    fields: [files.id],
+    references: [businesses.logoFileId],
+  }),
   deletedByUser: one(user, {
     fields: [files.deletedBy],
     references: [user.id],

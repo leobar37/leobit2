@@ -5,7 +5,6 @@
 import type { TagRepository } from "../repository/tag.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -80,10 +79,7 @@ export class TagService {
         color,
       }, tx);
 
-      return {
-        data: tag,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return tag;
     });
   }
 
@@ -123,10 +119,7 @@ export class TagService {
         throw new NotFoundError("Etiqueta");
       }
 
-      return {
-        data: updated,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updated;
     });
   }
 

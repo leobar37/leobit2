@@ -68,7 +68,7 @@ describe("ProductService category contracts", () => {
 
   const mockTransaction = () => {
     const tx = {
-      execute: vi.fn().mockResolvedValue([{ txid: "67890" }]),
+      execute: vi.fn().mockResolvedValue([]),
     };
 
     transactionMock.mockImplementation(async (callback) => callback(tx as never));
@@ -98,7 +98,7 @@ describe("ProductService category contracts", () => {
       costPrice: 10,
     });
 
-    expect(result).toEqual({ data: product, txid: 67890 });
+    expect(result).toEqual(product);
     expect(categoryRepo.findById).toHaveBeenCalledWith(ctx, "cat-1");
     expect(repository.create).toHaveBeenCalledWith(
       ctx,
@@ -146,7 +146,7 @@ describe("ProductService category contracts", () => {
       categoryId: null,
     });
 
-    expect(result.data.categoryId).toBeNull();
+    expect(result.categoryId).toBeNull();
     expect(repository.update).toHaveBeenCalledWith(
       ctx,
       "prod-1",
@@ -260,7 +260,7 @@ describe("ProductService category contracts", () => {
       categoryId: "cat-2",
     });
 
-    expect(result.data.categoryId).toBe("cat-2");
+    expect(result.categoryId).toBe("cat-2");
     expect(categoryRepo.findById).toHaveBeenCalledWith(ctx, "cat-2");
     expect(repository.update).toHaveBeenCalledWith(
       ctx,

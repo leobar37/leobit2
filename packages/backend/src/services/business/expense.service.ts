@@ -4,7 +4,6 @@ import type { RequestContext } from "../../context/request-context";
 import { NotFoundError, ValidationError, ForbiddenError } from "../../errors";
 import type { Expense } from "../../db/schema";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { normalizeAmount } from "../../lib/number-utils";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -113,10 +112,7 @@ export class ExpenseService {
         receiptImageId: data.receiptImageId ?? null,
       }, tx);
 
-      return {
-        data: expense,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return expense;
     });
   }
 
@@ -174,10 +170,7 @@ export class ExpenseService {
 
     return db.transaction(async (tx) => {
       const expense = await this.repository.update(ctx, id, updateData, tx);
-      return {
-        data: expense,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return expense;
     });
   }
 
@@ -223,10 +216,7 @@ export class ExpenseService {
       const expense = await this.repository.update(ctx, id, {
         receiptImageId,
       }, tx);
-      return {
-        data: expense,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return expense;
     });
   }
 }

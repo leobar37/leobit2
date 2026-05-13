@@ -1,7 +1,6 @@
 import type { ProductVariantRepository } from "../repository/product-variant.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -97,10 +96,7 @@ export class ProductVariantService {
         quantity: "0",
       }, tx);
 
-      return {
-        data: variant,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return variant;
     });
   }
 
@@ -152,10 +148,7 @@ export class ProductVariantService {
         throw new NotFoundError("Variante");
       }
 
-      return {
-        data: updated,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updated;
     });
   }
 
@@ -175,10 +168,7 @@ export class ProductVariantService {
         throw new NotFoundError("Variante");
       }
 
-      return {
-        data: updated,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updated;
     });
   }
 
@@ -244,10 +234,7 @@ export class ProductVariantService {
         throw new NotFoundError("Inventario de variante");
       }
 
-      return {
-        data: inventory,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return inventory;
     });
   }
 
@@ -271,10 +258,7 @@ export class ProductVariantService {
         throw new NotFoundError("Inventario de variante");
       }
 
-      return {
-        data: inventory,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return inventory;
     });
   }
 

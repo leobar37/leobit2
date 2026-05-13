@@ -40,7 +40,7 @@ describe("CategoryService", () => {
 
   const mockTransaction = () => {
     const tx = {
-      execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+      execute: vi.fn().mockResolvedValue([]),
     };
 
     transactionMock.mockImplementation(async (callback) => callback(tx as never));
@@ -72,7 +72,7 @@ describe("CategoryService", () => {
       color: "#123456",
     });
 
-    expect(result).toEqual({ data: category, txid: 12345 });
+    expect(result).toEqual(category);
     expect(repository.count).toHaveBeenCalledWith(ctx, { name: "Pollo Fresco" });
     expect(repository.create).toHaveBeenCalledWith(
       ctx,
@@ -94,7 +94,7 @@ describe("CategoryService", () => {
       color: "#654321",
     });
 
-    expect(result.data.name).toBe("Huevo");
+    expect(result.name).toBe("Huevo");
     expect(repository.findById).toHaveBeenCalledWith(ctx, "cat-1");
     expect(repository.count).toHaveBeenCalledWith(ctx, { name: "Huevo", excludeId: "cat-1" });
     expect(repository.update).toHaveBeenCalledWith(
@@ -228,7 +228,7 @@ describe("CategoryService", () => {
       color: "#123456",
     });
 
-    expect(result).toEqual({ data: category, txid: 12345 });
+    expect(result).toEqual(category);
     expect(repository.count).toHaveBeenCalledWith(otherCtx, { name: "Pollo Fresco" });
     expect(repository.create).toHaveBeenCalledWith(
       otherCtx,

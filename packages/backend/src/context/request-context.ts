@@ -16,6 +16,27 @@ function buildCacheKey(userId: string, businessId?: string | null): string {
   return `${userId}:${businessId ?? "default"}`;
 }
 
+function normalizeCalculatorSettings(
+  settings: Partial<BusinessCalculatorSettings> | null | undefined
+): BusinessCalculatorSettings {
+  return {
+    calculators: {
+      sales: {
+        ...defaultCalculatorSettings.calculators.sales,
+        ...settings?.calculators?.sales,
+      },
+      orders: {
+        ...defaultCalculatorSettings.calculators.orders,
+        ...settings?.calculators?.orders,
+      },
+      purchases: {
+        ...defaultCalculatorSettings.calculators.purchases,
+        ...settings?.calculators?.purchases,
+      },
+    },
+  };
+}
+
 /**
  * Plain data object cached to avoid mutability issues.
  * A new RequestContext instance is created on each cache hit.
@@ -253,7 +274,7 @@ export class RequestContext {
     // Note: Drizzle's `with` can return business as array in type inference,
     // but at runtime it's a single object due to `findFirst`.
     const businessRecord = membership.business as { calculatorSettings?: BusinessCalculatorSettings; businessMode?: string; modeConfigOverrides?: Partial<BusinessModeFlags> } | undefined;
-    const calculatorSettings = businessRecord?.calculatorSettings || defaultCalculatorSettings;
+    const calculatorSettings = normalizeCalculatorSettings(businessRecord?.calculatorSettings);
 
     // Resolve business mode and merged flags
     const businessMode = businessRecord?.businessMode || "polleria";

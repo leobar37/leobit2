@@ -6,7 +6,6 @@ import type { ProductUnitRepository } from "../repository/product-unit.repositor
 import type { FileRepository } from "../repository/file.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -159,10 +158,7 @@ export class PurchaseService {
     // Note: Inventory is updated when purchase status changes to "received"
     // via state machine transition, not at creation time
 
-    return {
-      data: purchase,
-      txid: await getCurrentTransactionId(tx),
-    };
+    return purchase;
   }
 
   async updatePurchase(
@@ -266,10 +262,7 @@ export class PurchaseService {
         throw new NotFoundError("Compra");
       }
 
-      return {
-        data: updated,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updated;
     });
   }
 
@@ -303,10 +296,7 @@ export class PurchaseService {
       throw new NotFoundError("Compra");
     }
 
-    return {
-      data: { ...existing, status: "pending" },
-      txid: await getCurrentTransactionId(tx),
-    };
+    return { ...existing, status: "pending" };
   }
 
   async updatePurchaseStatus(
@@ -339,10 +329,7 @@ export class PurchaseService {
         throw new NotFoundError("Compra");
       }
 
-      return {
-        data: updated,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return updated;
     });
   }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Calculator, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -91,10 +91,11 @@ export default function FlagsConfigPage() {
   const [localSettings, setLocalSettings] = useState(settings);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Update local state when settings load
-  if (!localSettings && settings) {
-    setLocalSettings(settings);
-  }
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings(settings);
+    }
+  }, [settings]);
 
   const handleSave = async () => {
     if (!localSettings) return;
@@ -141,6 +142,7 @@ export default function FlagsConfigPage() {
     <>
       <MobileSlot name="header:left" priority={10}>
         <button
+          type="button"
           onClick={() => navigate("/config")}
           className="shell-toolbar-button rounded-2xl p-2 -ml-2 text-muted-foreground transition-colors hover:text-foreground"
         >
@@ -201,6 +203,7 @@ export default function FlagsConfigPage() {
 
         <div className="flex gap-3">
           <Button
+            type="button"
             variant="outline"
             className="flex-1 rounded-xl"
             onClick={() => navigate("/config")}
@@ -208,6 +211,7 @@ export default function FlagsConfigPage() {
             Cancelar
           </Button>
           <Button
+            type="button"
             className="flex-1 rounded-xl"
             onClick={handleSave}
             disabled={isSaving || !localSettings}

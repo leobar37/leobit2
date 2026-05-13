@@ -56,7 +56,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
         ...body,
         amount: parseFloat(body.amount),
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -146,7 +146,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
       return {
         success: true,
         data: result.data,
-        txid: result.txid,
+
       };
     },
     {
@@ -170,7 +170,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
       return {
         success: true,
         data: result.data,
-        txid: result.txid,
+
       };
     },
     {
@@ -194,7 +194,7 @@ export const paymentRoutes = new Elysia({ prefix: "/payments" })
       return {
         success: true,
         data: result.data,
-        txid: result.txid,
+
       };
     },
     {

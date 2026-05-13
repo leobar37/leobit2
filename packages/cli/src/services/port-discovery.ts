@@ -32,7 +32,7 @@ export interface DiscoveredPorts {
 const DEFAULT_PORTS: DiscoveredPorts = {
   backend: 3000,
   app: 3002,
-  dashboard: 3099,
+  dashboard: 5173,
 };
 
 export async function discoverAllPorts(): Promise<DiscoveredPorts> {
@@ -48,8 +48,8 @@ export async function discoverAllPorts(): Promise<DiscoveredPorts> {
   }
   assigned.add(app);
 
-  // Dashboard usa puerto fijo 5174
-  const dashboard = 5174;
+  // Dashboard usa puerto fijo 5173
+  const dashboard = DEFAULT_PORTS.dashboard;
   if (!await isPortAvailable(dashboard)) {
     throw new Error(
       `Puerto ${dashboard} ocupado. Libéralo o usa \`avileo dashboard --port <otro>\`.`

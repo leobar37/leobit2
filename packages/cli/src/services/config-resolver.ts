@@ -11,7 +11,7 @@ export interface ServiceDefinition {
 const DEFAULT_PORTS: Record<string, number> = {
   backend: 3000,
   app: 3002,
-  dashboard: 5174,
+  dashboard: 5173,
 };
 
 const COLORS: Record<string, string> = {

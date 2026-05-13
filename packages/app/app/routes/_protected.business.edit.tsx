@@ -1,19 +1,20 @@
-// @ts-nocheck - Route file with complex type errors
-import { useForm, Controller } from "react-hook-form";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Route, Camera, Loader2, Settings } from "lucide-react";
 import {
   useBusiness,
   useUpdateBusiness,
-  useUploadBusinessLogo,
 } from "@/hooks/use-business";
+import { useFile } from "~/hooks/use-files";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { Switch } from "@/components/ui/switch";
-import { useRef, useState } from "react";
 import { FormPage } from "~/components/layout/form-page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useWrapperForm, WrapperFormProvider } from "~/hooks/use-wrapper-form";
+import { fileField } from "~/lib/forms/media-field-resolvers";
+import { CameraGalleryDrawer } from "~/components/ui/camera-gallery-drawer";
 
 const updateBusinessSchema = z.object({
   name: z.string().min(2).max(100),
@@ -24,6 +25,13 @@ const updateBusinessSchema = z.object({
   usarDistribucion: z.boolean(),
   publicCatalogEnabled: z.boolean(),
   publicCatalogSlug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).or(z.literal("")),
+  logoFileId: z
+    .union([
+      z.string(),
+      z.custom<File>((value) => typeof File !== "undefined" && value instanceof File),
+      z.null(),
+    ])
+    .optional(),
 });
 
 type UpdateBusinessFormData = z.infer<typeof updateBusinessSchema>;
@@ -31,11 +39,11 @@ type UpdateBusinessFormData = z.infer<typeof updateBusinessSchema>;
 export default function EditBusinessPage() {
   const { data: business, isLoading } = useBusiness();
   const updateBusiness = useUpdateBusiness();
-  const uploadLogo = useUploadBusinessLogo();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const { data: logoFile } = useFile(business?.logoFileId ?? "");
+  const [logoDrawerOpen, setLogoDrawerOpen] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const form = useForm<UpdateBusinessFormData>({
+  const wrapperForm = useWrapperForm<UpdateBusinessFormData>({
     resolver: zodResolver(updateBusinessSchema),
     mode: "onChange",
     defaultValues: {
@@ -47,6 +55,7 @@ export default function EditBusinessPage() {
       usarDistribucion: true,
       publicCatalogEnabled: false,
       publicCatalogSlug: "",
+      logoFileId: undefined,
     },
     values: business
       ? {
@@ -58,51 +67,80 @@ export default function EditBusinessPage() {
           usarDistribucion: business.usarDistribucion,
           publicCatalogEnabled: business.publicCatalogEnabled,
           publicCatalogSlug: business.publicCatalogSlug || "",
+          logoFileId: business.logoFileId ?? undefined,
         }
       : undefined,
+    fields: {
+      logoFileId: fileField(),
+    },
   });
 
-  const onSubmit = async (data: UpdateBusinessFormData) => {
+  const logoValue = wrapperForm.watch("logoFileId");
+
+  // Clean up preview URL when logoValue changes from File to string/null
+  useState(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+    };
+  });
+
+  const handleLogoFileSelect = (file: File) => {
+    wrapperForm.setValue("logoFileId", file, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    const previewUrl = URL.createObjectURL(file);
+    setLogoPreview(previewUrl);
+  };
+
+  const handleSubmit = wrapperForm.handleResolvedSubmit(async (data) => {
     if (!business) return;
 
     try {
+      const payload: {
+        name: string;
+        ruc?: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+        usarDistribucion: boolean;
+        publicCatalogEnabled: boolean;
+        publicCatalogSlug: string | null;
+        logoFileId?: string | null;
+      } = {
+        name: data.name,
+        ruc: data.ruc || undefined,
+        address: data.address || undefined,
+        phone: data.phone || undefined,
+        email: data.email || undefined,
+        usarDistribucion: data.usarDistribucion,
+        publicCatalogEnabled: data.publicCatalogEnabled,
+        publicCatalogSlug: data.publicCatalogSlug || null,
+      };
+
+      if (typeof data.logoFileId === "string" && data.logoFileId) {
+        payload.logoFileId = data.logoFileId;
+      }
+
       await updateBusiness.mutateAsync({
         id: business.id,
-        input: {
-          name: data.name,
-          ruc: data.ruc || undefined,
-          address: data.address || undefined,
-          phone: data.phone || undefined,
-          email: data.email || undefined,
-          usarDistribucion: data.usarDistribucion,
-          publicCatalogEnabled: data.publicCatalogEnabled,
-          publicCatalogSlug: data.publicCatalogSlug || null,
-        },
+        input: payload,
       });
+      setLogoPreview(null);
     } catch (error) {
-      form.setError("root", {
+      wrapperForm.setError("root", {
         message: error instanceof Error ? error.message : "Error al actualizar",
       });
     }
-  };
+  });
 
-  const handleLogoClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !business) return;
-
-    setIsUploading(true);
-    try {
-      await uploadLogo.mutateAsync({ id: business.id, file });
-    } catch (error) {
-      console.error("Error uploading logo:", error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  // Resolve logo image URL for display
+  const logoImageUrl = logoPreview
+    ? logoPreview
+    : typeof logoValue === "string" && logoValue
+      ? logoFile?.url
+      : business?.logoUrl;
 
   if (isLoading) {
     return (
@@ -135,160 +173,165 @@ export default function EditBusinessPage() {
     : "";
 
   return (
-    <FormPage
-      title="Mi Negocio"
-      backHref="/config"
-      toolbar={
-        <Button
-          type="submit"
-          form="business-edit-form"
-          disabled={updateBusiness.isPending || !form.formState.isValid}
-          className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
-        >
-          {updateBusiness.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            "Guardar cambios"
-          )}
-        </Button>
-      }
-    >
-      <div className="max-w-md mx-auto space-y-4">
-        <div className="text-center space-y-4">
-          <div className="relative inline-block">
-            <div
-              className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
-              onClick={handleLogoClick}
-            >
-              {isUploading ? (
-                <Loader2 className="h-8 w-8 text-white animate-spin" />
-              ) : business.logoUrl ? (
-                <img
-                  src={business.logoUrl}
-                  alt="Logo"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Route className="h-10 w-10 text-white" />
-              )}
+    <>
+      <FormPage
+        title="Mi Negocio"
+        backHref="/config"
+        toolbar={
+          <Button
+            type="submit"
+            form="business-edit-form"
+            disabled={updateBusiness.isPending || !wrapperForm.formState.isValid}
+            className="w-full h-14 rounded-xl bg-orange-500 hover:bg-orange-600 text-lg font-semibold disabled:opacity-100 disabled:bg-orange-300 disabled:text-white"
+          >
+            {updateBusiness.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              "Guardar cambios"
+            )}
+          </Button>
+        }
+      >
+        <div className="space-y-6">
+          {/* Logo Section */}
+          <div className="text-center space-y-3">
+            <div className="relative inline-block">
+              <div
+                className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
+                onClick={() => setLogoDrawerOpen(true)}
+              >
+                {logoImageUrl ? (
+                  <img
+                    src={logoImageUrl}
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Route className="h-10 w-10 text-white" />
+                )}
+              </div>
+              <button
+                className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border border-orange-100"
+                onClick={() => setLogoDrawerOpen(true)}
+                type="button"
+              >
+                <Camera className="h-4 w-4 text-orange-600" />
+              </button>
             </div>
-            <button
-              className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border border-orange-100"
-              onClick={handleLogoClick}
-              type="button"
-            >
-              <Camera className="h-4 w-4 text-orange-600" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+            <div>
+              <h2 className="text-xl font-semibold">{business.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {business.role === "ADMIN_NEGOCIO" ? "Administrador" : "Vendedor"}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-semibold">{business.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {business.role === "ADMIN_NEGOCIO" ? "Administrador" : "Vendedor"}
-            </p>
-          </div>
-        </div>
 
-        <div>
-          <form id="business-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Form */}
+          <WrapperFormProvider form={wrapperForm}>
+            <form id="business-edit-form" onSubmit={handleSubmit} className="space-y-4">
               <FormInput
                 label="Nombre del negocio"
-                error={form.formState.errors.name?.message}
-                register={form.register("name")}
+                placeholder="Ej: Pollería El Sabor"
+                error={wrapperForm.formState.errors.name?.message}
+                name="name"
               />
 
               <FormInput
                 label="RUC"
-                error={form.formState.errors.ruc?.message}
-                register={form.register("ruc")}
+                placeholder="20123456789"
+                error={wrapperForm.formState.errors.ruc?.message}
+                name="ruc"
               />
 
               <FormInput
                 label="Dirección"
-                error={form.formState.errors.address?.message}
-                register={form.register("address")}
+                placeholder="Av. Principal 123"
+                error={wrapperForm.formState.errors.address?.message}
+                name="address"
               />
 
               <FormInput
                 label="Teléfono"
-                error={form.formState.errors.phone?.message}
-                register={form.register("phone")}
+                placeholder="987654321"
+                error={wrapperForm.formState.errors.phone?.message}
+                name="phone"
               />
 
               <FormInput
                 label="Email"
                 type="email"
-                error={form.formState.errors.email?.message}
-                register={form.register("email")}
+                placeholder="contacto@tunegocio.com"
+                error={wrapperForm.formState.errors.email?.message}
+                name="email"
               />
 
-              <div className="pt-6 border-t border-gray-200">
+              {/* Settings Section */}
+              <div className="pt-4 border-t border-border/60">
                 <div className="flex items-center gap-2 mb-4">
                   <Settings className="h-5 w-5 text-orange-600" />
                   <h3 className="font-semibold text-lg">Configuración del Negocio</h3>
                 </div>
 
-                <Controller
-                  name="usarDistribucion"
-                  control={form.control}
-                  render={({ field }) => (
-                    <div className="mb-4">
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        label="Usar sistema de distribución"
-                        description="Asigna kilos a vendedores diariamente"
-                      />
+                <div className="space-y-4">
+                  <Switch
+                    checked={wrapperForm.watch("usarDistribucion")}
+                    onCheckedChange={(checked) =>
+                      wrapperForm.setValue("usarDistribucion", checked, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    label="Usar sistema de distribución"
+                    description="Asigna kilos a vendedores diariamente"
+                  />
+
+                  <Switch
+                    checked={wrapperForm.watch("publicCatalogEnabled")}
+                    onCheckedChange={(checked) =>
+                      wrapperForm.setValue("publicCatalogEnabled", checked, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    label="Catálogo público"
+                    description="Permite que clientes creen pedidos desde un enlace público"
+                  />
+
+                  <FormInput
+                    label="URL pública"
+                    placeholder="polleria-leo"
+                    description="Solo letras, números y guiones"
+                    error={wrapperForm.formState.errors.publicCatalogSlug?.message}
+                    name="publicCatalogSlug"
+                  />
+
+                  {publicCatalogUrl && (
+                    <div className="rounded-lg border border-orange-100 bg-orange-50/70 p-3 text-sm text-orange-800">
+                      Enlace: <span className="font-semibold">{publicCatalogUrl}</span>
                     </div>
                   )}
-                />
-
-                <Controller
-                  name="publicCatalogEnabled"
-                  control={form.control}
-                  render={({ field }) => (
-                    <div className="mb-4">
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        label="Catálogo público"
-                        description="Permite que clientes creen pedidos desde un enlace público"
-                      />
-                    </div>
-                  )}
-                />
-
-                <FormInput
-                  label="URL pública"
-                  description="Solo letras, números y guiones. Ejemplo: polleria-leo"
-                  error={form.formState.errors.publicCatalogSlug?.message}
-                  register={form.register("publicCatalogSlug")}
-                />
-
-                {publicCatalogUrl && (
-                  <div className="rounded-2xl border border-orange-100 bg-orange-50/70 p-3 text-sm text-orange-800">
-                    Enlace: <span className="font-semibold">{publicCatalogUrl}</span>
-                  </div>
-                )}
+                </div>
               </div>
 
-              {form.formState.errors.root && (
+              {wrapperForm.formState.errors.root && (
                 <p className="text-sm text-destructive text-center">
-                  {form.formState.errors.root.message}
+                  {wrapperForm.formState.errors.root.message}
                 </p>
               )}
             </form>
-          </div>
+          </WrapperFormProvider>
         </div>
-    </FormPage>
+      </FormPage>
+
+      <CameraGalleryDrawer
+        open={logoDrawerOpen}
+        onOpenChange={setLogoDrawerOpen}
+        onFileSelect={handleLogoFileSelect}
+        title="Logo del negocio"
+      />
+    </>
   );
 }

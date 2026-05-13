@@ -9,13 +9,7 @@ import {
 } from "../../errors";
 import type { Abono } from "../../db/schema";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import { decimalToNumber } from "@avileo/shared";
-
-export interface PaymentMutationResult {
-  data: Abono;
-  txid: number;
-}
 
 export class PaymentService {
   constructor(
@@ -63,7 +57,7 @@ export class PaymentService {
       referenceNumber?: string;
       relatedSaleId?: string;
     }
-  ): Promise<PaymentMutationResult> {
+  ): Promise<Abono> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para registrar abonos");
     }
@@ -127,10 +121,7 @@ export class PaymentService {
         relatedSaleId: data.relatedSaleId,
       }, tx);
 
-      return {
-        data: abono,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return abono;
     });
   }
 
@@ -171,7 +162,7 @@ export class PaymentService {
       proofImageId?: string;
       referenceNumber?: string;
     }
-  ): Promise<PaymentMutationResult> {
+  ): Promise<Abono> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar abonos");
     }
@@ -183,10 +174,7 @@ export class PaymentService {
 
     return db.transaction(async (tx) => {
       const abono = await this.repository.update(ctx, id, data, tx);
-      return {
-        data: abono,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return abono;
     });
   }
 
@@ -199,7 +187,7 @@ export class PaymentService {
       proofImageId?: string;
       notes?: string;
     }
-  ): Promise<PaymentMutationResult> {
+  ): Promise<Abono> {
     if (!ctx.hasPermission("customers.write")) {
       throw new ForbiddenError("No tiene permisos para actualizar abonos");
     }
@@ -211,10 +199,7 @@ export class PaymentService {
 
     return db.transaction(async (tx) => {
       const abono = await this.repository.update(ctx, id, data, tx);
-      return {
-        data: abono,
-        txid: await getCurrentTransactionId(tx),
-      };
+      return abono;
     });
   }
 }

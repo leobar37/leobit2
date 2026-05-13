@@ -27,7 +27,7 @@ export const productCategoryRoutes = new Elysia({ prefix: "/product-categories" 
     async ({ categoryService, ctx, body, set }) => {
       set.status = 201;
       const result = await categoryService.createCategory(ctx as RequestContext, body);
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -44,7 +44,7 @@ export const productCategoryRoutes = new Elysia({ prefix: "/product-categories" 
         params.id,
         body
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({

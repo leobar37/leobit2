@@ -55,7 +55,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         status: body.status,
         items: body.items ?? [],
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -87,7 +87,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
     "/:id/confirm",
     async ({ purchaseService, ctx, params }) => {
       const result = await purchaseService.confirmPurchase(ctx as RequestContext, params.id);
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -106,7 +106,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         notes: body.notes,
         items: body.items,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -139,7 +139,7 @@ export const purchaseRoutes = new Elysia({ prefix: "/purchases" })
         params.id,
         body.status
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({

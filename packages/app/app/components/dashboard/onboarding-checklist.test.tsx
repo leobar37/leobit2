@@ -5,7 +5,7 @@ import { OnboardingChecklist } from "./onboarding-checklist";
 
 describe("OnboardingChecklist", () => {
   beforeEach(() => {
-    window.localStorage.clear();
+    localStorage.clear();
   });
 
   it("renders actionable steps and links product creation correctly", () => {
@@ -46,7 +46,7 @@ describe("OnboardingChecklist", () => {
     );
 
     fireEvent.click(screen.getByLabelText("Cerrar checklist"));
-    expect(window.localStorage.getItem("avileo:onboarding-checklist-dismissed")).toBe("true");
+    expect(localStorage.getItem("avileo:onboarding-checklist-dismissed")).toBe("true");
 
     unmount();
 

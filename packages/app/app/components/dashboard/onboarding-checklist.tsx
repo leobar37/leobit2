@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { X, CheckCircle2, Store, Package, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface OnboardingChecklistProps {
   hasProducts: boolean;
@@ -15,18 +15,16 @@ interface OnboardingChecklistProps {
 const CHECKLIST_DISMISSED_KEY = "avileo:onboarding-checklist-dismissed";
 const CHECKLIST_COMPLETED_KEY = "avileo:onboarding-checklist-completed";
 
+function getInitialVisibility(): boolean {
+  if (typeof window === "undefined") return false;
+  const dismissed = localStorage.getItem(CHECKLIST_DISMISSED_KEY) === "true";
+  const completed = localStorage.getItem(CHECKLIST_COMPLETED_KEY) === "true";
+  return !dismissed && !completed;
+}
+
 export function OnboardingChecklist({ hasProducts, hasSales, userName, businessMode, onCreateSale }: OnboardingChecklistProps) {
   const [isDismissed, setIsDismissed] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const dismissed = localStorage.getItem(CHECKLIST_DISMISSED_KEY) === "true";
-    const completed = localStorage.getItem(CHECKLIST_COMPLETED_KEY) === "true";
-    
-    if (!dismissed && !completed) {
-      setIsVisible(true);
-    }
-  }, []);
+  const isVisible = getInitialVisibility() && !isDismissed;
 
   const handleDismiss = () => {
     localStorage.setItem(CHECKLIST_DISMISSED_KEY, "true");
@@ -69,11 +67,9 @@ export function OnboardingChecklist({ hasProducts, hasSales, userName, businessM
   const totalCount = items.length;
   const allCompleted = completedCount === totalCount;
 
-  useEffect(() => {
-    if (allCompleted && isVisible) {
-      localStorage.setItem(CHECKLIST_COMPLETED_KEY, "true");
-    }
-  }, [allCompleted, isVisible]);
+  if (allCompleted && isVisible) {
+    localStorage.setItem(CHECKLIST_COMPLETED_KEY, "true");
+  }
 
   if (!isVisible || isDismissed || allCompleted) {
     return null;

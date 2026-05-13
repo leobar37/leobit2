@@ -2,7 +2,6 @@ import type { CustomerRepository, AccountsReceivableItem } from "../repository/c
 import type { WaterCustomerProfileRepository, WaterCustomerProfileInput } from "../repository/water-customer-profile.repository";
 import type { RequestContext } from "../../context/request-context";
 import { db } from "../../lib/db";
-import { getCurrentTransactionId } from "../../lib/transaction-id";
 import {
   NotFoundError,
   ValidationError,
@@ -152,10 +151,7 @@ export class CustomerService {
         );
       }
 
-      return {
-        data: { ...customer, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
-        txid: await getCurrentTransactionId(tx),
-      };
+      return { ...customer, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) };
     });
   }
 
@@ -178,6 +174,10 @@ export class CustomerService {
     const existing = await this.repository.findById(ctx, id);
     if (!existing) {
       throw new NotFoundError("Cliente");
+    }
+
+    if (!data) {
+      throw new ValidationError("Datos de actualización requeridos");
     }
 
     if (data.name !== undefined && data.name.length < 2) {
@@ -210,10 +210,7 @@ export class CustomerService {
         waterProfile = await this.getWaterProfileRepository().findByCustomerId(ctx, id, tx) ?? null;
       }
 
-      return {
-        data: { ...updated, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) },
-        txid: await getCurrentTransactionId(tx),
-      };
+      return { ...updated, ...(ctx.businessMode === "agua" ? { waterProfile } : {}) };
     });
   }
 
@@ -278,7 +275,7 @@ export class CustomerService {
   private async attachWaterProfiles<T extends Customer>(
     ctx: RequestContext,
     customers: T[]
-  ): Promise<Array<T & { waterProfile?: import("../../db/schema").WaterCustomerProfile | null }>> {
+  ): Promise<Array<T & { waterProfile?: (import("../../db/schema").WaterCustomerProfile & { waterRouteName?: string | null }) | null }>> {
     if (ctx.businessMode !== "agua" || customers.length === 0) {
       return customers;
     }
@@ -300,7 +297,7 @@ export class CustomerService {
   private async attachWaterProfile<T extends Customer>(
     ctx: RequestContext,
     customer: T
-  ): Promise<T & { waterProfile?: import("../../db/schema").WaterCustomerProfile | null }> {
+  ): Promise<T & { waterProfile?: (import("../../db/schema").WaterCustomerProfile & { waterRouteName?: string | null }) | null }> {
     if (ctx.businessMode !== "agua") {
       return customer;
     }

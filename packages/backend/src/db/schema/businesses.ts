@@ -47,7 +47,8 @@ export const businesses = pgTable(
     address: text("address"),
     phone: varchar("phone", { length: 20 }),
     email: varchar("email", { length: 100 }),
-    logoUrl: varchar("logo_url", { length: 255 }),
+    logoUrl: varchar("logo_url", { length: 255 }), // DEPRECATED: use logoFileId
+    logoFileId: uuid("logo_file_id"), // FK to files.id - relation defined in files.ts to avoid circular dependency
 
     // Public customer catalog
     publicCatalogEnabled: boolean("public_catalog_enabled").notNull().default(false),
@@ -73,6 +74,7 @@ export const businesses = pgTable(
     index("idx_businesses_name").on(table.name),
     index("idx_businesses_ruc").on(table.ruc),
     index("idx_businesses_is_active").on(table.isActive),
+    index("idx_businesses_logo_file_id").on(table.logoFileId),
     uniqueIndex("ux_businesses_public_catalog_slug_ci").on(
       sql`lower(${table.publicCatalogSlug})`
     ),

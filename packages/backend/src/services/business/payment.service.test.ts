@@ -24,7 +24,7 @@ describe("PaymentService", () => {
 
   it("allows sale-linked payments for credit sales with no initial payment", async () => {
     const tx = {
-      execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+      execute: vi.fn().mockResolvedValue([]),
     };
     transactionMock.mockImplementation(async (callback) => callback(tx as never));
 
@@ -59,7 +59,6 @@ describe("PaymentService", () => {
       paymentMethod: "efectivo",
     });
 
-    expect(result.txid).toBe(12345);
     expect(repository.getTotalBySale).toHaveBeenCalledWith(ctx, "sale-1");
     expect(repository.create).toHaveBeenCalledWith(
       ctx,
@@ -138,7 +137,7 @@ describe("PaymentService", () => {
 
   it("does not double count the initial sale payment when it also has a linked payment record", async () => {
     const tx = {
-      execute: vi.fn().mockResolvedValue([{ txid: "12345" }]),
+      execute: vi.fn().mockResolvedValue([]),
     };
     transactionMock.mockImplementation(async (callback) => callback(tx as never));
 
@@ -173,7 +172,6 @@ describe("PaymentService", () => {
       paymentMethod: "efectivo",
     });
 
-    expect(result.txid).toBe(12345);
     expect(repository.create).toHaveBeenCalledWith(
       ctx,
       expect.objectContaining({

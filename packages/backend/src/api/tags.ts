@@ -30,7 +30,7 @@ export const tagRoutes = new Elysia({ prefix: "/tags" })
     async ({ tagService, ctx, body, set }) => {
       set.status = 201;
       const result = await tagService.createTag(ctx as RequestContext, body);
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -43,7 +43,7 @@ export const tagRoutes = new Elysia({ prefix: "/tags" })
     "/:id",
     async ({ tagService, ctx, params, body }) => {
       const result = await tagService.updateTag(ctx as RequestContext, params.id, body);
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({

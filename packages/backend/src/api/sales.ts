@@ -81,7 +81,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         saleDate: body.saleDate,
         items: body.items,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       body: t.Object({
@@ -148,7 +148,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         advanceReferenceNumber: body.advanceReferenceNumber,
         advanceProofImageId: body.advanceProofImageId,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -241,7 +241,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
           proofImageId: body.proofImageId,
         }
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -276,7 +276,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         params.id,
         body.baseVersion
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -327,7 +327,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         unitPriceQuoted: body.unitPriceQuoted,
         subtotal: body.subtotal,
       });
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
@@ -364,7 +364,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
           isModified: body.isModified,
         }
       );
-      return { success: true, data: result.data, txid: result.txid };
+      return { success: true, data: result.data };
     },
     {
       params: t.Object({
