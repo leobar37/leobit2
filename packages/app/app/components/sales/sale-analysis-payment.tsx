@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { formatCurrency } from "~/lib/utils";
+import { SaleDetailSection } from "./sale-detail-section";
 
 interface PaymentStatus {
   totalAmount: number;
@@ -18,13 +18,16 @@ interface SaleAnalysisPaymentProps {
 export function SaleAnalysisPayment({ paymentStatus }: SaleAnalysisPaymentProps) {
   if (!paymentStatus) {
     return (
-      <Card className="shell-card-flat rounded-[28px]">
-        <CardContent className="p-6">
+      <SaleDetailSection
+        title="Estado de pago"
+        icon={<CreditCard className="h-4 w-4" />}
+      >
+        <div className="p-4">
           <p className="text-center text-muted-foreground">
             No hay datos de pago disponibles
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </SaleDetailSection>
     );
   }
 
@@ -61,65 +64,67 @@ export function SaleAnalysisPayment({ paymentStatus }: SaleAnalysisPaymentProps)
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="space-y-4">
-      <Card className="shell-card-flat rounded-[28px]">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-orange-500" />
-            Estado de Pago
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-center">
-            <div
-              className={`w-20 h-20 ${statusConfig.bgColor} rounded-full flex items-center justify-center`}
-            >
-              <StatusIcon className={`h-10 w-10 ${statusConfig.color}`} />
-            </div>
+    <SaleDetailSection
+      title="Estado de pago"
+      icon={<CreditCard className="h-4 w-4" />}
+      action={
+        <span className="text-xs font-medium text-muted-foreground">
+          {paymentPercentage}% pagado
+        </span>
+      }
+    >
+      <div className="space-y-3 p-3">
+        <div className="shell-card-soft flex items-center gap-3 rounded-xl px-3 py-3">
+          <div
+            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${statusConfig.bgColor}`}
+          >
+            <StatusIcon className={`h-6 w-6 ${statusConfig.color}`} />
           </div>
 
-          <div className="text-center">
-            <p className="text-lg font-semibold">{statusConfig.label}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-foreground">{statusConfig.label}</p>
             <p className="text-sm text-muted-foreground">
-              {paymentPercentage}% pagado
+              S/ {formatCurrency(amountPaid)} de S/ {formatCurrency(totalAmount)}
             </p>
           </div>
+        </div>
 
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className={`h-2.5 rounded-full ${
-                isFullyPaid
-                  ? "bg-green-500"
-                  : paymentPercentage > 50
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            className={`h-full rounded-full ${
+              isFullyPaid
+                ? "bg-green-500"
+                : paymentPercentage > 50
                   ? "bg-yellow-500"
                   : "bg-red-500"
-              }`}
-              style={{ width: `${Math.min(paymentPercentage, 100)}%` }}
-            ></div>
-          </div>
+            }`}
+            style={{ width: `${Math.min(paymentPercentage, 100)}%` }}
+          />
+        </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-2">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="font-semibold">S/ {formatCurrency(totalAmount)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">Pagado</p>
-              <p className="font-semibold text-green-600">S/ {formatCurrency(amountPaid)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">Saldo</p>
-              <p
-                className={`font-semibold ${
-                  balanceDue > 0 ? "text-red-600" : "text-green-600"
-                }`}
-              >
-                S/ {formatCurrency(balanceDue)}
-              </p>
-            </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="shell-card-soft rounded-xl px-2.5 py-2">
+            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="mt-1 font-semibold">S/ {formatCurrency(totalAmount)}</p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="shell-card-soft rounded-xl px-2.5 py-2">
+            <p className="text-xs text-muted-foreground">Pagado</p>
+            <p className="mt-1 font-semibold text-green-600">
+              S/ {formatCurrency(amountPaid)}
+            </p>
+          </div>
+          <div className="shell-card-soft rounded-xl px-2.5 py-2">
+            <p className="text-xs text-muted-foreground">Saldo</p>
+            <p
+              className={`mt-1 font-semibold ${
+                balanceDue > 0 ? "text-red-600" : "text-green-600"
+              }`}
+            >
+              S/ {formatCurrency(balanceDue)}
+            </p>
+          </div>
+        </div>
+      </div>
+    </SaleDetailSection>
   );
 }

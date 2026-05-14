@@ -1,6 +1,6 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, Package, Percent } from "lucide-react";
 import { formatCurrency, formatNumber } from "~/lib/utils";
+import { SaleDetailSection } from "./sale-detail-section";
 
 interface ProfitItem {
   productName: string;
@@ -32,13 +32,16 @@ interface SaleAnalysisProfitProps {
 export function SaleAnalysisProfit({ profitAnalysis }: SaleAnalysisProfitProps) {
   if (!profitAnalysis) {
     return (
-      <Card className="shell-card-flat rounded-[28px]">
-        <CardContent className="p-6">
+      <SaleDetailSection
+        title="Rentabilidad"
+        icon={<TrendingUp className="h-4 w-4" />}
+      >
+        <div className="p-4">
           <p className="text-center text-muted-foreground">
             No hay datos de rentabilidad disponibles
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </SaleDetailSection>
     );
   }
 
@@ -46,57 +49,65 @@ export function SaleAnalysisProfit({ profitAnalysis }: SaleAnalysisProfitProps) 
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-5 w-5 text-orange-500" />
-          <h3 className="text-lg font-semibold">Rentabilidad Total</h3>
-        </div>
-        <div className="space-y-4">
-          <div className="text-center p-4 bg-muted/40 rounded-[20px]">
-            <p className="text-sm text-muted-foreground mb-1">Ganancia Total</p>
-            <p
-              className={`text-3xl font-bold ${
-                summary.totalProfit >= 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              S/ {formatCurrency(summary.totalProfit)}
-            </p>
-            <div className="flex items-center justify-center gap-2 mt-2">
-              <Percent className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">
-                {summary.totalMarginPercent}% margen
-              </span>
+      <SaleDetailSection
+        title="Rentabilidad"
+        icon={<TrendingUp className="h-4 w-4" />}
+        action={
+          <span className="text-xs font-medium text-muted-foreground">
+            {summary.totalMarginPercent}% margen
+          </span>
+        }
+      >
+        <div className="p-3">
+          <div className="shell-card-soft rounded-xl px-3 py-3">
+            <p className="text-xs text-muted-foreground">Ganancia total</p>
+            <div className="mt-1 flex items-end justify-between gap-3">
+              <p
+                className={`text-2xl font-bold tracking-[-0.04em] ${
+                  summary.totalProfit >= 0 ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                S/ {formatCurrency(summary.totalProfit)}
+              </p>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Percent className="h-4 w-4" />
+                <span>{summary.totalMarginPercent}%</span>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-muted/40 rounded-[20px] p-3">
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="shell-card-soft rounded-xl px-3 py-2">
               <p className="text-xs text-muted-foreground">Ingresos</p>
-              <p className="text-lg font-semibold">
+              <p className="mt-1 font-semibold">
                 S/ {formatCurrency(summary.totalRevenue)}
               </p>
             </div>
-            <div className="bg-muted/40 rounded-[20px] p-3">
+            <div className="shell-card-soft rounded-xl px-3 py-2">
               <p className="text-xs text-muted-foreground">Costos</p>
-              <p className="text-lg font-semibold text-red-600">
+              <p className="mt-1 font-semibold text-red-600">
                 S/ {formatCurrency(summary.totalCost)}
               </p>
             </div>
           </div>
         </div>
-      </div>
+      </SaleDetailSection>
 
       {items.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="h-5 w-5 text-orange-500" />
-            <h3 className="text-lg font-semibold">Por Producto</h3>
-          </div>
-          <div className="space-y-3">
+        <SaleDetailSection
+          title="Por producto"
+          icon={<Package className="h-4 w-4" />}
+          action={
+            <span className="text-xs font-medium text-muted-foreground">
+              {items.length} producto{items.length > 1 ? "s" : ""}
+            </span>
+          }
+        >
+          <div className="space-y-2 p-3">
             {items.map((item, index) => (
               <div
                 key={index}
-                className="bg-muted/40 rounded-[20px] p-3 space-y-2"
+                className="shell-card-soft space-y-3 rounded-xl px-3 py-3"
               >
                 <p className="font-medium truncate">{item.productName}</p>
 
@@ -144,7 +155,7 @@ export function SaleAnalysisProfit({ profitAnalysis }: SaleAnalysisProfitProps) 
               </div>
             ))}
           </div>
-        </div>
+        </SaleDetailSection>
       )}
     </div>
   );

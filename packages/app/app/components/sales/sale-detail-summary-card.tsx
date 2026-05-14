@@ -77,92 +77,76 @@ export function SaleDetailSummaryCard({ sale }: SaleDetailSummaryCardProps) {
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl shell-card-flat">
-      <div className="space-y-4 p-4">
-        <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50">
-            <ShoppingCart className="h-5 w-5 text-orange-600" />
+    <section className="shell-card-flat rounded-2xl p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/15 dark:text-orange-300">
+            <ShoppingCart className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-orange-700/80">
-              {saleWorkflowStatus}
-            </p>
-
-            <div className="mt-1 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-lg font-bold tracking-tight text-foreground">
-                  {sale.type === "pre_order" ? "Pedido" : "Venta"} #{sale.id.slice(-6)}
-                  {sale.type === "pre_order" && (
-                    <span className="ml-2 inline-flex items-center rounded bg-indigo-100 px-1.5 py-0.5 text-xs font-semibold text-indigo-700">
-                      Pedido
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {sale.customer?.name || "Cliente general"}
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold tracking-[-0.04em] text-foreground">
-                  S/ {formatCurrency(totalAmount)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <Badge
                 variant={getWorkflowBadgeVariant() as any}
-                className="rounded-md px-2 py-0.5 text-xs font-medium"
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none"
               >
                 {saleWorkflowStatus}
               </Badge>
-
               <Badge
                 variant={getPaymentBadgeVariant() as any}
-                className="rounded-md px-2 py-0.5 text-xs font-medium"
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none"
               >
                 {saleStatus}
               </Badge>
-
               {sale.saleType === "credito" && (
                 <Badge
                   variant="primary"
-                  className="rounded-md px-2 py-0.5 text-xs font-medium"
+                  className="rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none"
                 >
                   Crédito
                 </Badge>
               )}
             </div>
 
+            <p className="mt-3 truncate text-lg font-bold tracking-tight text-foreground">
+              {sale.type === "pre_order" ? "Pedido" : "Venta"} #{sale.id.slice(-6)}
+            </p>
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              {sale.customer?.name || "Cliente general"}
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 border-t shell-divider pt-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Abonado</p>
-            <p className="mt-1 text-lg font-semibold text-foreground">
-              S/ {formatCurrency(effectivePaidAmount)}
-            </p>
-          </div>
+        <div className="flex-shrink-0 text-right">
+          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="mt-0.5 text-2xl font-bold tracking-[-0.04em] text-foreground">
+            S/ {formatCurrency(totalAmount)}
+          </p>
+        </div>
+      </div>
 
-          <div>
-            <p className="text-xs text-muted-foreground">
-              {sale.saleType === "credito" ? "Saldo pendiente" : "Estado"}
-            </p>
-             <p
-              className={`mt-1 text-lg font-semibold ${
-                sale.saleType === "credito" && dueAmount > 0
-                  ? "text-red-500 dark:text-red-300"
-                  : "text-emerald-600 dark:text-emerald-400"
-              }`}
-            >
-              {sale.saleType === "credito"
-                ? `S/ ${formatCurrency(dueAmount)}`
-                : "Pagado"}
-            </p>
-          </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 border-t shell-divider pt-3">
+        <div className="shell-card-soft rounded-xl px-3 py-2">
+          <p className="text-xs text-muted-foreground">Abonado</p>
+          <p className="mt-1 font-semibold text-foreground">
+            S/ {formatCurrency(effectivePaidAmount)}
+          </p>
+        </div>
+
+        <div className="shell-card-soft rounded-xl px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            {sale.saleType === "credito" ? "Saldo" : "Estado"}
+          </p>
+          <p
+            className={`mt-1 font-semibold ${
+              sale.saleType === "credito" && dueAmount > 0
+                ? "text-red-500 dark:text-red-300"
+                : "text-emerald-600 dark:text-emerald-400"
+            }`}
+          >
+            {sale.saleType === "credito"
+              ? `S/ ${formatCurrency(dueAmount)}`
+              : "Pagado"}
+          </p>
         </div>
       </div>
     </section>

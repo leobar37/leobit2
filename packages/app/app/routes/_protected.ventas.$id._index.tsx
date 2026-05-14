@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate, useParams } from "react-router";
-import { AlertCircle, Loader2, TrendingUp } from "lucide-react";
+import { AlertCircle, Loader2, ReceiptText, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSale } from "~/hooks/use-sales";
 import { useSaleAnalysis } from "~/hooks/use-sale-analysis";
@@ -77,70 +77,67 @@ export default function SaleDetailPage() {
           sale={sale}
         />
 
-        <MobilePage.Root className="space-y-3">
-          <div className="shell-card-flat overflow-hidden rounded-[22px]">
-            <div className="border-b shell-divider px-3 pt-1">
-              <div className="flex">
-                <button
-                  onClick={() => setActiveTab("details")}
-                  className={cn(
-                    "relative flex-1 px-3 py-3 text-sm font-medium transition-colors",
-                    activeTab === "details"
-                      ? "text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:bg-orange-500"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  Detalles
-                </button>
-                <button
-                  onClick={() => setActiveTab("analysis")}
-                  className={cn(
-                    "relative flex flex-1 items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-colors",
-                    activeTab === "analysis"
-                      ? "text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:bg-orange-500"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Análisis
-                </button>
-              </div>
-            </div>
+        <MobilePage.Root className="space-y-4">
+          <div className="shell-card-soft grid grid-cols-2 gap-1 rounded-2xl p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab("details")}
+              className={cn(
+                "flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors",
+                activeTab === "details"
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : "text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-white/10"
+              )}
+            >
+              <ReceiptText className="h-4 w-4" />
+              Detalles
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("analysis")}
+              className={cn(
+                "flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors",
+                activeTab === "analysis"
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : "text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-white/10"
+              )}
+            >
+              <TrendingUp className="h-4 w-4" />
+              Análisis
+            </button>
+          </div>
 
-            <div className="p-3 sm:p-4">
-              {activeTab === "details" ? (
-                <div className="space-y-4">
-                  {isCancelled && <SaleCancelledCard sale={sale} />}
-                  <SaleDetailSummaryCard sale={sale} />
-                  <SaleDetailInfoCard sale={sale} hideTara={hideTara} />
-                  <SaleDetailItemsCard items={items} totalAmount={sale.totalAmount} />
-                  <SaleDetailPaymentCard sale={sale} />
+          {activeTab === "details" ? (
+            <div className="space-y-4">
+              {isCancelled && <SaleCancelledCard sale={sale} />}
+              <SaleDetailSummaryCard sale={sale} />
+              <SaleDetailInfoCard sale={sale} hideTara={hideTara} />
+              <SaleDetailItemsCard items={items} totalAmount={sale.totalAmount} />
+              <SaleDetailPaymentCard sale={sale} />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {analysisLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {analysisLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-                    </div>
-                  ) : analysis ? (
-                    <>
-                      {sale.customerId && (
-                        <SaleAnalysisCustomerHistory
-                          customerHistory={analysis.customerHistory}
-                        />
-                      )}
-                      <SaleAnalysisProfit profitAnalysis={analysis.profitAnalysis} />
-                      <SaleAnalysisPayment paymentStatus={analysis.paymentStatus} />
-                    </>
-                  ) : (
-                    <p className="py-8 text-center text-muted-foreground">
-                      No hay datos de análisis disponibles
-                    </p>
+              ) : analysis ? (
+                <>
+                  {sale.customerId && (
+                    <SaleAnalysisCustomerHistory
+                      customerHistory={analysis.customerHistory}
+                    />
                   )}
-                </div>
+                  <SaleAnalysisProfit profitAnalysis={analysis.profitAnalysis} />
+                  <SaleAnalysisPayment paymentStatus={analysis.paymentStatus} />
+                </>
+              ) : (
+                <p className="py-8 text-center text-muted-foreground">
+                  No hay datos de análisis disponibles
+                </p>
               )}
             </div>
-          </div>
+          )}
 
           <CancelSaleDialog />
         </MobilePage.Root>
