@@ -57,7 +57,7 @@ export const productRoutes = new Elysia({ prefix: "/products" })
         costPrice: body.costPrice ? parseFloat(body.costPrice) : undefined,
         hasVariants: body.hasVariants,
       });
-      return { success: true, data: result.data };
+      return { success: true, data: result };
     },
     {
       body: t.Object({

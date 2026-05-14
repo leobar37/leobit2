@@ -98,6 +98,62 @@ export const reportRoutes = new Elysia({ prefix: "/reports" })
     }
   )
   .get(
+    "/sales-movements",
+    async ({ ctx, query }) => {
+      const reportService = new ReportService();
+      const type = (query.type as "day" | "week" | "month" | "range") || "day";
+      const startDate = query.startDate ? new Date(query.startDate) : undefined;
+      const endDate = query.endDate ? new Date(query.endDate) : undefined;
+
+      const movements = await reportService.getSalesMovements(ctx as RequestContext, {
+        type,
+        startDate,
+        endDate,
+      });
+      return { success: true, data: movements };
+    },
+    {
+      query: t.Object({
+        type: t.Optional(t.Union([
+          t.Literal("day"),
+          t.Literal("week"),
+          t.Literal("month"),
+          t.Literal("range"),
+        ])),
+        startDate: t.Optional(t.String()),
+        endDate: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get(
+    "/sales-kilos",
+    async ({ ctx, query }) => {
+      const reportService = new ReportService();
+      const type = (query.type as "day" | "week" | "month" | "range") || "day";
+      const startDate = query.startDate ? new Date(query.startDate) : undefined;
+      const endDate = query.endDate ? new Date(query.endDate) : undefined;
+
+      const kilos = await reportService.getSalesKilos(ctx as RequestContext, {
+        type,
+        startDate,
+        endDate,
+      });
+      return { success: true, data: kilos };
+    },
+    {
+      query: t.Object({
+        type: t.Optional(t.Union([
+          t.Literal("day"),
+          t.Literal("week"),
+          t.Literal("month"),
+          t.Literal("range"),
+        ])),
+        startDate: t.Optional(t.String()),
+        endDate: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get(
     "/debtors-summary",
     async ({ ctx }) => {
       const reportService = new ReportService();

@@ -110,6 +110,7 @@ interface AppDrawerProps {
   onOpenChange?: (open: boolean) => void
   size?: VariantProps<typeof appDrawerVariants>["size"]
   contentClassName?: string
+  description?: string
   "data-testid"?: string
 }
 
@@ -117,6 +118,7 @@ function AppDrawerRoot({
   children,
   size,
   contentClassName,
+  description = "Panel lateral de acciones",
   "data-testid": dataTestId,
   ...props
 }: AppDrawerProps) {
@@ -127,7 +129,7 @@ function AppDrawerRoot({
         data-testid={dataTestId}
       >
         <DrawerDescription className="sr-only">
-          Panel lateral para seleccionar o buscar clientes
+          {description}
         </DrawerDescription>
         {children}
       </DrawerContent>

@@ -8,6 +8,7 @@ import { api } from "~/lib/api-client";
 import { extractData } from "~/lib/api-utils";
 import { queryKeys } from "~/lib/query-keys";
 import type { PeriodType } from "~/components/dashboard/period-selector";
+import type { SaleListItem } from "~/hooks/use-sales";
 
 export interface PeriodParams {
   type: PeriodType;
@@ -31,6 +32,37 @@ export interface SalesStats {
     kilos: number;
     count: number;
   };
+}
+
+export interface SalesMovementsReport {
+  summary: {
+    amount: number;
+    kilos: number;
+    count: number;
+  };
+  sales: SaleListItem[];
+}
+
+export interface SalesKilosReport {
+  summary: {
+    kilos: number;
+    amount: number;
+    count: number;
+  };
+  items: Array<{
+    saleId: string;
+    saleDate: string | Date;
+    customer: {
+      id: string;
+      name: string;
+    } | null;
+    productName: string;
+    variantName: string;
+    kilos: number;
+    unitPrice: number;
+    subtotal: number;
+    status: string;
+  }>;
 }
 
 export interface DebtorsSummary {
@@ -95,6 +127,44 @@ export function useSalesStats(period: PeriodParams) {
       return extractData(response) as SalesStats;
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
+    retry: 1,
+  });
+}
+
+export function useSalesMovements(period: PeriodParams, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.dashboard.movements(period),
+    queryFn: async () => {
+      const params: Record<string, string> = { type: period.type };
+      if (period.startDate) params.startDate = period.startDate;
+      if (period.endDate) params.endDate = period.endDate;
+
+      const response = await api.reports["sales-movements"].get({
+        query: params,
+      });
+      return extractData(response) as SalesMovementsReport;
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: 1000 * 60 * 2,
+    retry: 1,
+  });
+}
+
+export function useSalesKilos(period: PeriodParams, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.dashboard.kilos(period),
+    queryFn: async () => {
+      const params: Record<string, string> = { type: period.type };
+      if (period.startDate) params.startDate = period.startDate;
+      if (period.endDate) params.endDate = period.endDate;
+
+      const response = await api.reports["sales-kilos"].get({
+        query: params,
+      });
+      return extractData(response) as SalesKilosReport;
+    },
+    enabled: options?.enabled ?? true,
+    staleTime: 1000 * 60 * 2,
     retry: 1,
   });
 }

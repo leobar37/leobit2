@@ -7,6 +7,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -75,6 +76,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 const queryPersister = createQueryPersister(undefined, getStoredBusinessId() ?? undefined);
 
 export default function App() {
+  const location = useLocation();
+  const shouldShowDesktopUnsupportedNotice = location.pathname === "/dashboard";
+
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       const buildId = import.meta.env.VITE_BUILD_ID || "dev";
@@ -216,10 +220,16 @@ export default function App() {
           persistOptions={{ persister: queryPersister }}
         >
           <NuqsAdapter>
-            <div className="app-mobile-viewport">
+            <div
+              className={
+                shouldShowDesktopUnsupportedNotice
+                  ? "app-mobile-viewport app-mobile-viewport--desktop-unsupported"
+                  : "app-mobile-viewport"
+              }
+            >
               <Outlet />
             </div>
-            <DesktopUnsupportedNotice />
+            {shouldShowDesktopUnsupportedNotice && <DesktopUnsupportedNotice />}
           </NuqsAdapter>
           <Toaster position="top-center" />
         </PersistQueryClientProvider>

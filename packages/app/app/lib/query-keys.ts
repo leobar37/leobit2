@@ -91,6 +91,8 @@ export const queryKeys = {
   },
   dashboard: {
     stats: (period: PeriodParams) => ["dashboard", "stats", period] as const,
+    movements: (period: PeriodParams) => ["dashboard", "movements", period] as const,
+    kilos: (period: PeriodParams) => ["dashboard", "kilos", period] as const,
     debtors: ["dashboard", "debtors"] as const,
     chart: (period: PeriodParams) => ["dashboard", "chart", period] as const,
     water: (period: PeriodParams) => ["dashboard", "water", period] as const,

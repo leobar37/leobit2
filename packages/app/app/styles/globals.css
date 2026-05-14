@@ -144,7 +144,7 @@
   }
 
   @media (min-width: 768px) {
-    .app-mobile-viewport {
+    .app-mobile-viewport--desktop-unsupported {
       display: none;
     }
 

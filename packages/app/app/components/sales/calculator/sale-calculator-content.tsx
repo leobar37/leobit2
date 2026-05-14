@@ -42,6 +42,17 @@ export function CalculatorContent() {
   } = calculator;
 
   const { hideTara, hidePrices } = settings;
+  const selectedVariantPrice = picker.selectedVariant?.price;
+  const pricePlaceholder =
+    !hidePrices && selectedVariantPrice ? selectedVariantPrice : "0.00";
+  const priceHelperText =
+    !hidePrices && selectedVariantPrice
+      ? `Precio base: S/ ${selectedVariantPrice}`
+      : undefined;
+  const priceHelperValue = !hidePrices ? selectedVariantPrice : undefined;
+  const applyPriceHelperValue = !hidePrices
+    ? (value: string) => setFieldValue("price", value)
+    : undefined;
 
   return (
     <div className="flex flex-col h-full">
@@ -292,7 +303,7 @@ export function CalculatorContent() {
                   label="Kilos netos"
                   value={values.quantity}
                   placeholder="0.000"
-                    onChange={(value) => setFieldValue("quantity", value)}
+                  onChange={(value) => setFieldValue("quantity", value)}
                   fieldType="quantity"
                   isAutoCalculateTarget={isFieldAutoCalculated("quantity")}
                   onToggleAutoCalculate={() =>
@@ -304,30 +315,24 @@ export function CalculatorContent() {
                   name="pricePerKg"
                   label="Precio por kg (S/)"
                   value={values.price}
-                  placeholder={picker.selectedVariant?.price || "0.00"}
-                    onChange={(value) => setFieldValue("price", value)}
+                  placeholder={pricePlaceholder}
+                  onChange={(value) => setFieldValue("price", value)}
                   fieldType="price"
                   isAutoCalculateTarget={isFieldAutoCalculated("price")}
                   onToggleAutoCalculate={() =>
                     toggleAutoCalculateField("price")
                   }
                   decimals={2}
-                  helperText={
-                    picker.selectedVariant?.price
-                      ? `Precio base: S/ ${picker.selectedVariant.price}`
-                      : undefined
-                  }
-                  helperValue={picker.selectedVariant?.price}
-                  onApplyHelperValue={(value) =>
-                    setFieldValue("price", value)
-                  }
+                  helperText={priceHelperText}
+                  helperValue={priceHelperValue}
+                  onApplyHelperValue={applyPriceHelperValue}
                 />
                 <CalculatorInput
                   name="totalAmount"
                   label="Total (S/)"
                   value={values.total}
                   placeholder="0.00"
-                    onChange={(value) => setFieldValue("total", value)}
+                  onChange={(value) => setFieldValue("total", value)}
                   fieldType="total"
                   isAutoCalculateTarget={isFieldAutoCalculated("total")}
                   onToggleAutoCalculate={() =>
@@ -355,7 +360,7 @@ export function CalculatorContent() {
                   name="pricePerPack"
                   label="Precio por pack (S/)"
                   value={values.price}
-                  placeholder={picker.selectedVariant?.price || "0.00"}
+                  placeholder={pricePlaceholder}
                   onChange={(value) => setFieldValue("price", value)}
                   fieldType="price"
                   isAutoCalculateTarget={isFieldAutoCalculated("price")}
@@ -363,15 +368,9 @@ export function CalculatorContent() {
                     toggleAutoCalculateField("price")
                   }
                   decimals={2}
-                  helperText={
-                    picker.selectedVariant?.price
-                      ? `Precio base: S/ ${picker.selectedVariant.price}`
-                      : undefined
-                  }
-                  helperValue={picker.selectedVariant?.price}
-                  onApplyHelperValue={(value) =>
-                    setFieldValue("price", value)
-                  }
+                  helperText={priceHelperText}
+                  helperValue={priceHelperValue}
+                  onApplyHelperValue={applyPriceHelperValue}
                 />
                 <CalculatorInput
                   name="totalAmount"

@@ -81,7 +81,7 @@ export const saleRoutes = new Elysia({ prefix: "/sales" })
         saleDate: body.saleDate,
         items: body.items,
       });
-      return { success: true, data: result.data };
+      return { success: true, data: result };
     },
     {
       body: t.Object({

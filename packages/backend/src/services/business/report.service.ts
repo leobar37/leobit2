@@ -9,6 +9,7 @@ import {
   waterDeliveryStops,
   distribuciones,
   businessUsers,
+  products,
   type Sale,
 } from "../../db/schema";
 import type { RequestContext } from "../../context/request-context";
@@ -59,6 +60,48 @@ export interface SalesStats {
     kilos: number;
     count: number;
   };
+}
+
+export type SalesMovement = Sale & {
+  customer?: {
+    id: string;
+    name: string;
+    dni: string | null;
+    phone: string | null;
+  } | null;
+};
+
+export interface SalesMovementsReport {
+  summary: {
+    amount: number;
+    kilos: number;
+    count: number;
+  };
+  sales: SalesMovement[];
+}
+
+export interface SalesKilosRow {
+  saleId: string;
+  saleDate: Date;
+  customer: {
+    id: string;
+    name: string;
+  } | null;
+  productName: string;
+  variantName: string;
+  kilos: number;
+  unitPrice: number;
+  subtotal: number;
+  status: string;
+}
+
+export interface SalesKilosReport {
+  summary: {
+    kilos: number;
+    amount: number;
+    count: number;
+  };
+  items: SalesKilosRow[];
 }
 
 export interface ChartData {
@@ -322,6 +365,102 @@ export class ReportService {
     };
   }
 
+  async getSalesMovements(
+    ctx: RequestContext,
+    options: {
+      type: PeriodType;
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<SalesMovementsReport> {
+    const { currentRange } = this.getDateRanges(options.type, options.startDate, options.endDate);
+    const rows = await db.query.sales.findMany({
+      where: and(
+        eq(sales.businessId, ctx.businessId),
+        gte(sales.saleDate, currentRange.start),
+        lte(sales.saleDate, currentRange.end),
+        sql`${sales.status} NOT IN ('cancelled', 'draft')`
+      ),
+      orderBy: desc(sales.saleDate),
+      with: {
+        customer: true,
+      },
+    });
+
+    return {
+      summary: {
+        amount: rows.reduce((sum, sale) => sum + parseFloat(String(sale.totalAmount ?? "0")), 0),
+        kilos: rows.reduce((sum, sale) => sum + parseFloat(String(sale.netWeight ?? "0")), 0),
+        count: rows.length,
+      },
+      sales: rows as SalesMovement[],
+    };
+  }
+
+  async getSalesKilos(
+    ctx: RequestContext,
+    options: {
+      type: PeriodType;
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<SalesKilosReport> {
+    const { currentRange } = this.getDateRanges(options.type, options.startDate, options.endDate);
+    const rows = await db
+      .select({
+        saleId: sales.id,
+        saleDate: sales.saleDate,
+        customerId: customers.id,
+        customerName: customers.name,
+        productName: saleItems.productName,
+        variantName: saleItems.variantName,
+        kilos: this.saleItemKilosExpression(),
+        unitPrice: sql<string>`coalesce(${saleItems.unitPrice}, ${saleItems.unitPriceFinal}, ${saleItems.unitPriceQuoted}, '0')`,
+        subtotal: saleItems.subtotal,
+        status: sales.status,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(sales.id, saleItems.saleId))
+      .innerJoin(products, eq(products.id, saleItems.productId))
+      .leftJoin(customers, eq(customers.id, sales.customerId))
+      .where(
+        and(
+          eq(saleItems.businessId, ctx.businessId),
+          eq(sales.businessId, ctx.businessId),
+          eq(products.businessId, ctx.businessId),
+          eq(products.unit, "kg"),
+          gte(sales.saleDate, currentRange.start),
+          lte(sales.saleDate, currentRange.end),
+          sql`${sales.status} NOT IN ('cancelled', 'draft')`,
+          sql`${this.saleItemKilosExpression()} > 0`
+        )
+      )
+      .orderBy(desc(sales.saleDate));
+
+    const items = rows.map((row) => ({
+      saleId: row.saleId,
+      saleDate: row.saleDate,
+      customer: row.customerId && row.customerName
+        ? { id: row.customerId, name: row.customerName }
+        : null,
+      productName: row.productName,
+      variantName: row.variantName,
+      kilos: this.parseNumber(row.kilos),
+      unitPrice: this.parseNumber(row.unitPrice),
+      subtotal: this.parseNumber(row.subtotal),
+      status: row.status,
+    }));
+
+    return {
+      summary: {
+        kilos: items.reduce((sum, item) => sum + item.kilos, 0),
+        amount: items.reduce((sum, item) => sum + item.subtotal, 0),
+        count: new Set(items.map((item) => item.saleId)).size,
+      },
+      items,
+    };
+  }
+
   async getSalesChart(
     ctx: RequestContext,
     options: {
@@ -574,10 +713,9 @@ export class ReportService {
     start: Date,
     end: Date
   ) {
-    return db
+    const salesStats = await db
       .select({
         totalAmount: sql<string>`coalesce(sum(${sales.totalAmount}), '0')`,
-        totalKilos: sql<string>`coalesce(sum(${sales.netWeight}), '0')`,
         count: sql<number>`count(*)`,
       })
       .from(sales)
@@ -585,9 +723,43 @@ export class ReportService {
         and(
           eq(sales.businessId, ctx.businessId),
           gte(sales.saleDate, start),
-          lte(sales.saleDate, end)
+          lte(sales.saleDate, end),
+          sql`${sales.status} NOT IN ('cancelled', 'draft')`
         )
       );
+
+    const kilosStats = await db
+      .select({
+        totalKilos: sql<string>`coalesce(sum(${this.saleItemKilosExpression()}), '0')`,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(sales.id, saleItems.saleId))
+      .innerJoin(products, eq(products.id, saleItems.productId))
+      .where(
+        and(
+          eq(saleItems.businessId, ctx.businessId),
+          eq(sales.businessId, ctx.businessId),
+          eq(products.businessId, ctx.businessId),
+          eq(products.unit, "kg"),
+          gte(sales.saleDate, start),
+          lte(sales.saleDate, end),
+          sql`${sales.status} NOT IN ('cancelled', 'draft')`
+        )
+      );
+
+    return [{
+      totalAmount: salesStats[0]?.totalAmount ?? "0",
+      totalKilos: kilosStats[0]?.totalKilos ?? "0",
+      count: salesStats[0]?.count ?? 0,
+    }];
+  }
+
+  private saleItemKilosExpression() {
+    return sql<string>`case
+      when ${sales.type} = 'pre_order'
+        then coalesce(${saleItems.deliveredQuantity}, '0')
+      else coalesce(${saleItems.quantity}, '0')
+    end`;
   }
 
   private getDateRanges(

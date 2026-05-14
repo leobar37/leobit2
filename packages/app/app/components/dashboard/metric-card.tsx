@@ -11,6 +11,8 @@ interface MetricCardProps {
   className?: string;
   featured?: boolean;
   dataTestId?: string;
+  onClick?: () => void;
+  ariaLabel?: string;
 }
 
 export function MetricCard({
@@ -23,19 +25,14 @@ export function MetricCard({
   className,
   featured = false,
   dataTestId,
+  onClick,
+  ariaLabel,
 }: MetricCardProps) {
   const isPositive = change !== undefined && change >= 0;
   const showChange = change !== undefined && change !== 0;
-
-  return (
-    <div
-      data-testid={dataTestId}
-      className={cn(
-        "rounded-lg border border-border/70 bg-muted/15 p-3.5",
-        featured && "bg-muted/25",
-        className
-      )}
-    >
+  const isInteractive = Boolean(onClick);
+  const content = (
+    <>
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <p className={cn("font-medium text-muted-foreground", featured ? "text-sm" : "text-sm")}>
@@ -81,6 +78,36 @@ export function MetricCard({
           <Icon className={cn("h-[18px] w-[18px]", iconColor)} />
         </div>
       </div>
+    </>
+  );
+
+  const classes = cn(
+    "rounded-lg border border-border/70 bg-muted/15 p-3.5",
+    featured && "bg-muted/25",
+    isInteractive && "w-full text-left transition-colors active:scale-[0.98] hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    className
+  );
+
+  if (isInteractive) {
+    return (
+      <button
+        type="button"
+        data-testid={dataTestId}
+        aria-label={ariaLabel ?? title}
+        onClick={onClick}
+        className={classes}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      data-testid={dataTestId}
+      className={classes}
+    >
+      {content}
     </div>
   );
 }

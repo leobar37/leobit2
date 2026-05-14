@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router";
 import { ShoppingCart, Search, Plus, MapPin, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { cn } from "~/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,42 @@ import {
   getSaleEditorPathWithReturn,
 } from "~/lib/sales/navigation";
 import type { Sale as SaleCardData } from "~/hooks/use-sales";
+
+interface FilterChipProps {
+  children: ReactNode;
+  active: boolean;
+  activeClassName?: string;
+  inactiveClassName?: string;
+  badge?: number;
+  onClick: () => void;
+}
+
+function FilterChip({
+  children,
+  active,
+  activeClassName = "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]",
+  inactiveClassName = "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]",
+  badge,
+  onClick,
+}: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
+        active ? activeClassName : inactiveClassName
+      )}
+    >
+      {children}
+      {active && typeof badge === "number" && badge > 0 && (
+        <span className="absolute -right-1 -top-2 z-10 min-w-5 rounded-full border border-background bg-orange-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white shadow-sm dark:border-background dark:bg-orange-400 dark:text-orange-950">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+    </button>
+  );
+}
 
 export default function SalesPage() {
   useSetLayout({ title: "Ventas" });
@@ -155,83 +192,60 @@ export default function SalesPage() {
         )}
 
         {/* Filter Tabs */}
-        <div className="-mx-3 overflow-x-auto px-3 pb-1 hide-scrollbar sm:-mx-4 sm:px-4">
+        <div className="-mx-3 overflow-x-auto px-3 pb-1 pt-2 hide-scrollbar sm:-mx-4 sm:px-4">
           <div className="flex min-w-max gap-2">
-            <button
+            <FilterChip
               onClick={() => {
                 setTab("all");
                 setTipo("");
               }}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
-                tab === "all" && !tipo
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
-              )}
+              active={tab === "all" && !tipo}
+              badge={totalSales}
             >
               Todas
-            </button>
+            </FilterChip>
             {isDistribucionActiva && (
-              <button
+              <FilterChip
                 onClick={() => setTab("mine")}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
-                  tab === "mine"
-                    ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
-                )}
+                active={tab === "mine"}
+                badge={totalSales}
               >
                 <MapPin className="h-3.5 w-3.5" />
                 Mi Dist.
-              </button>
+              </FilterChip>
             )}
-            <button
+            <FilterChip
               onClick={() => setTab("free")}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
-                tab === "free"
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
-              )}
+              active={tab === "free"}
+              badge={totalSales}
             >
               Libres
-            </button>
-            <button
+            </FilterChip>
+            <FilterChip
               onClick={() => setTab("drafts")}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
-                tab === "drafts"
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
-              )}
+              active={tab === "drafts"}
+              badge={totalSales}
             >
               Borradores
-            </button>
+            </FilterChip>
 
             <div className="mx-0.5 h-5 w-px self-center bg-stone-200/80 dark:bg-white/[0.10]" />
 
-            <button
+            <FilterChip
               onClick={() => setTipo(tipo === "ventas" ? "" : "ventas")}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
-                tipo === "ventas"
-                  ? "bg-orange-100 text-orange-700 dark:bg-orange-500/[0.15] dark:text-orange-300 dark:ring-orange-400/[0.20]"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
-              )}
+              active={tipo === "ventas"}
+              badge={totalSales}
             >
               Ventas
-            </button>
-            <button
+            </FilterChip>
+            <FilterChip
               onClick={() => setTipo(tipo === "pedidos" ? "" : "pedidos")}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ring-1 ring-transparent",
-                tipo === "pedidos"
-                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/[0.15] dark:text-indigo-300 dark:ring-indigo-400/[0.20]"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/[0.08] dark:text-muted-foreground dark:hover:bg-white/[0.12] dark:hover:text-foreground dark:ring-white/[0.06]"
-              )}
+              active={tipo === "pedidos"}
+              activeClassName="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/[0.15] dark:text-indigo-300 dark:ring-indigo-400/[0.20]"
+              badge={totalSales}
             >
               Pedidos
-            </button>
+            </FilterChip>
           </div>
         </div>
 

@@ -8,7 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import { useParams, useNavigate } from "react-router";
-import { saleItemTransformer } from "@avileo/shared";
+import {
+  defaultCalculatorSettings,
+  saleItemTransformer,
+} from "@avileo/shared";
 import { useSaleCalculatorUrlState } from "~/hooks/use-sale-calculator-url-state";
 import { useSaleEditorState } from "~/hooks/use-sale-editor-state";
 import { useSale, useSaleEditingItem } from "~/hooks/use-sales";
@@ -102,10 +105,14 @@ export function SaleCalculatorProvider({
     }
   }, [isEditMode, editingItem, urlState]);
 
+  const defaultSalesSettings = defaultCalculatorSettings.calculators.sales;
   const calculatorSettings = settings?.calculators?.sales;
-  const hideTara = calculatorSettings?.hideTara ?? true;
-  const autoFillPrice = calculatorSettings?.autoFillPrice ?? true;
-  const hidePrices = calculatorSettings?.hidePrices ?? false;
+  const hideTara =
+    calculatorSettings?.hideTara ?? defaultSalesSettings.hideTara;
+  const autoFillPrice =
+    calculatorSettings?.autoFillPrice ?? defaultSalesSettings.autoFillPrice;
+  const hidePrices =
+    calculatorSettings?.hidePrices ?? defaultSalesSettings.hidePrices;
 
   const editingInitialValues =
     isEditMode && editingItem
@@ -119,6 +126,7 @@ export function SaleCalculatorProvider({
   const calculator = useSmartCalculator({
     product: picker.selectedProduct ?? undefined,
     variant: picker.selectedVariant ?? undefined,
+    initialPrice: picker.selectedVariant?.price ?? "",
     autoFillPrice,
     hideTara,
     initialValues: editingInitialValues,

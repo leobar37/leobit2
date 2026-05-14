@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   ShoppingCart,
   Users,
@@ -32,21 +32,27 @@ import { MetricCard } from "~/components/dashboard/metric-card";
 import { WeeklySalesChart } from "~/components/dashboard/weekly-sales-chart";
 import {
   useSalesStats,
+  useSalesMovements,
+  useSalesKilos,
   useDebtorsSummary,
   useSalesChart,
   useWaterOperationalReport,
 } from "~/hooks/use-dashboard";
 import { formatCurrency, formatKilos } from "~/lib/utils";
-import { getToday } from "~/lib/date-utils";
+import { formatRecentDateTime, getToday } from "~/lib/date-utils";
 import { PeriodSelector, type PeriodValue } from "~/components/dashboard/period-selector";
 import { OnboardingChecklist } from "~/components/dashboard/onboarding-checklist";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateSaleTypeSheet } from "~/components/sales/create-sale-type-sheet";
 import { useCocheraDashboard } from "~/hooks/use-cochera-dashboard";
+import { AppDrawer } from "~/components/ui/app-drawer";
+import { Button } from "@/components/ui/button";
+import { getSaleDetailPathWithReturn } from "~/lib/sales/navigation";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: business, isLoading: isLoadingBusiness } = useBusiness();
   const { data: distribucion, isLoading: isLoadingDistribucion } = useMiDistribucion();
 
@@ -57,8 +63,26 @@ export default function DashboardPage() {
   });
 
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
+  const [movementsDrawerOpen, setMovementsDrawerOpen] = useState(false);
+  const [kilosDrawerOpen, setKilosDrawerOpen] = useState(false);
 
   const { data: salesStats, isLoading: isLoadingSales } = useSalesStats(period);
+  const {
+    data: salesMovements,
+    isLoading: isLoadingMovements,
+    isError: isMovementsError,
+    refetch: refetchMovements,
+  } = useSalesMovements(period, {
+    enabled: movementsDrawerOpen && business?.businessMode === "polleria",
+  });
+  const {
+    data: salesKilos,
+    isLoading: isLoadingKilos,
+    isError: isKilosError,
+    refetch: refetchKilos,
+  } = useSalesKilos(period, {
+    enabled: kilosDrawerOpen && business?.businessMode === "polleria",
+  });
   const { data: debtorsSummary, isLoading: isLoadingDebtors } = useDebtorsSummary();
   const { data: chartData, isLoading: isLoadingChart } = useSalesChart(period);
 
@@ -79,6 +103,7 @@ export default function DashboardPage() {
   const isAdmin = business?.role === BusinessUserRole.ADMIN_NEGOCIO;
   const isWaterMode = business?.businessMode === "agua";
   const isCocheraMode = business?.businessMode === "cochera";
+  const isPolleriaMode = business?.businessMode === "polleria";
   const { data: waterReport, isLoading: isLoadingWaterReport } = useWaterOperationalReport(period, {
     enabled: isWaterMode,
   });
@@ -96,6 +121,22 @@ export default function DashboardPage() {
         : period.type === "month"
           ? "Este mes"
           : "Rango personalizado";
+  const movementsTitle =
+    period.type === "day"
+      ? "Movimientos de hoy"
+      : period.type === "week"
+        ? "Movimientos de la semana"
+        : period.type === "month"
+          ? "Movimientos del mes"
+          : "Movimientos del rango";
+  const kilosTitle =
+    period.type === "day"
+      ? "Kilos de hoy"
+      : period.type === "week"
+        ? "Kilos de la semana"
+        : period.type === "month"
+          ? "Kilos del mes"
+          : "Kilos del rango";
 
   if (isLoadingBusiness || !business) {
     return (
@@ -382,6 +423,8 @@ export default function DashboardPage() {
               change={isWaterMode ? undefined : salesStats?.change.amount}
               icon={FileText}
               iconColor="text-orange-600"
+              onClick={isPolleriaMode ? () => setMovementsDrawerOpen(true) : undefined}
+              ariaLabel={isPolleriaMode ? `Ver ${movementsTitle.toLowerCase()}` : undefined}
             />
             <MetricCard
               dataTestId={isWaterMode ? "water-dashboard-containers" : undefined}
@@ -398,6 +441,8 @@ export default function DashboardPage() {
               change={isWaterMode ? undefined : salesStats?.change.kilos}
               icon={isWaterMode ? Droplets : Weight}
               iconColor="text-blue-600"
+              onClick={isPolleriaMode ? () => setKilosDrawerOpen(true) : undefined}
+              ariaLabel={isPolleriaMode ? `Ver ${kilosTitle.toLowerCase()}` : undefined}
             />
             <MetricCard
               dataTestId={isWaterMode ? "water-dashboard-stops-completed" : undefined}
@@ -509,6 +554,215 @@ export default function DashboardPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AppDrawer
+        open={movementsDrawerOpen}
+        onOpenChange={setMovementsDrawerOpen}
+        size="large"
+        description="Detalle de ventas que componen el movimiento del periodo"
+        data-testid="dashboard-movements-drawer"
+      >
+        <AppDrawer.Header
+          title={movementsTitle}
+          icon={<FileText className="h-5 w-5" />}
+          onClose={() => setMovementsDrawerOpen(false)}
+        />
+        <AppDrawer.Body className="space-y-4">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border/70 bg-muted/20 p-3">
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground">Total</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                S/ {formatCurrency(salesMovements?.summary.amount ?? salesStats?.current.amount ?? 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground">Ventas</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {salesMovements?.summary.count ?? salesStats?.current.count ?? 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground">Kilos</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {formatKilos(salesStats?.current.kilos ?? salesMovements?.summary.kilos ?? 0)} kg
+              </p>
+            </div>
+          </div>
+
+          {isLoadingMovements ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="h-20 animate-pulse rounded-2xl bg-muted/35"
+                />
+              ))}
+            </div>
+          ) : isMovementsError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center dark:border-red-500/20 dark:bg-red-500/10">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                No se pudieron cargar los movimientos.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3 rounded-xl"
+                onClick={() => refetchMovements()}
+              >
+                Reintentar
+              </Button>
+            </div>
+          ) : salesMovements?.sales.length ? (
+            <div className="space-y-2">
+              {salesMovements.sales.map((sale) => {
+                const customerName = sale.customer?.name || "Cliente general";
+                const isCreditSale = sale.saleType === "credito";
+
+                return (
+                  <button
+                    key={sale.id}
+                    type="button"
+                    className="w-full rounded-2xl border border-border/70 bg-background p-3 text-left transition-colors active:scale-[0.99] hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/70"
+                    onClick={() => navigate(getSaleDetailPathWithReturn(sale.id, { pathname: "/dashboard", search: "" }))}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {customerName}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {isCreditSale ? "Crédito" : "Contado"} · {formatRecentDateTime(sale.saleDate)}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-sm font-semibold text-foreground">
+                        S/ {formatCurrency(sale.totalAmount)}
+                      </p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                      <span>{sale.status === "delivered" ? "Entregada" : sale.status === "confirmed" ? "Confirmada" : "Activa"}</span>
+                      <span>{formatKilos(Number(sale.netWeight ?? 0))} kg</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border/70 bg-muted/15 p-6 text-center">
+              <p className="text-sm font-medium text-foreground">
+                No hay movimientos en este periodo
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Las ventas confirmadas aparecerán aquí.
+              </p>
+            </div>
+          )}
+        </AppDrawer.Body>
+      </AppDrawer>
+
+      <AppDrawer
+        open={kilosDrawerOpen}
+        onOpenChange={setKilosDrawerOpen}
+        size="large"
+        description="Detalle de productos vendidos por kilo en el periodo"
+        data-testid="dashboard-kilos-drawer"
+      >
+        <AppDrawer.Header
+          title={kilosTitle}
+          icon={<Weight className="h-5 w-5" />}
+          onClose={() => setKilosDrawerOpen(false)}
+        />
+        <AppDrawer.Body className="space-y-4">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border/70 bg-muted/20 p-3">
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground">Kilos</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {formatKilos(salesKilos?.summary.kilos ?? salesStats?.current.kilos ?? 0)} kg
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground">Ventas</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {salesKilos?.summary.count ?? salesStats?.current.count ?? 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground">Total</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                S/ {formatCurrency(salesKilos?.summary.amount ?? 0)}
+              </p>
+            </div>
+          </div>
+
+          {isLoadingKilos ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="h-20 animate-pulse rounded-2xl bg-muted/35"
+                />
+              ))}
+            </div>
+          ) : isKilosError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center dark:border-red-500/20 dark:bg-red-500/10">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                No se pudo cargar el detalle de kilos.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3 rounded-xl"
+                onClick={() => refetchKilos()}
+              >
+                Reintentar
+              </Button>
+            </div>
+          ) : salesKilos?.items.length ? (
+            <div className="space-y-2">
+              {salesKilos.items.map((item, index) => {
+                const customerName = item.customer?.name || "Cliente general";
+
+                return (
+                  <button
+                    key={`${item.saleId}-${index}`}
+                    type="button"
+                    className="w-full rounded-2xl border border-border/70 bg-background p-3 text-left transition-colors active:scale-[0.99] hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+                    onClick={() => navigate(getSaleDetailPathWithReturn(item.saleId, { pathname: "/dashboard", search: "" }))}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {item.productName}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                          {item.variantName} · {customerName}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-sm font-semibold text-foreground">
+                        {formatKilos(item.kilos)} kg
+                      </p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                      <span>{formatRecentDateTime(item.saleDate)}</span>
+                      <span>S/ {formatCurrency(item.subtotal)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border/70 bg-muted/15 p-6 text-center">
+              <p className="text-sm font-medium text-foreground">
+                No hay kilos vendidos en este periodo
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Las ventas válidas con productos por kilo aparecerán aquí.
+              </p>
+            </div>
+          )}
+        </AppDrawer.Body>
+      </AppDrawer>
 
       <CreateSaleTypeSheet
         open={createSheetOpen}
